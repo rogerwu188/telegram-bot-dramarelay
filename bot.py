@@ -763,10 +763,6 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                             tmp_file.write(chunk)
                     tmp_file_path = tmp_file.name
                 
-                # 更新状态：下载完成，准备发送
-                await download_msg.edit_text(
-                    "📤 视频下载完成，正在发送..." if user_lang == 'zh' else "📤 Video downloaded, sending..."
-                )
                 logger.info(f"✅ Video downloaded successfully, file size: {os.path.getsize(tmp_file_path)} bytes")
                 
                 # 发送视频
@@ -782,10 +778,25 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                         supports_streaming=True
                     )
                 
-                # 删除临时文件和状态消息
+                # 删除临时文件
                 os.unlink(tmp_file_path)
-                await download_msg.delete()
-                logger.info(f"✅ Video sent successfully and temp files cleaned up")
+                
+                # 更新为最终提示消息（不删除）
+                final_msg = (
+                    "✅ 视频已下载，请上传至你的 YouTube/Instagram/TikTok 账号\n\n"
+                    "📌 完成后点击下方「📤 Submit Link」按钮提交链接"
+                ) if user_lang == 'zh' else (
+                    "✅ Video downloaded! Please upload it to your YouTube/Instagram/TikTok account\n\n"
+                    "📌 Click the '📤 Submit Link' button below when done"
+                )
+                await download_msg.edit_text(final_msg)
+                
+                # 保存提示消息ID，以便用户提交链接时删除
+                if 'task_hint_messages' not in context.user_data:
+                    context.user_data['task_hint_messages'] = {}
+                context.user_data['task_hint_messages'][task_id] = download_msg.message_id
+                
+                logger.info(f"✅ Video sent successfully, waiting for user to submit link")
                 
             except Exception as e:
                 logger.error(f"Error downloading video: {e}")
@@ -891,6 +902,19 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 提交链接
     reward = submit_task_link(user_id, task_id, platform, link)
     stats = get_user_stats(user_id)
+    
+    # 删除之前的提示消息
+    try:
+        if 'task_hint_messages' in context.user_data and task_id in context.user_data['task_hint_messages']:
+            hint_msg_id = context.user_data['task_hint_messages'][task_id]
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=hint_msg_id
+            )
+            del context.user_data['task_hint_messages'][task_id]
+            logger.info(f"✅ Deleted hint message for task {task_id}")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to delete hint message: {e}")
     
     message = get_message(user_lang, 'link_submitted',
         reward=reward,
