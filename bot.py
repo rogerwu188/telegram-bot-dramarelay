@@ -763,8 +763,11 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                             tmp_file.write(chunk)
                     tmp_file_path = tmp_file.name
                 
-                # 删除下载提示
-                await download_msg.delete()
+                # 更新状态：下载完成，准备发送
+                await download_msg.edit_text(
+                    "📤 视频下载完成，正在发送..." if user_lang == 'zh' else "📤 Video downloaded, sending..."
+                )
+                logger.info(f"✅ Video downloaded successfully, file size: {os.path.getsize(tmp_file_path)} bytes")
                 
                 # 发送视频
                 with open(tmp_file_path, 'rb') as video_file:
@@ -779,8 +782,10 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                         supports_streaming=True
                     )
                 
-                # 删除临时文件
+                # 删除临时文件和状态消息
                 os.unlink(tmp_file_path)
+                await download_msg.delete()
+                logger.info(f"✅ Video sent successfully and temp files cleaned up")
                 
             except Exception as e:
                 logger.error(f"Error downloading video: {e}")
