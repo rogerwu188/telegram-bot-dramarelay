@@ -917,11 +917,15 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         )
     ]]
     
-    await query.edit_message_text(
+    sent_msg = await query.edit_message_text(
         message,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='Markdown'
     )
+    
+    # 保存任务卡片消息 ID
+    context.user_data['task_card_message_id'] = sent_msg.message_id
+    context.user_data['task_card_chat_id'] = query.message.chat_id
     
     return SUBMIT_LINK
 
@@ -941,12 +945,22 @@ async def platform_select_callback(update: Update, context: ContextTypes.DEFAULT
     return SUBMIT_LINK
 
 async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理链接输入"""
+    """处理链接输入（新版本：编辑原消息）"""
     user_id = update.effective_user.id
     user_lang = get_user_language(user_id)
     
     link = update.message.text.strip()
     task_id = context.user_data.get('submit_task_id')
+    
+    # 获取任务卡片消息 ID
+    task_card_message_id = context.user_data.get('task_card_message_id')
+    task_card_chat_id = context.user_data.get('task_card_chat_id')
+    
+    # 立即删除用户的消息
+    try:
+        await update.message.delete()
+    except Exception as e:
+        logger.warning(f"⚠️ 无法删除用户消息: {e}")
     
     # 自动识别平台
     platform = detect_platform(link)
@@ -968,27 +982,60 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "• Supported platforms: TikTok, YouTube, Instagram, Facebook, Twitter\n\n"
             "🔁 Please resend the correct link"
         )
-        await update.message.reply_text(error_msg, parse_mode='Markdown')
+        
+        # 编辑任务卡片显示错误
+        if task_card_message_id and task_card_chat_id:
+            retry_button = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+            ]])
+            
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_msg,
+                reply_markup=retry_button,
+                parse_mode='Markdown'
+            )
         return SUBMIT_LINK
-    
-    # 🔍 验证视频内容是否匹配任务
-    verifying_msg = await update.message.reply_text(
-        "🔍 **正在验证视频内容...**\n\n请稍候，这可能需要 10-30 秒" if user_lang == 'zh' else 
-        "🔍 **Verifying video content...**\n\nPlease wait, this may take 10-30 seconds",
-        parse_mode='Markdown'
-    )
     
     # 获取任务信息
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT title, description FROM drama_tasks WHERE task_id = %s", (task_id,))
+    cur.execute("SELECT title, description, node_power_reward FROM drama_tasks WHERE task_id = %s", (task_id,))
     task = cur.fetchone()
     cur.close()
     conn.close()
     
     if not task:
-        await verifying_msg.edit_text("❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found")
+        if task_card_message_id and task_card_chat_id:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text="❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found"
+            )
         return ConversationHandler.END
+    
+    # 更新任务卡片显示"验证中"
+    if task_card_message_id and task_card_chat_id:
+        verifying_text = (
+            f"🔍 **正在验证视频内容...**\n\n"
+            f"🎬 任务：{task['title']}\n"
+            f"🔗 链接：{link[:50]}...\n\n"
+            f"⏳ 请稍候，这可能需要 5-15 秒"
+        ) if user_lang == 'zh' else (
+            f"🔍 **Verifying video content...**\n\n"
+            f"🎬 Task: {task['title']}\n"
+            f"🔗 Link: {link[:50]}...\n\n"
+            f"⏳ Please wait, this may take 5-15 seconds"
+        )
+        
+        await context.bot.edit_message_text(
+            chat_id=task_card_chat_id,
+            message_id=task_card_message_id,
+            text=verifying_text,
+            parse_mode='Markdown'
+        )
     
     # 调用验证器
     verify_result = link_verifier.verify_link(
@@ -996,9 +1043,6 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         task_title=task['title'],
         task_description=task['description'] or ''
     )
-    
-    # 删除验证中消息
-    await verifying_msg.delete()
     
     # 检查验证结果
     if not verify_result['success']:
@@ -1008,35 +1052,29 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"• 链接是否可以正常访问\n"
             f"• 视频是否公开可见\n\n"
             f"错误信息：{verify_result.get('error', '未知错误')}\n\n"
-            f"🔁 请重新提交"
+            f"🔁 点击下方按钮重试"
         ) if user_lang == 'zh' else (
             f"❌ **Verification Failed**\n\n"
             f"Cannot access your submitted link. Please check:\n"
             f"• Link is accessible\n"
             f"• Video is publicly visible\n\n"
             f"Error: {verify_result.get('error', 'Unknown error')}\n\n"
-            f"🔁 Please resubmit"
-        )
-        await update.message.reply_text(error_msg, parse_mode='Markdown')
-        
-        # 重新发送任务卡片到最新位置
-        task_card = (
-            f"📋 **Submit Task**\n"
-            f"🎬 {task['title']}\n"
-            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
-            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
-        ) if user_lang == 'en' else (
-            f"📋 **Submit Task**\n"
-            f"🎬 分享短剧《{task['title']}》真情反转片段\n"
-            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
-            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+            f"🔁 Click button below to retry"
         )
         
-        back_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("« Back" if user_lang == 'en' else "« 返回", callback_data='submit_link')
+        retry_button = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
         ]])
         
-        await update.message.reply_text(task_card, reply_markup=back_button, parse_mode='Markdown')
+        if task_card_message_id and task_card_chat_id:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_msg,
+                reply_markup=retry_button,
+                parse_mode='Markdown'
+            )
         return SUBMIT_LINK
     
     if not verify_result['matched']:
@@ -1045,34 +1083,28 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"📝 您提交的视频内容与任务要求不匹配。\n\n"
             f"🎯 任务要求：{task['title']}\n"
             f"📱 您的视频：{verify_result.get('page_title', '未知')}\n\n"
-            f"✅ 请确保上传的是正确的任务视频，然后重新提交。"
+            f"✅ 请确保上传的是正确的任务视频，然后点击重试。"
         ) if user_lang == 'zh' else (
             f"❌ **Content Mismatch**\n\n"
             f"📝 Your submitted video content doesn't match the task requirements.\n\n"
             f"🎯 Task: {task['title']}\n"
             f"📱 Your video: {verify_result.get('page_title', 'Unknown')}\n\n"
-            f"✅ Please ensure you upload the correct task video and resubmit."
-        )
-        await update.message.reply_text(error_msg, parse_mode='Markdown')
-        
-        # 重新发送任务卡片到最新位置
-        task_card = (
-            f"📋 **Submit Task**\n"
-            f"🎬 {task['title']}\n"
-            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
-            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
-        ) if user_lang == 'en' else (
-            f"📋 **Submit Task**\n"
-            f"🎬 分享短剧《{task['title']}》真情反转片段\n"
-            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
-            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+            f"✅ Please ensure you upload the correct task video and click retry."
         )
         
-        back_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("« Back" if user_lang == 'en' else "« 返回", callback_data='submit_link')
+        retry_button = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
         ]])
         
-        await update.message.reply_text(task_card, reply_markup=back_button, parse_mode='Markdown')
+        if task_card_message_id and task_card_chat_id:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_msg,
+                reply_markup=retry_button,
+                parse_mode='Markdown'
+            )
         return SUBMIT_LINK
     
     # 验证通过，提交链接
@@ -1092,32 +1124,41 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.warning(f"⚠️ Failed to delete hint message: {e}")
     
-    # 显示提交成功消息
+    # 显示提交成功消息（编辑任务卡片）
     platform_emoji = {
-        'TikTok': '🎵',
-        'YouTube': '📺',
-        'Instagram': '📸',
-        'Facebook': '👥',
-        'Twitter': '🐦',
-        'Other': '🌐'
+        'tiktok': '📱 TikTok',
+        'youtube': '▶️ YouTube',
+        'instagram': '📷 Instagram',
+        'facebook': '👥 Facebook',
+        'twitter': '🐦 Twitter'
     }
     
-    message = (
+    success_msg = (
         f"✅ **提交成功！**\n\n"
-        f"{platform_emoji.get(platform, '🌐')} 平台：{platform}\n"
-        f"🎁 获得奖励：+{reward} NP\n"
-        f"📊 总算力：{stats['total_power']} NP\n\n"
-        f"🚀 继续分享更多视频，赚取更多奖励！"
+        f"平台：{platform_emoji.get(platform, platform)}\n"
+        f"🎁 奖励：+{reward} NP\n"
+        f"📊 总算力：{stats['total_node_power']} NP\n\n"
+        f"🚀 继续分享更多视频获得更多奖励！"
     ) if user_lang == 'zh' else (
         f"✅ **Submitted Successfully!**\n\n"
-        f"{platform_emoji.get(platform, '🌐')} Platform: {platform}\n"
+        f"Platform: {platform_emoji.get(platform, platform)}\n"
         f"🎁 Reward: +{reward} NP\n"
-        f"📊 Total Power: {stats['total_power']} NP\n\n"
+        f"📊 Total Power: {stats['total_node_power']} NP\n\n"
         f"🚀 Keep sharing more videos to earn more rewards!"
     )
     
-    keyboard = get_main_menu_keyboard(user_lang)
-    await update.message.reply_text(message, reply_markup=keyboard, parse_mode='Markdown')
+    back_button = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🏠 返回主菜单" if user_lang == 'zh' else "🏠 Back to Menu", callback_data='back_to_menu')
+    ]])
+    
+    if task_card_message_id and task_card_chat_id:
+        await context.bot.edit_message_text(
+            chat_id=task_card_chat_id,
+            message_id=task_card_message_id,
+            text=success_msg,
+            reply_markup=back_button,
+            parse_mode='Markdown'
+        )
     
     return ConversationHandler.END
 
