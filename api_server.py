@@ -231,6 +231,9 @@ def create_task():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 支持 video_url 和 video_file_id 两种参数名
+        video_url = data.get('video_file_id') or data.get('video_url')
+        
         cur.execute("""
             INSERT INTO drama_tasks (
                 title, description, video_file_id, thumbnail_url,
@@ -240,7 +243,7 @@ def create_task():
         """, (
             data.get('title'),
             data.get('description'),
-            data.get('video_file_id'),
+            video_url,
             data.get('thumbnail_url'),
             data.get('duration', 15),
             data.get('node_power_reward', 10),

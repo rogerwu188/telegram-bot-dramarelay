@@ -572,6 +572,22 @@ def bind_wallet(user_id: int, wallet_address: str):
 # 工具函数
 # ============================================================
 
+def detect_platform(link: str) -> Optional[str]:
+    """自动识别平台"""
+    patterns = {
+        'TikTok': r'https?://(www\.)?tiktok\.com',
+        'YouTube': r'https?://(www\.)?(youtube\.com|youtu\.be)',
+        'Instagram': r'https?://(www\.)?instagram\.com',
+        'Facebook': r'https?://(www\.)?facebook\.com',
+        'Twitter': r'https?://(www\.)?(twitter\.com|x\.com)',
+    }
+    
+    for platform, pattern in patterns.items():
+        if re.match(pattern, link):
+            return platform
+    
+    return 'Other'
+
 def validate_link(platform: str, link: str) -> bool:
     """验证链接格式"""
     patterns = {
@@ -853,23 +869,55 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     task_id = int(query.data.split('_')[2])
     context.user_data['submit_task_id'] = task_id
     
-    # 显示平台选择
-    keyboard = [
-        [InlineKeyboardButton("TikTok", callback_data="platform_TikTok")],
-        [InlineKeyboardButton("YouTube", callback_data="platform_YouTube")],
-        [InlineKeyboardButton("Instagram", callback_data="platform_Instagram")],
-        [InlineKeyboardButton("Facebook", callback_data="platform_Facebook")],
-        [InlineKeyboardButton("Twitter", callback_data="platform_Twitter")],
-        [InlineKeyboardButton("其他平台 / Other" if user_lang == 'zh' else "Other Platform", callback_data="platform_Other")],
-        [InlineKeyboardButton(get_message(user_lang, 'cancel'), callback_data='submit_link')]
-    ]
+    # 获取任务信息
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT dt.title, dt.node_power_reward
+        FROM user_tasks ut
+        JOIN drama_tasks dt ON ut.task_id = dt.task_id
+        WHERE ut.user_id = %s AND ut.task_id = %s
+    """, (user_id, task_id))
+    task = cur.fetchone()
+    cur.close()
+    conn.close()
     
-    await query.edit_message_text(
-        get_message(user_lang, 'select_platform'),
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    if not task:
+        await query.edit_message_text(
+            "❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+            ]])
+        )
+        return ConversationHandler.END
+    
+    # 显示提交界面
+    message = (
+        f"📤 **提交任务**\n"
+        f"🎬 {task['title']}\n"
+        f"💰 完成可获得：{task['node_power_reward']} NP\n\n"
+        f"📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）"
+    ) if user_lang == 'zh' else (
+        f"📤 **Submit Task**\n"
+        f"🎬 {task['title']}\n"
+        f"💰 Reward: {task['node_power_reward']} NP\n\n"
+        f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
     )
     
-    return SUBMIT_PLATFORM
+    keyboard = [[
+        InlineKeyboardButton(
+            "« 返回" if user_lang == 'zh' else "« Back",
+            callback_data='submit_link'
+        )
+    ]]
+    
+    await query.edit_message_text(
+        message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+    
+    return SUBMIT_LINK
 
 async def platform_select_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理平台选择"""
@@ -893,10 +941,28 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     link = update.message.text.strip()
     task_id = context.user_data.get('submit_task_id')
-    platform = context.user_data.get('submit_platform')
     
+    # 自动识别平台
+    platform = detect_platform(link)
+    
+    # 验证链接格式
     if not validate_link(platform, link):
-        await update.message.reply_text(get_message(user_lang, 'invalid_link'))
+        error_msg = (
+            "❌ **链接验证失败**\n\n"
+            "🔍 请检查：\n"
+            "• 链接是否完整（包含 https://）\n"
+            "• 链接是否指向具体的视频页面\n"
+            "• 支持的平台：TikTok、YouTube、Instagram、Facebook、Twitter\n\n"
+            "🔁 请重新发送正确的链接"
+        ) if user_lang == 'zh' else (
+            "❌ **Link Validation Failed**\n\n"
+            "🔍 Please check:\n"
+            "• Link is complete (includes https://)\n"
+            "• Link points to a specific video page\n"
+            "• Supported platforms: TikTok, YouTube, Instagram, Facebook, Twitter\n\n"
+            "🔁 Please resend the correct link"
+        )
+        await update.message.reply_text(error_msg, parse_mode='Markdown')
         return SUBMIT_LINK
     
     # 提交链接
@@ -916,13 +982,32 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.warning(f"⚠️ Failed to delete hint message: {e}")
     
-    message = get_message(user_lang, 'link_submitted',
-        reward=reward,
-        total_power=stats['total_power']
+    # 显示提交成功消息
+    platform_emoji = {
+        'TikTok': '🎵',
+        'YouTube': '📺',
+        'Instagram': '📸',
+        'Facebook': '👥',
+        'Twitter': '🐦',
+        'Other': '🌐'
+    }
+    
+    message = (
+        f"✅ **提交成功！**\n\n"
+        f"{platform_emoji.get(platform, '🌐')} 平台：{platform}\n"
+        f"🎁 获得奖励：+{reward} NP\n"
+        f"📊 总算力：{stats['total_power']} NP\n\n"
+        f"🚀 继续分享更多视频，赚取更多奖励！"
+    ) if user_lang == 'zh' else (
+        f"✅ **Submitted Successfully!**\n\n"
+        f"{platform_emoji.get(platform, '🌐')} Platform: {platform}\n"
+        f"🎁 Reward: +{reward} NP\n"
+        f"📊 Total Power: {stats['total_power']} NP\n\n"
+        f"🚀 Keep sharing more videos to earn more rewards!"
     )
     
     keyboard = get_main_menu_keyboard(user_lang)
-    await update.message.reply_text(message, reply_markup=keyboard)
+    await update.message.reply_text(message, reply_markup=keyboard, parse_mode='Markdown')
     
     return ConversationHandler.END
 
