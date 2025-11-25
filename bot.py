@@ -21,6 +21,7 @@ from telegram.ext import (
     ContextTypes,
     filters
 )
+from auto_migrate import auto_migrate
 
 # ============================================================
 # 配置和日志
@@ -1191,6 +1192,10 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
 def main():
     """主函数"""
     logger.info("🚀 X2C DramaRelayBot Starting...")
+    
+    # 运行数据库迁移
+    logger.info("🔧 Running database migrations...")
+    auto_migrate()
     
     # 初始化数据库
     init_database()
