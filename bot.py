@@ -172,7 +172,7 @@ MESSAGES = {
 💰 奖励：{reward} Node Power
 📱 平台：{platforms}
 
-点击下方按钮领取任务并下载视频。""",
+⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。""",
         'task_claimed': '✅ 任务领取成功！\n\n请下载视频，上传到你选择的平台，然后回来提交链接。',
         'task_already_claimed': '⚠️ 你已经领取过这个任务了。',
         'select_task_to_submit': '请选择要提交的任务：',
@@ -261,7 +261,7 @@ Let's build the global drama distribution network together.""",
 💰 Reward: {reward} Node Power
 📱 Platforms: {platforms}
 
-Click the button below to claim the task and download the video.""",
+⬇️ Click the button below to claim the task. The video will be automatically downloaded to the chat.""",
         'task_claimed': '✅ Task claimed successfully!\n\nPlease download the video, upload it to your chosen platform, and come back to submit the link.',
         'task_already_claimed': '⚠️ You have already claimed this task.',
         'select_task_to_submit': 'Please select the task to submit:',
@@ -711,13 +711,78 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     task_id = int(query.data.split('_')[1])
     
+    # 获取任务详情
+    task = get_task_by_id(task_id)
+    
+    if not task:
+        await query.edit_message_text(
+            "❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found",
+            reply_markup=get_main_menu_keyboard(user_lang)
+        )
+        return
+    
     if claim_task(user_id, task_id):
         message = get_message(user_lang, 'task_claimed')
+        
+        # 先发送确认消息
+        keyboard = get_main_menu_keyboard(user_lang)
+        await query.edit_message_text(message, reply_markup=keyboard)
+        
+        # 如果任务有视频链接，下载并发送视频
+        video_url = task.get('video_file_id')
+        if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
+            try:
+                # 发送下载提示
+                download_msg = await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="⏳ 正在下载视频..." if user_lang == 'zh' else "⏳ Downloading video..."
+                )
+                
+                # 下载视频
+                import requests
+                import tempfile
+                import os
+                
+                response = requests.get(video_url, stream=True, timeout=60)
+                response.raise_for_status()
+                
+                # 保存到临时文件
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            tmp_file.write(chunk)
+                    tmp_file_path = tmp_file.name
+                
+                # 删除下载提示
+                await download_msg.delete()
+                
+                # 发送视频
+                with open(tmp_file_path, 'rb') as video_file:
+                    caption = f"🎬 {task['title']}\n\n" + \
+                              (f"💰 完成任务可获得 {task['node_power_reward']} Node Power" if user_lang == 'zh' \
+                               else f"💰 Complete this task to earn {task['node_power_reward']} Node Power")
+                    
+                    await context.bot.send_video(
+                        chat_id=query.message.chat_id,
+                        video=video_file,
+                        caption=caption,
+                        supports_streaming=True
+                    )
+                
+                # 删除临时文件
+                os.unlink(tmp_file_path)
+                
+            except Exception as e:
+                logger.error(f"Error downloading video: {e}")
+                error_msg = "❌ 视频下载失败，请稍后重试" if user_lang == 'zh' else "❌ Failed to download video, please try again later"
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text=f"{error_msg}\n\n📎 视频链接: {video_url}"
+                )
     else:
         message = get_message(user_lang, 'task_already_claimed')
-    
-    keyboard = get_main_menu_keyboard(user_lang)
-    await query.edit_message_text(message, reply_markup=keyboard)
+        keyboard = get_main_menu_keyboard(user_lang)
+        await query.edit_message_text(message, reply_markup=keyboard)
 
 async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理提交链接"""
