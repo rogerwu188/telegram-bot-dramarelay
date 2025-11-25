@@ -652,7 +652,7 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     keyboard = []
     for task in tasks:
         button_text = f"🎬 {task['title']} ({task['duration']}s) - {task['node_power_reward']} NP"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"task_{task['task_id']}")])
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
     
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
     
