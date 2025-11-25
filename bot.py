@@ -345,10 +345,11 @@ def get_or_create_user(user_id: int, username: str = None, first_name: str = Non
         cur.execute("""
             INSERT INTO users (user_id, username, first_name)
             VALUES (%s, %s, %s)
-            RETURNING *
         """, (user_id, username, first_name))
-        user = cur.fetchone()
         conn.commit()
+        # 重新查询用户
+        cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+        user = cur.fetchone()
     
     cur.close()
     conn.close()
