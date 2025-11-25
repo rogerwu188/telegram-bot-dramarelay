@@ -630,12 +630,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message, reply_markup=keyboard)
 
 async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理获取任务列表"""
+    """处理领取任务按钮"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
+    
+    logger.info(f"📝 get_tasks_callback triggered! user_id={user_id}")
     
     tasks = get_active_tasks()
     
@@ -711,6 +713,8 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     task_id = int(query.data.split('_')[1])
     
+    logger.info(f"🔔 claim_task_callback triggered! user_id={user_id}, task_id={task_id}, callback_data={query.data}")
+    
     # 获取任务详情
     task = get_task_by_id(task_id)
     
@@ -721,8 +725,12 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
     
-    if claim_task(user_id, task_id):
+    claim_result = claim_task(user_id, task_id)
+    logger.info(f"📊 claim_task result: {claim_result}")
+    
+    if claim_result:
         message = get_message(user_lang, 'task_claimed')
+        logger.info(f"✅ Task claimed successfully, sending confirmation message")
         
         # 先发送确认消息
         keyboard = get_main_menu_keyboard(user_lang)
@@ -730,7 +738,9 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         # 如果任务有视频链接，下载并发送视频
         video_url = task.get('video_file_id')
+        logger.info(f"🎥 video_url from task: {video_url}")
         if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
+            logger.info(f"✅ Starting video download from: {video_url}")
             try:
                 # 发送下载提示
                 download_msg = await context.bot.send_message(
