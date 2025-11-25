@@ -1110,10 +1110,25 @@ def main():
     )
     application.add_handler(wallet_conv_handler)
     
-    logger.info("✅ Bot is running! Press Ctrl+C to stop.")
+    # 检查是否有 WEBHOOK_URL 环境变量
+    webhook_url = os.getenv('WEBHOOK_URL')
     
-    # 启动 Bot
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    if webhook_url:
+        # Webhook 模式
+        logger.info(f"🌐 Using Webhook mode: {webhook_url}")
+        
+        # 设置 Webhook
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=int(os.getenv('PORT', 8080)),
+            url_path=BOT_TOKEN,
+            webhook_url=f"{webhook_url}/{BOT_TOKEN}"
+        )
+    else:
+        # Polling 模式（本地开发）
+        logger.info("🔄 Using Polling mode (local development)")
+        logger.info("✅ Bot is running! Press Ctrl+C to stop.")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
