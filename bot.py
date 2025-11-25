@@ -1217,9 +1217,15 @@ def main():
     submit_conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$')],
         states={
-            SUBMIT_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, link_input_handler)],
+            SUBMIT_LINK: [
+                CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$'),  # 允许在对话中切换任务
+                MessageHandler(filters.TEXT & ~filters.COMMAND, link_input_handler)
+            ],
         },
-        fallbacks=[CallbackQueryHandler(submit_link_callback, pattern='^submit_link$')],
+        fallbacks=[
+            CallbackQueryHandler(submit_link_callback, pattern='^submit_link$'),
+            CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$')
+        ],
     )
     application.add_handler(submit_conv_handler)
     
