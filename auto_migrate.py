@@ -4,7 +4,8 @@
 在 bot 启动时运行，确保数据库结构正确
 """
 import os
-import pymysql.cursors
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,41 +18,21 @@ def auto_migrate():
             logger.error("❌ DATABASE_URL not found")
             return False
         
-        # 解析 DATABASE_URL
-        import re
-        match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', db_url)
-        if not match:
-            logger.error("❌ Invalid DATABASE_URL format")
-            return False
+        logger.info(f"🔗 Connecting to database...")
         
-        user, password, host, port, database = match.groups()
-        
-        logger.info(f"🔗 Connecting to database: {host}:{port}/{database}")
-        
-        # 提取 SSL 参数
-        ssl_config = None
-        if '?' in database:
-            database, params = database.split('?', 1)
-            if 'ssl=' in params:
-                ssl_config = {'ca': None}  # 使用默认 CA
-        
-        conn = pymysql.connect(
-            host=host,
-            port=int(port),
-            user=user,
-            password=password,
-            database=database,
-            cursorclass=pymysql.cursors.DictCursor,
-            ssl=ssl_config
-        )
-        
+        conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         
-        # 检查并添加 total_node_power 字段
-        cur.execute("DESCRIBE users")
-        columns = [col['Field'] for col in cur.fetchall()]
+        # 检查 total_node_power 字段是否存在
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'total_node_power'
+        """)
         
-        if 'total_node_power' not in columns:
+        column_exists = cur.fetchone()
+        
+        if not column_exists:
             logger.info("📝 Adding column 'total_node_power' to users table...")
             cur.execute("""
                 ALTER TABLE users 
@@ -68,6 +49,8 @@ def auto_migrate():
         
     except Exception as e:
         logger.error(f"❌ Auto migration failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == '__main__':
