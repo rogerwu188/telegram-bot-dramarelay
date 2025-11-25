@@ -1018,6 +1018,25 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"🔁 Please resubmit"
         )
         await update.message.reply_text(error_msg, parse_mode='Markdown')
+        
+        # 重新发送任务卡片到最新位置
+        task_card = (
+            f"📋 **Submit Task**\n"
+            f"🎬 {task['title']}\n"
+            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
+            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+        ) if user_lang == 'en' else (
+            f"📋 **Submit Task**\n"
+            f"🎬 分享短剧《{task['title']}》真情反转片段\n"
+            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
+            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+        )
+        
+        back_button = InlineKeyboardMarkup([[
+            InlineKeyboardButton("« Back" if user_lang == 'en' else "« 返回", callback_data='submit_link')
+        ]])
+        
+        await update.message.reply_text(task_card, reply_markup=back_button, parse_mode='Markdown')
         return SUBMIT_LINK
     
     if not verify_result['matched']:
@@ -1035,6 +1054,25 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"✅ Please ensure you upload the correct task video and resubmit."
         )
         await update.message.reply_text(error_msg, parse_mode='Markdown')
+        
+        # 重新发送任务卡片到最新位置
+        task_card = (
+            f"📋 **Submit Task**\n"
+            f"🎬 {task['title']}\n"
+            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
+            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+        ) if user_lang == 'en' else (
+            f"📋 **Submit Task**\n"
+            f"🎬 分享短剧《{task['title']}》真情反转片段\n"
+            f"💰 Reward: {task.get('node_power_reward', 10)} NP\n\n"
+            f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
+        )
+        
+        back_button = InlineKeyboardMarkup([[
+            InlineKeyboardButton("« Back" if user_lang == 'en' else "« 返回", callback_data='submit_link')
+        ]])
+        
+        await update.message.reply_text(task_card, reply_markup=back_button, parse_mode='Markdown')
         return SUBMIT_LINK
     
     # 验证通过，提交链接
