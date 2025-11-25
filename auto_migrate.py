@@ -23,25 +23,34 @@ def auto_migrate():
         conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
         cur = conn.cursor()
         
-        # 检查 total_node_power 字段是否存在
+        # 获取 users 表的所有字段
         cur.execute("""
             SELECT column_name 
             FROM information_schema.columns 
-            WHERE table_name = 'users' AND column_name = 'total_node_power'
+            WHERE table_name = 'users'
         """)
         
-        column_exists = cur.fetchone()
+        existing_columns = [row['column_name'] for row in cur.fetchall()]
+        logger.info(f"📋 Existing columns in users table: {existing_columns}")
         
-        if not column_exists:
-            logger.info("📝 Adding column 'total_node_power' to users table...")
-            cur.execute("""
-                ALTER TABLE users 
-                ADD COLUMN total_node_power INTEGER DEFAULT 0
-            """)
-            conn.commit()
-            logger.info("✅ Column 'total_node_power' added successfully")
-        else:
-            logger.info("✅ Column 'total_node_power' already exists")
+        # 需要添加的字段列表
+        columns_to_add = [
+            ('total_node_power', 'INTEGER DEFAULT 0'),
+            ('completed_tasks', 'INTEGER DEFAULT 0'),
+        ]
+        
+        # 逐个检查并添加缺失的字段
+        for column_name, column_def in columns_to_add:
+            if column_name not in existing_columns:
+                logger.info(f"📝 Adding column '{column_name}' to users table...")
+                cur.execute(f"""
+                    ALTER TABLE users 
+                    ADD COLUMN {column_name} {column_def}
+                """)
+                conn.commit()
+                logger.info(f"✅ Column '{column_name}' added successfully")
+            else:
+                logger.info(f"✅ Column '{column_name}' already exists")
         
         cur.close()
         conn.close()
