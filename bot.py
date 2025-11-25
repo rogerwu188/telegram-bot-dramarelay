@@ -1205,7 +1205,6 @@ def main():
     application.add_handler(CallbackQueryHandler(task_detail_callback, pattern='^task_\\d+$'))
     application.add_handler(CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$'))
     application.add_handler(CallbackQueryHandler(submit_link_callback, pattern='^submit_link$'))
-    application.add_handler(CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$'))
     application.add_handler(CallbackQueryHandler(my_power_callback, pattern='^my_power$'))
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
@@ -1216,7 +1215,7 @@ def main():
     
     # 对话处理器 - 提交链接
     submit_conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(platform_select_callback, pattern='^platform_')],
+        entry_points=[CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$')],
         states={
             SUBMIT_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, link_input_handler)],
         },
