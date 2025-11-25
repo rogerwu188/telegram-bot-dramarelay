@@ -33,22 +33,32 @@ def auto_migrate():
         existing_columns = [row['column_name'] for row in cur.fetchall()]
         logger.info(f"📋 Existing columns in users table: {existing_columns}")
         
-        # 需要添加的字段列表
+        # 需要添加的字段列表（按照 init_database 中的定义）
         columns_to_add = [
+            ('username', 'VARCHAR(255)'),
+            ('first_name', 'VARCHAR(255)'),
+            ('language', "VARCHAR(10) DEFAULT 'zh'"),
+            ('wallet_address', 'VARCHAR(42)'),
             ('total_node_power', 'INTEGER DEFAULT 0'),
             ('completed_tasks', 'INTEGER DEFAULT 0'),
+            ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+            ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
         ]
         
         # 逐个检查并添加缺失的字段
         for column_name, column_def in columns_to_add:
             if column_name not in existing_columns:
                 logger.info(f"📝 Adding column '{column_name}' to users table...")
-                cur.execute(f"""
-                    ALTER TABLE users 
-                    ADD COLUMN {column_name} {column_def}
-                """)
-                conn.commit()
-                logger.info(f"✅ Column '{column_name}' added successfully")
+                try:
+                    cur.execute(f"""
+                        ALTER TABLE users 
+                        ADD COLUMN {column_name} {column_def}
+                    """)
+                    conn.commit()
+                    logger.info(f"✅ Column '{column_name}' added successfully")
+                except Exception as e:
+                    logger.error(f"❌ Failed to add column '{column_name}': {e}")
+                    conn.rollback()
             else:
                 logger.info(f"✅ Column '{column_name}' already exists")
         
