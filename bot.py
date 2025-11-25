@@ -22,6 +22,7 @@ from telegram.ext import (
     filters
 )
 from auto_migrate import auto_migrate
+from link_verifier import LinkVerifier
 
 # ============================================================
 # 配置和日志
@@ -43,6 +44,9 @@ ADMIN_IDS = [int(id.strip()) for id in ADMIN_IDS_STR.split(',') if id.strip()]
 logger.info("✅ BOT_TOKEN loaded")
 logger.info(f"✅ Admin IDs loaded: {ADMIN_IDS}")
 logger.info("✅ DATABASE_URL loaded")
+
+# 初始化链接验证器
+link_verifier = LinkVerifier()
 
 # 对话状态
 (
@@ -967,7 +971,73 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(error_msg, parse_mode='Markdown')
         return SUBMIT_LINK
     
-    # 提交链接
+    # 🔍 验证视频内容是否匹配任务
+    verifying_msg = await update.message.reply_text(
+        "🔍 **正在验证视频内容...**\n\n请稍候，这可能需要 10-30 秒" if user_lang == 'zh' else 
+        "🔍 **Verifying video content...**\n\nPlease wait, this may take 10-30 seconds",
+        parse_mode='Markdown'
+    )
+    
+    # 获取任务信息
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT title, description FROM drama_tasks WHERE task_id = %s", (task_id,))
+    task = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if not task:
+        await verifying_msg.edit_text("❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found")
+        return ConversationHandler.END
+    
+    # 调用验证器
+    verify_result = link_verifier.verify_link(
+        url=link,
+        task_title=task['title'],
+        task_description=task['description'] or ''
+    )
+    
+    # 删除验证中消息
+    await verifying_msg.delete()
+    
+    # 检查验证结果
+    if not verify_result['success']:
+        error_msg = (
+            f"❌ **验证失败**\n\n"
+            f"无法访问您提交的链接，请检查：\n"
+            f"• 链接是否可以正常访问\n"
+            f"• 视频是否公开可见\n\n"
+            f"错误信息：{verify_result.get('error', '未知错误')}\n\n"
+            f"🔁 请重新提交"
+        ) if user_lang == 'zh' else (
+            f"❌ **Verification Failed**\n\n"
+            f"Cannot access your submitted link. Please check:\n"
+            f"• Link is accessible\n"
+            f"• Video is publicly visible\n\n"
+            f"Error: {verify_result.get('error', 'Unknown error')}\n\n"
+            f"🔁 Please resubmit"
+        )
+        await update.message.reply_text(error_msg, parse_mode='Markdown')
+        return SUBMIT_LINK
+    
+    if not verify_result['matched']:
+        error_msg = (
+            f"❌ **内容不匹配**\n\n"
+            f"📝 您提交的视频内容与任务要求不匹配。\n\n"
+            f"🎯 任务要求：{task['title']}\n"
+            f"📱 您的视频：{verify_result.get('page_title', '未知')}\n\n"
+            f"✅ 请确保上传的是正确的任务视频，然后重新提交。"
+        ) if user_lang == 'zh' else (
+            f"❌ **Content Mismatch**\n\n"
+            f"📝 Your submitted video content doesn't match the task requirements.\n\n"
+            f"🎯 Task: {task['title']}\n"
+            f"📱 Your video: {verify_result.get('page_title', 'Unknown')}\n\n"
+            f"✅ Please ensure you upload the correct task video and resubmit."
+        )
+        await update.message.reply_text(error_msg, parse_mode='Markdown')
+        return SUBMIT_LINK
+    
+    # 验证通过，提交链接
     reward = submit_task_link(user_id, task_id, platform, link)
     stats = get_user_stats(user_id)
     
