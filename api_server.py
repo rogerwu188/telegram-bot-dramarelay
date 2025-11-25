@@ -181,10 +181,12 @@ def get_task(task_id):
                 'error': 'Task not found'
             }), 404
         
-        # 获取该任务的提交统计
+        # 获取该任务的提交统计（只统计已验证的提交）
         cur.execute("""
-            SELECT COUNT(*) as submission_count,
-                   COUNT(DISTINCT user_id) as unique_users
+            SELECT 
+                COUNT(*) as total_submissions,
+                COUNT(CASE WHEN status = 'verified' THEN 1 END) as verified_submissions,
+                COUNT(DISTINCT user_id) as unique_users
             FROM user_tasks
             WHERE task_id = %s
         """, (task_id,))
@@ -198,7 +200,8 @@ def get_task(task_id):
             task_dict['created_at'] = task_dict['created_at'].isoformat()
         
         task_dict['stats'] = {
-            'submission_count': stats['submission_count'],
+            'total_submissions': stats['total_submissions'],
+            'successful_distributions': stats['verified_submissions'],
             'unique_users': stats['unique_users']
         }
         
@@ -237,8 +240,9 @@ def create_task():
         cur.execute("""
             INSERT INTO drama_tasks (
                 title, description, video_file_id, thumbnail_url,
-                duration, node_power_reward, platform_requirements, status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                duration, node_power_reward, platform_requirements, status,
+                video_url, task_template, keywords_template, video_title
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING task_id, title, created_at
         """, (
             data.get('title'),
@@ -248,7 +252,11 @@ def create_task():
             data.get('duration', 15),
             data.get('node_power_reward', 10),
             data.get('platform_requirements', 'TikTok,YouTube,Instagram'),
-            data.get('status', 'active')
+            data.get('status', 'active'),
+            data.get('video_url'),
+            data.get('task_template'),
+            data.get('keywords_template'),
+            data.get('video_title')
         ))
         
         new_task = cur.fetchone()
