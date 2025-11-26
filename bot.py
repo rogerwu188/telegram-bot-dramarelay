@@ -839,12 +839,12 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
                 
                 if user_lang == 'zh':
-                    final_msg = f"""📤 请按以下提示上传短视频并完成任务：
+                    final_msg = f"""📥 下载已完成，请按以下提示上传：
 
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube 上传内容】
 
-▶ 视频文件名称（请直接复制）：
+▶️ 视频文件名称（右键直接另存，或直接拖拽）：
 {title}
 
 ▶ 视频描述（复制到 YouTube 描述栏）：
@@ -866,6 +866,12 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
 即可获得 🎉 **{reward} Node Power**"""
+                    
+                    # 创建 inline keyboard 按钮
+                    keyboard = [
+                        [InlineKeyboardButton("📎 提交链接", callback_data=f"submit_link_{task_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
                 else:
                     final_msg = f"""📤 Please follow the instructions below to upload the video and complete the task:
 
@@ -894,8 +900,14 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 Complete the task above and submit your published video link in this bot  
 to receive 🎉 **{reward} Node Power**"""
+                    
+                    # 创建 inline keyboard 按钮
+                    keyboard = [
+                        [InlineKeyboardButton("📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                await download_msg.edit_text(final_msg)
+                await download_msg.edit_text(final_msg, reply_markup=reply_markup)
                 
                 # 保存提示消息ID，以便用户提交链接时删除
                 if 'task_hint_messages' not in context.user_data:
@@ -956,7 +968,9 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    task_id = int(query.data.split('_')[2])
+    # 支持 submit_task_123 和 submit_link_123 两种格式
+    parts = query.data.split('_')
+    task_id = int(parts[-1])  # 获取最后一个部分作为 task_id
     context.user_data['submit_task_id'] = task_id
     
     # 获取任务信息
@@ -1469,7 +1483,10 @@ def main():
     
     # 对话处理器 - 提交链接
     submit_conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$')],
+        entry_points=[
+            CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$'),
+            CallbackQueryHandler(submit_task_select_callback, pattern='^submit_link_\\d+$')  # 支持从下载消息直接提交
+        ],
         states={
             SUBMIT_LINK: [
                 CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$'),  # 允许在对话中切换任务
