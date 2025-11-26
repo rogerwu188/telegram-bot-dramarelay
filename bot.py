@@ -970,11 +970,13 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     # 支持 submit_task_123 和 submit_link_123 两种格式
     parts = query.data.split('_')
     task_id = int(parts[-1])  # 获取最后一个部分作为 task_id
+    logger.info(f"🔗 User {user_id} clicked submit link button for task {task_id}, callback_data: {query.data}")
     context.user_data['submit_task_id'] = task_id
     
     # 获取任务信息
     conn = get_db_connection()
     cur = conn.cursor()
+    logger.info(f"📊 Querying task info for user_id={user_id}, task_id={task_id}")
     cur.execute("""
         SELECT dt.title, dt.node_power_reward
         FROM user_tasks ut
@@ -982,10 +984,12 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         WHERE ut.user_id = %s AND ut.task_id = %s
     """, (user_id, task_id))
     task = cur.fetchone()
+    logger.info(f"📋 Query result: {task}")
     cur.close()
     conn.close()
     
     if not task:
+        logger.warning(f"⚠️ Task {task_id} not found for user {user_id}")
         await query.edit_message_text(
             "❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found",
             reply_markup=InlineKeyboardMarkup([[
