@@ -1234,8 +1234,36 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return SUBMIT_LINK
     
     # 验证通过，提交链接
-    reward = submit_task_link(user_id, task_id, platform, link)
-    stats = get_user_stats(user_id)
+    logger.info(f"✅ 验证通过，开始提交任务: user_id={user_id}, task_id={task_id}, platform={platform}")
+    try:
+        reward = submit_task_link(user_id, task_id, platform, link)
+        logger.info(f"✅ 任务提交成功，奖励: {reward} NP")
+    except Exception as e:
+        logger.error(f"❌ 提交任务失败: {e}", exc_info=True)
+        error_msg = (
+            f"❌ **提交失败**\n\n"
+            f"验证成功但保存失败，请联系管理员\n\n"
+            f"错误信息：{str(e)}"
+        ) if user_lang == 'zh' else (
+            f"❌ **Submission Failed**\n\n"
+            f"Verification passed but save failed, please contact admin\n\n"
+            f"Error: {str(e)}"
+        )
+        if task_card_message_id and task_card_chat_id:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_msg,
+                parse_mode='Markdown'
+            )
+        return ConversationHandler.END
+    
+    try:
+        stats = get_user_stats(user_id)
+        logger.info(f"✅ 获取用户统计成功: total_np={stats.get('total_node_power')}")
+    except Exception as e:
+        logger.error(f"❌ 获取用户统计失败: {e}", exc_info=True)
+        stats = {'total_node_power': 0}
     
     # 删除之前的提示消息
     try:
@@ -1277,15 +1305,25 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         InlineKeyboardButton("🏠 返回主菜单" if user_lang == 'zh' else "🏠 Back to Menu", callback_data='back_to_menu')
     ]])
     
-    if task_card_message_id and task_card_chat_id:
-        await context.bot.edit_message_text(
-            chat_id=task_card_chat_id,
-            message_id=task_card_message_id,
-            text=success_msg,
-            reply_markup=back_button,
-            parse_mode='Markdown'
-        )
+    logger.info(f"📣 准备发送成功消息: task_card_message_id={task_card_message_id}, task_card_chat_id={task_card_chat_id}")
     
+    if task_card_message_id and task_card_chat_id:
+        try:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=success_msg,
+                reply_markup=back_button,
+                parse_mode='Markdown'
+            )
+            logger.info("✅ 成功消息已发送")
+        except Exception as e:
+            logger.error(f"❌ 发送成功消息失败: {e}", exc_info=True)
+            # 即使发送失败，任务也已经提交成功
+    else:
+        logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空，无法编辑消息")
+    
+    logger.info("✅ link_input_handler 完成，返回 ConversationHandler.END")
     return ConversationHandler.END
 
 async def my_power_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
