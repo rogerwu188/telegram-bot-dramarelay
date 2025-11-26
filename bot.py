@@ -834,13 +834,67 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 os.unlink(tmp_file_path)
                 
                 # 更新为最终提示消息（不删除）
-                final_msg = (
-                    "✅ 请将下方视频上传至你的 YouTube/Instagram/TikTok 账号，上传时请复制视频底部的模版信息。\n"
-                    "📌 完成后点击上方「📤 提交链接」按钮提交链接，即可获取奖励"
-                ) if user_lang == 'zh' else (
-                    "✅ Please upload the video below to your YouTube/Instagram/TikTok account, and copy the template information at the bottom of the video when uploading.\n"
-                    "📌 Click the '📤 Submit Link' button above when done to receive your reward"
-                )
+                # 格式化关键词为 #tag 格式
+                keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+                hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
+                
+                if user_lang == 'zh':
+                    final_msg = f"""📤 请按以下提示上传短视频并完成任务：
+
+━━━━━━━━━━━━━━━━━━
+🎬【YouTube 上传内容】
+
+▶ 视频文件名称（请直接复制）：
+{title}
+
+▶ 视频描述（复制到 YouTube 描述栏）：
+{description}
+
+（YouTube 不需要填写标签，保持空白即可）
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok 上传内容】
+
+▶ TikTok 视频描述（请完整复制）：
+{description}
+
+▶ TikTok 标签（复制到描述栏下方）：
+{hashtags}
+
+━━━━━━━━━━━━━━━━━━
+💰【奖励说明】
+
+完成以上任务，并在本机器人提交你发布后的视频链接  
+即可获得 🎉 **{reward} Node Power**"""
+                else:
+                    final_msg = f"""📤 Please follow the instructions below to upload the video and complete the task:
+
+━━━━━━━━━━━━━━━━━━
+🎬【YouTube Upload Content】
+
+▶ Video Title (copy directly):
+{title}
+
+▶ Video Description (paste in YouTube description):
+{description}
+
+(YouTube does not require tags, leave blank)
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok Upload Content】
+
+▶ TikTok Description (copy completely):
+{description}
+
+▶ TikTok Hashtags (paste below description):
+{hashtags}
+
+━━━━━━━━━━━━━━━━━━
+💰【Reward】
+
+Complete the task above and submit your published video link in this bot  
+to receive 🎉 **{reward} Node Power**"""
+                
                 await download_msg.edit_text(final_msg)
                 
                 # 保存提示消息ID，以便用户提交链接时删除
