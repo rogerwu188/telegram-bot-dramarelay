@@ -36,7 +36,8 @@ if DATABASE_URL_RAW.startswith('mysql://'):
 else:
     DATABASE_URL = DATABASE_URL_RAW or 'postgresql://postgres:UTKrUjgtzTzfCRQcXtohVuKalpdeCLns@tramway.proxy.rlwy.net:57058/railway'
 API_KEY = os.getenv('API_KEY') or 'x2c_admin_secret_key_2024'
-PORT = int(os.getenv('API_PORT', '5000'))
+# Railway 提供 PORT 环境变量，优先使用它
+PORT = int(os.getenv('PORT') or os.getenv('API_PORT', '5000'))
 
 logger.info("✅ API Server configuration loaded")
 logger.info(f"✅ Database URL: {DATABASE_URL[:30]}...")
