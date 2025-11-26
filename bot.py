@@ -817,11 +817,33 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                                 cleaned_keywords.append(line)
                     keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
                     
-                    # 构建caption，标签后换行
+                    # 构建caption - 详细的上传指南格式
+                    # 格式化关键词为 #tag 格式
+                    keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+                    hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
+                    
                     if user_lang == 'zh':
-                        caption = f"🎬 上传视频标题：\n{title}\n\n上传视频描述：\n{description}\n\n上传关键词描述：\n{keywords}\n\n💰 完成任务可获得 {reward} Node Power"
+                        caption = f"""🎬 上传视频标题：
+{title}
+
+上传视频描述：
+{description}
+
+上传关键词描述：
+{hashtags}
+
+💰 完成任务可获得 {reward} Node Power"""
                     else:
-                        caption = f"🎬 Video Title:\n{title}\n\nVideo Description:\n{description}\n\nKeywords:\n{keywords}\n\n💰 Complete this task to earn {reward} Node Power"
+                        caption = f"""🎬 Video Title:
+{title}
+
+Video Description:
+{description}
+
+Keywords:
+{hashtags}
+
+💰 Complete this task to earn {reward} Node Power"""
                     
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
