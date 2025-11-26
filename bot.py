@@ -178,7 +178,7 @@ MESSAGES = {
 📱 平台：{platforms}
 
 ⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。""",
-        'task_claimed': '✅ 任务领取成功！\n\n请下载视频，上传到你选择的平台，然后回来提交链接。',
+        'task_claimed': '✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。',
         'task_already_claimed': '⚠️ 你已经领取过这个任务了。',
         'select_task_to_submit': '请选择要提交的任务：',
         'no_tasks_in_progress': '你当前没有进行中的任务。\n\n请先领取任务！',
@@ -267,7 +267,7 @@ Let's build the global drama distribution network together.""",
 📱 Platforms: {platforms}
 
 ⬇️ Click the button below to claim the task. The video will be automatically downloaded to the chat.""",
-        'task_claimed': '✅ Task claimed successfully!\n\nPlease download the video, upload it to your chosen platform, and come back to submit the link.',
+        'task_claimed': '✅ Task claimed successfully!\n\nDownloading video... After download completes, please upload it to your chosen platform, and come back to submit the link.',
         'task_already_claimed': '⚠️ You have already claimed this task.',
         'select_task_to_submit': 'Please select the task to submit:',
         'no_tasks_in_progress': 'You have no tasks in progress.\n\nPlease claim a task first!',
