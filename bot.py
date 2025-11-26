@@ -1312,7 +1312,10 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     
     user_id = query.from_user.id
+    logger.info(f"Language callback triggered: user_id={user_id}, callback_data={query.data}")
+    
     new_lang = query.data.split('_')[2]
+    logger.info(f"Switching language to: {new_lang}")
     
     set_user_language(user_id, new_lang)
     
