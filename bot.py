@@ -798,13 +798,26 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                     # 确保每个字段都有值，并且格式正确
                     title = task.get('title', '')
                     description = task.get('description', '')
-                    keywords = task.get('keywords_template', '')
+                    keywords_raw = task.get('keywords_template', '')
                     reward = task.get('node_power_reward', 0)
                     
-                    if user_lang == 'zh':
-                        caption = f"🎬 {title}\n{description}\n{keywords}\n💰 完成任务可获得 {reward} Node Power"
+                    # 清理 keywords_template：去掉"视频链接："及其后面的URL部分
+                    # 格式可能是："视频链接：https://...mp4, keywords_template=actual_keywords"
+                    if '视频链接：' in keywords_raw:
+                        # 找到 "keywords_template=" 后面的内容
+                        if 'keywords_template=' in keywords_raw:
+                            keywords = keywords_raw.split('keywords_template=')[1]
+                        else:
+                            # 如果没有 "keywords_template="，则去掉整个"视频链接："行
+                            keywords = ''
                     else:
-                        caption = f"🎬 {title}\n{description}\n{keywords}\n💰 Complete this task to earn {reward} Node Power"
+                        keywords = keywords_raw
+                    
+                    # 构建caption，添加标签文字
+                    if user_lang == 'zh':
+                        caption = f"🎬 上传视频标题：{title}\n上传视频描述：{description}\n上传关键词描述：{keywords}\n💰 完成任务可获得 {reward} Node Power"
+                    else:
+                        caption = f"🎬 Video Title: {title}\nVideo Description: {description}\nKeywords: {keywords}\n💰 Complete this task to earn {reward} Node Power"
                     
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
