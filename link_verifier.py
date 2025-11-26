@@ -1,50 +1,48 @@
 #!/usr/bin/env python3
 """
-链接验证模块（轻量级版本）
-使用 requests + BeautifulSoup 验证视频链接内容
+链接验证模块
+使用 Playwright 浏览器自动化验证视频链接的描述和标签
 """
-import logging
+import os
 import re
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+import logging
+from datetime import datetime
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 logger = logging.getLogger(__name__)
 
 class LinkVerifier:
-    """视频链接验证器（轻量级）"""
+    """视频链接验证器（使用 Playwright）"""
     
-    def __init__(self):
+    def __init__(self, screenshots_dir="/tmp/screenshots"):
         """初始化验证器"""
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
-        })
+        self.screenshots_dir = screenshots_dir
+        os.makedirs(screenshots_dir, exist_ok=True)
     
-    def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 15) -> dict:
+    def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 30000) -> dict:
         """
-        验证视频链接
+        验证视频链接 - 检查描述和标签是否包含任务关键词
         
         Args:
             url: 用户提交的视频链接
             task_title: 任务标题（用于关键词匹配）
             task_description: 任务描述（用于关键词匹配）
-            timeout: 请求超时时间（秒）
+            timeout: 页面加载超时时间（毫秒）
         
         Returns:
             dict: {
                 'success': bool,  # 验证是否成功
                 'matched': bool,  # 是否匹配任务关键词
+                'screenshot_path': str,  # 截图路径
                 'page_title': str,  # 页面标题
-                'page_text': str,  # 页面文本内容
+                'page_text': str,  # 页面文本内容（描述+标签）
                 'error': str  # 错误信息（如果有）
             }
         """
         result = {
             'success': False,
             'matched': False,
+            'screenshot_path': None,
             'page_title': '',
             'page_text': '',
             'error': None
@@ -53,137 +51,191 @@ class LinkVerifier:
         try:
             logger.info(f"🔍 开始验证链接: {url}")
             
-            # 发送 HTTP 请求
-            response = self.session.get(url, timeout=timeout, allow_redirects=True)
-            response.raise_for_status()
-            
-            logger.info(f"✅ 成功获取页面，状态码: {response.status_code}")
-            
-            # 解析 HTML
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 提取页面标题
-            result['page_title'] = self._extract_title(soup, url)
-            logger.info(f"📄 页面标题: {result['page_title']}")
-            
-            # 提取页面描述和内容
-            result['page_text'] = self._extract_content(soup, url)
-            logger.info(f"📝 提取到的文本: {result['page_text'][:200]}...")
-            
-            # 验证关键词匹配
-            result['matched'] = self._check_keywords_match(
-                result['page_title'],
-                result['page_text'],
-                task_title,
-                task_description
-            )
-            
-            result['success'] = True
-            logger.info(f"✅ 验证完成，匹配结果: {result['matched']}")
-            
-        except requests.exceptions.Timeout:
-            logger.error(f"❌ 请求超时")
-            result['error'] = "请求超时，无法访问链接"
-        except requests.exceptions.RequestException as e:
-            logger.error(f"❌ 请求失败: {e}")
-            result['error'] = f"无法访问链接: {str(e)}"
+            with sync_playwright() as p:
+                # 启动浏览器（使用 chromium）
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                )
+                
+                context = browser.new_context(
+                    viewport={'width': 1280, 'height': 720},
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                )
+                
+                page = context.new_page()
+                
+                # 访问链接
+                logger.info(f"📱 正在访问页面...")
+                try:
+                    page.goto(url, timeout=timeout, wait_until='domcontentloaded')
+                except PlaywrightTimeout:
+                    logger.warning("⚠️ 页面加载超时，继续尝试提取内容...")
+                
+                # 等待页面渲染（TikTok 需要时间加载动态内容）
+                page.wait_for_timeout(5000)
+                
+                # 获取页面标题
+                result['page_title'] = page.title()
+                logger.info(f"📄 页面标题: {result['page_title']}")
+                
+                # 提取视频描述和标签
+                result['page_text'] = self._extract_description_and_tags(page, url)
+                logger.info(f"📝 提取到的描述和标签: {result['page_text'][:300]}...")
+                
+                # 截图保存
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                screenshot_filename = f"verify_{timestamp}.png"
+                screenshot_path = os.path.join(self.screenshots_dir, screenshot_filename)
+                
+                page.screenshot(path=screenshot_path, full_page=False)
+                result['screenshot_path'] = screenshot_path
+                logger.info(f"📸 截图已保存: {screenshot_path}")
+                
+                browser.close()
+                
+                # 验证关键词匹配（只检查描述和标签）
+                result['matched'] = self._check_keywords_match(
+                    result['page_text'],
+                    task_title,
+                    task_description
+                )
+                
+                result['success'] = True
+                logger.info(f"✅ 验证完成，匹配结果: {result['matched']}")
+                
         except Exception as e:
             logger.error(f"❌ 验证失败: {e}")
             result['error'] = str(e)
         
         return result
     
-    def _extract_title(self, soup: BeautifulSoup, url: str) -> str:
-        """提取页面标题"""
-        # 优先级顺序：og:title > twitter:title > title 标签
-        
-        # 1. Open Graph title
-        og_title = soup.find('meta', property='og:title')
-        if og_title and og_title.get('content'):
-            return og_title['content'].strip()
-        
-        # 2. Twitter title
-        twitter_title = soup.find('meta', attrs={'name': 'twitter:title'})
-        if twitter_title and twitter_title.get('content'):
-            return twitter_title['content'].strip()
-        
-        # 3. 标准 title 标签
-        title_tag = soup.find('title')
-        if title_tag:
-            return title_tag.get_text().strip()
-        
-        # 4. 平台特定选择器
-        domain = urlparse(url).netloc.lower()
-        
-        if 'tiktok.com' in domain:
-            # TikTok 特定选择器
-            desc = soup.find('meta', attrs={'name': 'description'})
-            if desc and desc.get('content'):
-                return desc['content'].strip()
-        
-        return ""
-    
-    def _extract_content(self, soup: BeautifulSoup, url: str) -> str:
-        """提取页面内容"""
-        content_parts = []
-        
-        # 1. Meta 描述
-        meta_desc = soup.find('meta', attrs={'name': 'description'})
-        if meta_desc and meta_desc.get('content'):
-            content_parts.append(meta_desc['content'])
-        
-        # 2. Open Graph 描述
-        og_desc = soup.find('meta', property='og:description')
-        if og_desc and og_desc.get('content'):
-            content_parts.append(og_desc['content'])
-        
-        # 3. Twitter 描述
-        twitter_desc = soup.find('meta', attrs={'name': 'twitter:description'})
-        if twitter_desc and twitter_desc.get('content'):
-            content_parts.append(twitter_desc['content'])
-        
-        # 4. 平台特定内容提取
-        domain = urlparse(url).netloc.lower()
-        
-        if 'tiktok.com' in domain:
-            # TikTok: 尝试从 JSON-LD 提取
-            json_ld = soup.find('script', type='application/ld+json')
-            if json_ld:
-                content_parts.append(json_ld.string)
-        
-        elif 'youtube.com' in domain or 'youtu.be' in domain:
-            # YouTube: 提取视频描述
-            yt_desc = soup.find('meta', attrs={'name': 'description'})
-            if yt_desc and yt_desc.get('content'):
-                content_parts.append(yt_desc['content'])
-        
-        elif 'instagram.com' in domain:
-            # Instagram: 提取 og:description
-            pass  # 已在上面处理
-        
-        # 5. 提取主要文本内容（h1, h2, p 标签）
-        for tag in soup.find_all(['h1', 'h2', 'p'], limit=10):
-            text = tag.get_text().strip()
-            if text and len(text) > 10:
-                content_parts.append(text)
-        
-        return ' '.join(content_parts)
-    
-    def _check_keywords_match(self, page_title: str, page_text: str, task_title: str, task_description: str) -> bool:
+    def _extract_description_and_tags(self, page, url: str) -> str:
         """
-        检查页面内容是否包含任务关键词
+        提取视频描述和标签
         
         Args:
-            page_title: 页面标题
-            page_text: 页面文本
+            page: Playwright page 对象
+            url: 视频链接
+        
+        Returns:
+            str: 描述和标签的合并文本
+        """
+        text_parts = []
+        
+        # 判断平台
+        if 'tiktok.com' in url.lower():
+            # TikTok 特定选择器
+            selectors = [
+                # 视频描述
+                '[data-e2e="browse-video-desc"]',
+                '[data-e2e="video-desc"]',
+                'h1[data-e2e="browse-video-title"]',
+                # Meta 标签
+                'meta[property="og:description"]',
+                'meta[name="description"]',
+            ]
+            
+            for selector in selectors:
+                try:
+                    if selector.startswith('meta'):
+                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        if content:
+                            text_parts.append(content)
+                            logger.info(f"✓ 提取到 meta 内容: {content[:100]}")
+                    else:
+                        element = page.locator(selector).first
+                        if element.is_visible(timeout=2000):
+                            text = element.inner_text()
+                            if text:
+                                text_parts.append(text)
+                                logger.info(f"✓ 提取到描述: {text[:100]}")
+                except Exception as e:
+                    logger.debug(f"选择器 {selector} 未找到: {e}")
+                    continue
+            
+            # 提取标签（hashtags）
+            try:
+                hashtag_elements = page.locator('a[href*="/tag/"]').all()
+                hashtags = []
+                for elem in hashtag_elements[:20]:  # 限制最多20个标签
+                    try:
+                        tag_text = elem.inner_text()
+                        if tag_text.startswith('#'):
+                            hashtags.append(tag_text)
+                    except:
+                        continue
+                
+                if hashtags:
+                    hashtag_text = ' '.join(hashtags)
+                    text_parts.append(hashtag_text)
+                    logger.info(f"✓ 提取到标签: {hashtag_text}")
+            except Exception as e:
+                logger.debug(f"提取标签失败: {e}")
+        
+        elif 'youtube.com' in url.lower() or 'youtu.be' in url.lower():
+            # YouTube 特定选择器
+            selectors = [
+                '#title h1',
+                'yt-formatted-string.ytd-video-primary-info-renderer',
+                'meta[property="og:title"]',
+                'meta[property="og:description"]',
+                'meta[name="description"]',
+            ]
+            
+            for selector in selectors:
+                try:
+                    if selector.startswith('meta'):
+                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        if content:
+                            text_parts.append(content)
+                    else:
+                        element = page.locator(selector).first
+                        text = element.inner_text(timeout=2000)
+                        if text:
+                            text_parts.append(text)
+                except:
+                    continue
+        
+        elif 'instagram.com' in url.lower():
+            # Instagram 特定选择器
+            selectors = [
+                'h1',
+                'article h2',
+                'meta[property="og:title"]',
+                'meta[property="og:description"]',
+            ]
+            
+            for selector in selectors:
+                try:
+                    if selector.startswith('meta'):
+                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        if content:
+                            text_parts.append(content)
+                    else:
+                        element = page.locator(selector).first
+                        text = element.inner_text(timeout=2000)
+                        if text:
+                            text_parts.append(text)
+                except:
+                    continue
+        
+        return ' '.join(text_parts)
+    
+    def _check_keywords_match(self, page_text: str, task_title: str, task_description: str) -> bool:
+        """
+        检查描述和标签是否包含任务关键词
+        
+        Args:
+            page_text: 页面文本（描述+标签）
             task_title: 任务标题
             task_description: 任务描述
         
         Returns:
             bool: 是否匹配
         """
-        # 合并页面内容
-        page_content = f"{page_title} {page_text}".lower()
+        # 转换为小写
+        page_content = page_text.lower()
         
         # 从任务标题和描述中提取关键词
         keywords = set()
@@ -199,8 +251,9 @@ class LinkVerifier:
             keywords.update([w.lower() for w in desc_words if len(w) > 1])
         
         # 移除常见停用词
-        stopwords = {'的', '了', '是', '在', '和', '有', '我', '你', '他', '她', '它', 
-                     'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but'}
+        stopwords = {'的', '了', '是', '在', '和', '有', '我', '你', '他', '她', '它', '这', '那',
+                     'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'to',
+                     '推荐', '观看', '这部', '精彩', '短剧', '片段', '剧情', '跌宕起伏', '不容错过'}
         keywords = keywords - stopwords
         
         logger.info(f"🔑 关键词列表: {keywords}")
@@ -215,6 +268,7 @@ class LinkVerifier:
         
         logger.info(f"📊 匹配率: {match_rate:.2%} ({matched_count}/{len(keywords)})")
         logger.info(f"📋 匹配的关键词: {[k for k in keywords if k in page_content]}")
+        logger.info(f"❌ 未匹配的关键词: {[k for k in keywords if k not in page_content]}")
         
         # 至少匹配 30% 的关键词才算通过
         return match_rate >= 0.3
@@ -228,14 +282,16 @@ if __name__ == '__main__':
     
     # 测试 TikTok 链接
     result = verifier.verify_link(
-        url="https://www.tiktok.com/@wu.roger7/video/7576774823712394551",
+        url="https://www.tiktok.com/@wu.roger7/video/7577128093949725966",
         task_title="养母胜过生母",
-        task_description="分享短剧《养母胜过生母》真情反转片段"
+        task_description="推荐观看这部精彩短剧片段《养母胜过生母》，剧情跌宕起伏，不容错过！"
     )
     
     print("\n验证结果:")
     print(f"成功: {result['success']}")
     print(f"匹配: {result['matched']}")
     print(f"标题: {result['page_title']}")
+    print(f"描述和标签: {result['page_text']}")
+    print(f"截图: {result['screenshot_path']}")
     if result['error']:
         print(f"错误: {result['error']}")
