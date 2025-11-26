@@ -1476,6 +1476,7 @@ def main():
     application.add_handler(CallbackQueryHandler(task_detail_callback, pattern='^task_\\d+$'))
     application.add_handler(CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$'))
     application.add_handler(CallbackQueryHandler(submit_link_callback, pattern='^submit_link$'))
+    application.add_handler(CallbackQueryHandler(submit_task_select_callback, pattern='^submit_link_\\d+$'))  # 处理从下载消息直接提交
     application.add_handler(CallbackQueryHandler(my_power_callback, pattern='^my_power$'))
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
