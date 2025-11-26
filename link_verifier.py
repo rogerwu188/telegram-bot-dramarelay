@@ -19,7 +19,7 @@ class LinkVerifier:
         self.screenshots_dir = screenshots_dir
         os.makedirs(screenshots_dir, exist_ok=True)
     
-    async def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 30000) -> dict:
+    async def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 20000) -> dict:
         """
         验证视频链接 - 检查描述和标签是否包含任务关键词
         
@@ -68,31 +68,55 @@ class LinkVerifier:
                 # 访问链接
                 logger.info(f"📱 正在访问页面...")
                 try:
-                    await page.goto(url, timeout=timeout, wait_until='domcontentloaded')
+                    await page.goto(url, timeout=15000, wait_until='networkidle')
+                    logger.info("✅ 页面加载完成")
                 except PlaywrightTimeout:
-                    logger.warning("⚠️ 页面加载超时，继续尝试提取内容...")
+                    logger.warning("⚠️ 页面加载超时，尝试使用 domcontentloaded...")
+                    try:
+                        await page.goto(url, timeout=10000, wait_until='domcontentloaded')
+                    except Exception as e2:
+                        logger.error(f"页面加载失败: {e2}")
+                        result['error'] = f"无法访问链接: {str(e2)}"
+                        return result
+                except Exception as e:
+                    logger.error(f"访问页面失败: {e}")
+                    result['error'] = f"无法访问链接: {str(e)}"
+                    return result
                 
                 # 等待页面渲染（TikTok 需要时间加载动态内容）
-                await page.wait_for_timeout(5000)
+                try:
+                    await page.wait_for_timeout(3000)
+                except Exception as e:
+                    logger.warning(f"等待超时: {e}")
                 
                 # 获取页面标题
                 result['page_title'] = await page.title()
                 logger.info(f"📄 页面标题: {result['page_title']}")
                 
                 # 提取视频描述和标签
-                result['page_text'] = await self._extract_description_and_tags(page, url)
-                logger.info(f"📝 提取到的描述和标签: {result['page_text'][:300]}...")
+                try:
+                    result['page_text'] = await self._extract_description_and_tags(page, url)
+                    logger.info(f"📝 提取到的描述和标签: {result['page_text'][:300] if result['page_text'] else '(空)'}...")
+                except Exception as e:
+                    logger.error(f"提取内容失败: {e}")
+                    result['page_text'] = ''
                 
                 # 截图保存
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 screenshot_filename = f"verify_{timestamp}.png"
                 screenshot_path = os.path.join(self.screenshots_dir, screenshot_filename)
                 
-                await page.screenshot(path=screenshot_path, full_page=False)
-                result['screenshot_path'] = screenshot_path
-                logger.info(f"📸 截图已保存: {screenshot_path}")
+                try:
+                    await page.screenshot(path=screenshot_path, full_page=False, timeout=10000)
+                    result['screenshot_path'] = screenshot_path
+                    logger.info(f"📸 截图已保存: {screenshot_path}")
+                except Exception as e:
+                    logger.warning(f"截图失败: {e}")
                 
-                await browser.close()
+                try:
+                    await browser.close()
+                except Exception as e:
+                    logger.warning(f"关闭浏览器失败: {e}")
                 
                 # 验证关键词匹配（只检查描述和标签）
                 result['matched'] = self._check_keywords_match(
