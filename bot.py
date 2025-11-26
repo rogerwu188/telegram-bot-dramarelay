@@ -789,9 +789,17 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 
                 # 发送视频
                 with open(tmp_file_path, 'rb') as video_file:
-                    caption = f"🎬 {task['title']}\n\n" + \
-                              (f"💰 完成任务可获得 {task['node_power_reward']} Node Power" if user_lang == 'zh' \
-                               else f"💰 Complete this task to earn {task['node_power_reward']} Node Power")
+                    # 构建多行模版格式
+                    if user_lang == 'zh':
+                        caption = f"🎬 {task['title']}\n" + \
+                                  f"{task.get('description', '')}\n" + \
+                                  f"{task.get('keywords_template', '')}\n" + \
+                                  f"💰 完成任务可获得 {task['node_power_reward']} Node Power"
+                    else:
+                        caption = f"🎬 {task['title']}\n" + \
+                                  f"{task.get('description', '')}\n" + \
+                                  f"{task.get('keywords_template', '')}\n" + \
+                                  f"💰 Complete this task to earn {task['node_power_reward']} Node Power"
                     
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
@@ -805,11 +813,11 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 
                 # 更新为最终提示消息（不删除）
                 final_msg = (
-                    "✅ 视频已下载，请上传至你的 YouTube/Instagram/TikTok 账号\n\n"
-                    "📌 完成后点击下方「📤 Submit Link」按钮提交链接"
+                    "✅ 请将下方视频上传至你的 YouTube/Instagram/TikTok 账号，上传时请复制视频底部的模版信息。\n"
+                    "📌 完成后点击下方「📤 Submit Link」按钮提交链接，即可获取奖励"
                 ) if user_lang == 'zh' else (
-                    "✅ Video downloaded! Please upload it to your YouTube/Instagram/TikTok account\n\n"
-                    "📌 Click the '📤 Submit Link' button below when done"
+                    "✅ Please upload the video below to your YouTube/Instagram/TikTok account, and copy the template information at the bottom of the video when uploading.\n"
+                    "📌 Click the '📤 Submit Link' button below when done to receive your reward"
                 )
                 await download_msg.edit_text(final_msg)
                 
