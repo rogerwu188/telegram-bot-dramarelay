@@ -1316,10 +1316,21 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     
     set_user_language(user_id, new_lang)
     
-    message = "✅ 语言已切换为中文" if new_lang == 'zh' else "✅ Language switched to English"
+    # 获取完整的欢迎消息
+    texts = get_texts(new_lang)
+    welcome_message = texts['welcome']
     keyboard = get_main_menu_keyboard(new_lang)
     
-    await query.edit_message_text(message, reply_markup=keyboard)
+    # 先发送语言切换确认消息
+    confirm_message = "✅ 语言已切换为中文" if new_lang == 'zh' else "✅ Language switched to English"
+    await query.edit_message_text(confirm_message)
+    
+    # 然后发送完整的欢迎消息和菜单
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=welcome_message,
+        reply_markup=keyboard
+    )
 
 async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """返回主菜单"""
