@@ -855,10 +855,9 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 ━━━━━━━━━━━━━━━━━━
 🎬【TikTok 上传内容】
 
-▶ TikTok 视频描述（请完整复制）：
+▶️ TikTok 视频描述（请完整复制以下内容）：
 {description}
 
-▶ TikTok 标签（复制到描述栏下方）：
 {hashtags}
 
 ━━━━━━━━━━━━━━━━━━
