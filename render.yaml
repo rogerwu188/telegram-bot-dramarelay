@@ -1,0 +1,27 @@
+services:
+  # Web Service (API Server + Telegram Bot)
+  - type: web
+    name: x2c-drama-bot
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: x2c-drama-db
+          property: connectionString
+      - key: API_KEY
+        value: x2c_admin_secret_key_2024
+
+databases:
+  - name: x2c-drama-db
+    databaseName: x2c_drama
+    user: x2c_user
+    plan: free
