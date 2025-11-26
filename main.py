@@ -1,44 +1,60 @@
 #!/usr/bin/env python3
 """
 主启动文件 - 同时运行 Telegram Bot 和 API 服务器
+使用线程而不是进程，以确保在容器环境中正常工作
 """
-import multiprocessing
+import threading
 import sys
 import os
+import time
 
 def run_bot():
     """运行 Telegram Bot"""
     print("🤖 Starting Telegram Bot...")
-    os.system("python3 bot.py")
+    sys.stdout.flush()
+    import bot
+    # bot.py 会自动运行
 
 def run_api():
     """运行 API 服务器"""
     print("🌐 Starting API Server...")
-    os.system("python3 api_server.py")
+    sys.stdout.flush()
+    import api_server
+    # api_server.py 会自动运行
 
 if __name__ == "__main__":
-    # 创建两个进程
-    bot_process = multiprocessing.Process(target=run_bot, name="TelegramBot")
-    api_process = multiprocessing.Process(target=run_api, name="APIServer")
+    print("=" * 60)
+    print("X2C Drama Relay - Starting Services")
+    print("=" * 60)
+    sys.stdout.flush()
+    
+    # 创建两个线程
+    api_thread = threading.Thread(target=run_api, name="APIServer", daemon=True)
+    bot_thread = threading.Thread(target=run_bot, name="TelegramBot", daemon=False)
     
     try:
-        # 启动进程
-        bot_process.start()
-        api_process.start()
+        # 先启动 API Server
+        api_thread.start()
+        time.sleep(2)  # 等待 API Server 启动
+        
+        # 再启动 Bot
+        bot_thread.start()
         
         print("✅ Both services started successfully!")
-        print("   - Telegram Bot (PID: {})".format(bot_process.pid))
-        print("   - API Server (PID: {})".format(api_process.pid))
+        print("   - API Server (Thread: {})".format(api_thread.name))
+        print("   - Telegram Bot (Thread: {})".format(bot_thread.name))
+        print("=" * 60)
+        sys.stdout.flush()
         
-        # 等待进程结束
-        bot_process.join()
-        api_process.join()
+        # 等待 Bot 线程结束（主线程）
+        bot_thread.join()
         
     except KeyboardInterrupt:
         print("\n🛑 Shutting down services...")
-        bot_process.terminate()
-        api_process.terminate()
-        bot_process.join()
-        api_process.join()
+        sys.stdout.flush()
         print("✅ Services stopped")
         sys.exit(0)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.stdout.flush()
+        sys.exit(1)
