@@ -1320,8 +1320,7 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     set_user_language(user_id, new_lang)
     
     # 获取完整的欢迎消息
-    texts = get_texts(new_lang)
-    welcome_message = texts['welcome']
+    welcome_message = get_message(new_lang, 'welcome')
     keyboard = get_main_menu_keyboard(new_lang)
     
     # 删除旧消息
