@@ -281,8 +281,15 @@ class LinkVerifier:
         
         # 提取任务标题中的关键词（去除标点符号）
         title_words = re.findall(r'[\w\u4e00-\u9fff]+', task_title)
-        # 过滤掉单字和常见词
-        keywords.update([w.lower() for w in title_words if len(w) > 1])
+        # 过滤掉单字、纯数字、包含数字的词和常见词
+        for w in title_words:
+            if len(w) <= 1:  # 过滤单字
+                continue
+            if w.isdigit():  # 过滤纯数字
+                continue
+            if re.search(r'\d', w):  # 过滤包含数字的词（如"第5集"、"觉醒2"）
+                continue
+            keywords.add(w.lower())
         
         # 不再从描述中提取关键词，因为描述包含大量营销性词语
         
@@ -293,9 +300,11 @@ class LinkVerifier:
             'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'to', 'of', 'for',
             # 营销性词语
             '推荐', '观看', '这部', '精彩', '短剧', '片段', '剧情', '跌宕起伏', '不容错过',
-            '精选', '热门', '好看', '必看', '强烈推荐', '热播', '爆款', '热剧',
-            '女主', '男主', '角色', '觉醒', '逆袭', '复仇', '重生', '穿越',
-            '第', '集', 'ep', 'episode'
+            '精选', '热门', '好看', '必看', '强烈推荐', '热播', '爆款', '热剧', '短剧',
+            '女主', '男主', '角色', '觉醒', '逆袭', '复仇', '重生', '穿越', '觉醒',
+            '第', '集', 'ep', 'episode',
+            # 其他常见词
+            '中', '上', '下', '左', '右', '前', '后'
         }
         keywords = keywords - stopwords
         
