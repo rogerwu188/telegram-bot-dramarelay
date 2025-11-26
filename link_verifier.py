@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
 链接验证模块
-使用 Playwright 浏览器自动化验证视频链接的描述和标签
+使用 Playwright 浏览器自动化验证视频链接的描述和标签（异步版本）
 """
 import os
 import re
 import logging
 from datetime import datetime
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
 logger = logging.getLogger(__name__)
 
 class LinkVerifier:
-    """视频链接验证器（使用 Playwright）"""
+    """视频链接验证器（使用 Playwright 异步 API）"""
     
     def __init__(self, screenshots_dir="/tmp/screenshots"):
         """初始化验证器"""
         self.screenshots_dir = screenshots_dir
         os.makedirs(screenshots_dir, exist_ok=True)
     
-    def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 30000) -> dict:
+    async def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 30000) -> dict:
         """
         验证视频链接 - 检查描述和标签是否包含任务关键词
         
@@ -51,36 +51,36 @@ class LinkVerifier:
         try:
             logger.info(f"🔍 开始验证链接: {url}")
             
-            with sync_playwright() as p:
+            async with async_playwright() as p:
                 # 启动浏览器（使用 chromium）
-                browser = p.chromium.launch(
+                browser = await p.chromium.launch(
                     headless=True,
                     args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
                 )
                 
-                context = browser.new_context(
+                context = await browser.new_context(
                     viewport={'width': 1280, 'height': 720},
                     user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 )
                 
-                page = context.new_page()
+                page = await context.new_page()
                 
                 # 访问链接
                 logger.info(f"📱 正在访问页面...")
                 try:
-                    page.goto(url, timeout=timeout, wait_until='domcontentloaded')
+                    await page.goto(url, timeout=timeout, wait_until='domcontentloaded')
                 except PlaywrightTimeout:
                     logger.warning("⚠️ 页面加载超时，继续尝试提取内容...")
                 
                 # 等待页面渲染（TikTok 需要时间加载动态内容）
-                page.wait_for_timeout(5000)
+                await page.wait_for_timeout(5000)
                 
                 # 获取页面标题
-                result['page_title'] = page.title()
+                result['page_title'] = await page.title()
                 logger.info(f"📄 页面标题: {result['page_title']}")
                 
                 # 提取视频描述和标签
-                result['page_text'] = self._extract_description_and_tags(page, url)
+                result['page_text'] = await self._extract_description_and_tags(page, url)
                 logger.info(f"📝 提取到的描述和标签: {result['page_text'][:300]}...")
                 
                 # 截图保存
@@ -88,11 +88,11 @@ class LinkVerifier:
                 screenshot_filename = f"verify_{timestamp}.png"
                 screenshot_path = os.path.join(self.screenshots_dir, screenshot_filename)
                 
-                page.screenshot(path=screenshot_path, full_page=False)
+                await page.screenshot(path=screenshot_path, full_page=False)
                 result['screenshot_path'] = screenshot_path
                 logger.info(f"📸 截图已保存: {screenshot_path}")
                 
-                browser.close()
+                await browser.close()
                 
                 # 验证关键词匹配（只检查描述和标签）
                 result['matched'] = self._check_keywords_match(
@@ -105,12 +105,12 @@ class LinkVerifier:
                 logger.info(f"✅ 验证完成，匹配结果: {result['matched']}")
                 
         except Exception as e:
-            logger.error(f"❌ 验证失败: {e}")
+            logger.error(f"❌ 验证失败: {e}", exc_info=True)
             result['error'] = str(e)
         
         return result
     
-    def _extract_description_and_tags(self, page, url: str) -> str:
+    async def _extract_description_and_tags(self, page, url: str) -> str:
         """
         提取视频描述和标签
         
@@ -139,14 +139,14 @@ class LinkVerifier:
             for selector in selectors:
                 try:
                     if selector.startswith('meta'):
-                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        content = await page.get_attribute(selector, 'content', timeout=2000)
                         if content:
                             text_parts.append(content)
                             logger.info(f"✓ 提取到 meta 内容: {content[:100]}")
                     else:
                         element = page.locator(selector).first
-                        if element.is_visible(timeout=2000):
-                            text = element.inner_text()
+                        if await element.is_visible(timeout=2000):
+                            text = await element.inner_text()
                             if text:
                                 text_parts.append(text)
                                 logger.info(f"✓ 提取到描述: {text[:100]}")
@@ -156,11 +156,11 @@ class LinkVerifier:
             
             # 提取标签（hashtags）
             try:
-                hashtag_elements = page.locator('a[href*="/tag/"]').all()
+                hashtag_elements = await page.locator('a[href*="/tag/"]').all()
                 hashtags = []
                 for elem in hashtag_elements[:20]:  # 限制最多20个标签
                     try:
-                        tag_text = elem.inner_text()
+                        tag_text = await elem.inner_text()
                         if tag_text.startswith('#'):
                             hashtags.append(tag_text)
                     except:
@@ -186,12 +186,12 @@ class LinkVerifier:
             for selector in selectors:
                 try:
                     if selector.startswith('meta'):
-                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        content = await page.get_attribute(selector, 'content', timeout=2000)
                         if content:
                             text_parts.append(content)
                     else:
                         element = page.locator(selector).first
-                        text = element.inner_text(timeout=2000)
+                        text = await element.inner_text(timeout=2000)
                         if text:
                             text_parts.append(text)
                 except:
@@ -209,12 +209,12 @@ class LinkVerifier:
             for selector in selectors:
                 try:
                     if selector.startswith('meta'):
-                        content = page.get_attribute(selector, 'content', timeout=2000)
+                        content = await page.get_attribute(selector, 'content', timeout=2000)
                         if content:
                             text_parts.append(content)
                     else:
                         element = page.locator(selector).first
-                        text = element.inner_text(timeout=2000)
+                        text = await element.inner_text(timeout=2000)
                         if text:
                             text_parts.append(text)
                 except:
@@ -276,22 +276,27 @@ class LinkVerifier:
 
 # 测试代码
 if __name__ == '__main__':
+    import asyncio
+    
     logging.basicConfig(level=logging.INFO)
     
-    verifier = LinkVerifier()
+    async def test():
+        verifier = LinkVerifier()
+        
+        # 测试 TikTok 链接
+        result = await verifier.verify_link(
+            url="https://www.tiktok.com/@wu.roger7/video/7577128093949725966",
+            task_title="养母胜过生母",
+            task_description="推荐观看这部精彩短剧片段《养母胜过生母》，剧情跌宕起伏，不容错过！"
+        )
+        
+        print("\n验证结果:")
+        print(f"成功: {result['success']}")
+        print(f"匹配: {result['matched']}")
+        print(f"标题: {result['page_title']}")
+        print(f"描述和标签: {result['page_text']}")
+        print(f"截图: {result['screenshot_path']}")
+        if result['error']:
+            print(f"错误: {result['error']}")
     
-    # 测试 TikTok 链接
-    result = verifier.verify_link(
-        url="https://www.tiktok.com/@wu.roger7/video/7577128093949725966",
-        task_title="养母胜过生母",
-        task_description="推荐观看这部精彩短剧片段《养母胜过生母》，剧情跌宕起伏，不容错过！"
-    )
-    
-    print("\n验证结果:")
-    print(f"成功: {result['success']}")
-    print(f"匹配: {result['matched']}")
-    print(f"标题: {result['page_title']}")
-    print(f"描述和标签: {result['page_text']}")
-    print(f"截图: {result['screenshot_path']}")
-    if result['error']:
-        print(f"错误: {result['error']}")
+    asyncio.run(test())

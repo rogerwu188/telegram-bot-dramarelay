@@ -1142,8 +1142,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             parse_mode='Markdown'
         )
     
-    # 调用验证器
-    verify_result = link_verifier.verify_link(
+    # 调用验证器（异步）
+    verify_result = await link_verifier.verify_link(
         url=link,
         task_title=task['title'],
         task_description=task['description'] or ''
