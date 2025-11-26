@@ -1321,11 +1321,13 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     welcome_message = texts['welcome']
     keyboard = get_main_menu_keyboard(new_lang)
     
-    # 先发送语言切换确认消息
-    confirm_message = "✅ 语言已切换为中文" if new_lang == 'zh' else "✅ Language switched to English"
-    await query.edit_message_text(confirm_message)
+    # 删除旧消息
+    try:
+        await query.message.delete()
+    except:
+        pass
     
-    # 然后发送完整的欢迎消息和菜单
+    # 发送完整的欢迎消息和菜单
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=welcome_message,
