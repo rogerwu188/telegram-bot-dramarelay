@@ -31,6 +31,25 @@ if __name__ == "__main__":
     print("=" * 60)
     sys.stdout.flush()
     
+    # 检查并安装 Playwright 浏览器
+    print("🔍 Checking Playwright browsers...")
+    sys.stdout.flush()
+    playwright_cache = os.path.expanduser("~/.cache/ms-playwright/chromium-1091")
+    if not os.path.exists(playwright_cache):
+        print("📥 Installing Playwright Chromium browser...")
+        sys.stdout.flush()
+        try:
+            subprocess.run(["playwright", "install", "chromium"], check=True)
+            subprocess.run(["playwright", "install-deps", "chromium"], check=True)
+            print("✅ Playwright browser installed successfully!")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to install Playwright browser: {e}")
+            print("   Link verification may not work properly.")
+        sys.stdout.flush()
+    else:
+        print("✅ Playwright browser already installed")
+        sys.stdout.flush()
+    
     try:
         # 启动 API Server
         print("🌐 Starting API Server...")
