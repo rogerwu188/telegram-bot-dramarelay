@@ -283,7 +283,7 @@ def create_task():
             'error': str(e)
         }), 500
 
-@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+@app.route('/api/tasks/<int:task_id>', methods=['PUT', 'PATCH'])
 @require_api_key
 def update_task(task_id):
     """更新任务"""
