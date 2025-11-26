@@ -801,23 +801,27 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                     keywords_raw = task.get('keywords_template', '')
                     reward = task.get('node_power_reward', 0)
                     
-                    # 清理 keywords_template：去掉"视频链接："及其后面的URL部分
-                    # 格式可能是："视频链接：https://...mp4, keywords_template=actual_keywords"
-                    if '视频链接：' in keywords_raw:
-                        # 找到 "keywords_template=" 后面的内容
-                        if 'keywords_template=' in keywords_raw:
-                            keywords = keywords_raw.split('keywords_template=')[1]
-                        else:
-                            # 如果没有 "keywords_template="，则去掉整个"视频链接："行
-                            keywords = ''
-                    else:
-                        keywords = keywords_raw
+                    # 清理 keywords_template：完全删除包含"视频链接："的行
+                    keywords_lines = keywords_raw.split('\n')
+                    cleaned_keywords = []
+                    for line in keywords_lines:
+                        # 跳过包含"视频链接："的行
+                        if '视频链接：' not in line and line.strip():
+                            # 如果行中包含"keywords_template="，提取后面的内容
+                            if 'keywords_template=' in line:
+                                cleaned_keywords.append(line.split('keywords_template=')[1])
+                            # 如果行中包含"上传关键词描述："，提取后面的内容
+                            elif '上传关键词描述：' in line:
+                                cleaned_keywords.append(line.split('上传关键词描述：')[1])
+                            else:
+                                cleaned_keywords.append(line)
+                    keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
                     
-                    # 构建caption，添加标签文字
+                    # 构建caption，标签后换行
                     if user_lang == 'zh':
-                        caption = f"🎬 上传视频标题：{title}\n上传视频描述：{description}\n上传关键词描述：{keywords}\n💰 完成任务可获得 {reward} Node Power"
+                        caption = f"🎬 上传视频标题：\n{title}\n\n上传视频描述：\n{description}\n\n上传关键词描述：\n{keywords}\n\n💰 完成任务可获得 {reward} Node Power"
                     else:
-                        caption = f"🎬 Video Title: {title}\nVideo Description: {description}\nKeywords: {keywords}\n💰 Complete this task to earn {reward} Node Power"
+                        caption = f"🎬 Video Title:\n{title}\n\nVideo Description:\n{description}\n\nKeywords:\n{keywords}\n\n💰 Complete this task to earn {reward} Node Power"
                     
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
