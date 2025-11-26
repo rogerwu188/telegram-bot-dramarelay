@@ -1053,6 +1053,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     link = update.message.text.strip()
     task_id = context.user_data.get('submit_task_id')
     
+    logger.info(f"🔗 link_input_handler called: user_id={user_id}, task_id={task_id}, link={link[:50]}...")
+    
     # 获取任务卡片消息 ID
     task_card_message_id = context.user_data.get('task_card_message_id')
     task_card_chat_id = context.user_data.get('task_card_chat_id')
@@ -1476,7 +1478,6 @@ def main():
     application.add_handler(CallbackQueryHandler(task_detail_callback, pattern='^task_\\d+$'))
     application.add_handler(CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$'))
     application.add_handler(CallbackQueryHandler(submit_link_callback, pattern='^submit_link$'))
-    application.add_handler(CallbackQueryHandler(submit_task_select_callback, pattern='^submit_link_\\d+$'))  # 处理从下载消息直接提交
     application.add_handler(CallbackQueryHandler(my_power_callback, pattern='^my_power$'))
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
