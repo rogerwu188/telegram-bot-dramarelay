@@ -754,8 +754,11 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         message = get_message(user_lang, 'task_claimed')
         logger.info(f"✅ Task claimed successfully, sending confirmation message")
         
-        # 先发送确认消息
-        keyboard = get_main_menu_keyboard(user_lang)
+        # 先发送确认消息，只显示2个按钮：提交链接 + 返回主菜单
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(get_message(user_lang, 'menu_submit_link'), callback_data='submit_link')],
+            [InlineKeyboardButton("« 返回主菜单" if user_lang == 'zh' else "« Back to Menu", callback_data='back_to_menu')]
+        ])
         await query.edit_message_text(message, reply_markup=keyboard)
         
         # 如果任务有视频链接，下载并发送视频
@@ -790,16 +793,18 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # 发送视频
                 with open(tmp_file_path, 'rb') as video_file:
                     # 构建多行模版格式
+                    logger.info(f"📝 Task data for caption: title={task.get('title')}, description={task.get('description')}, keywords_template={task.get('keywords_template')}")
+                    
+                    # 确保每个字段都有值，并且格式正确
+                    title = task.get('title', '')
+                    description = task.get('description', '')
+                    keywords = task.get('keywords_template', '')
+                    reward = task.get('node_power_reward', 0)
+                    
                     if user_lang == 'zh':
-                        caption = f"🎬 {task['title']}\n" + \
-                                  f"{task.get('description', '')}\n" + \
-                                  f"{task.get('keywords_template', '')}\n" + \
-                                  f"💰 完成任务可获得 {task['node_power_reward']} Node Power"
+                        caption = f"🎬 {title}\n{description}\n{keywords}\n💰 完成任务可获得 {reward} Node Power"
                     else:
-                        caption = f"🎬 {task['title']}\n" + \
-                                  f"{task.get('description', '')}\n" + \
-                                  f"{task.get('keywords_template', '')}\n" + \
-                                  f"💰 Complete this task to earn {task['node_power_reward']} Node Power"
+                        caption = f"🎬 {title}\n{description}\n{keywords}\n💰 Complete this task to earn {reward} Node Power"
                     
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
@@ -814,10 +819,10 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # 更新为最终提示消息（不删除）
                 final_msg = (
                     "✅ 请将下方视频上传至你的 YouTube/Instagram/TikTok 账号，上传时请复制视频底部的模版信息。\n"
-                    "📌 完成后点击下方「📤 Submit Link」按钮提交链接，即可获取奖励"
+                    "📌 完成后点击上方「📤 提交链接」按钮提交链接，即可获取奖励"
                 ) if user_lang == 'zh' else (
                     "✅ Please upload the video below to your YouTube/Instagram/TikTok account, and copy the template information at the bottom of the video when uploading.\n"
-                    "📌 Click the '📤 Submit Link' button below when done to receive your reward"
+                    "📌 Click the '📤 Submit Link' button above when done to receive your reward"
                 )
                 await download_msg.edit_text(final_msg)
                 
