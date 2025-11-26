@@ -845,10 +845,17 @@ Keywords:
 
 💰 Complete this task to earn {reward} Node Power"""
                     
+                    # 生成合法的文件名（去掉特殊字符）
+                    safe_filename = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '·', '《', '》')).strip()
+                    if not safe_filename:
+                        safe_filename = f"video_{task_id}"
+                    filename = f"{safe_filename}.mp4"
+                    
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
                         video=video_file,
                         caption=caption,
+                        filename=filename,
                         supports_streaming=True
                     )
                 
