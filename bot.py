@@ -7,6 +7,7 @@ X2C DramaRelayBot - 全球短剧分发节点 Telegram Bot
 import os
 import re
 import logging
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 import psycopg2
@@ -1142,12 +1143,32 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             parse_mode='Markdown'
         )
     
-    # 调用验证器（异步）
-    verify_result = await link_verifier.verify_link(
-        url=link,
-        task_title=task['title'],
-        task_description=task['description'] or ''
-    )
+    # 调用验证器（异步）并设置超时
+    logger.info(f"🔍 开始调用 verify_link: url={link[:50]}...")
+    try:
+        verify_result = await asyncio.wait_for(
+            link_verifier.verify_link(
+                url=link,
+                task_title=task['title'],
+                task_description=task['description'] or ''
+            ),
+            timeout=45.0  # 45秒超时
+        )
+        logger.info(f"✅ verify_link 返回: success={verify_result.get('success')}, matched={verify_result.get('matched')}")
+    except asyncio.TimeoutError:
+        logger.error("⚠️ verify_link 超时！45秒未返回")
+        verify_result = {
+            'success': False,
+            'matched': False,
+            'error': '验证超时，请稍后重试'
+        }
+    except Exception as e:
+        logger.error(f"❌ verify_link 异常: {e}", exc_info=True)
+        verify_result = {
+            'success': False,
+            'matched': False,
+            'error': f'验证失败: {str(e)}'
+        }
     
     # 检查验证结果
     if not verify_result['success']:

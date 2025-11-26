@@ -50,23 +50,31 @@ class LinkVerifier:
         
         try:
             logger.info(f"🔍 开始验证链接: {url}")
+            logger.info("🎭 Step 1: 启动 Playwright...")
             
             async with async_playwright() as p:
+                logger.info("✅ Playwright 已启动")
                 # 启动浏览器（使用 chromium）
+                logger.info("🎭 Step 2: 启动 Chromium 浏览器...")
                 browser = await p.chromium.launch(
                     headless=True,
                     args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
                 )
+                logger.info("✅ Chromium 浏览器已启动")
                 
+                logger.info("🎭 Step 3: 创建浏览器上下文...")
                 context = await browser.new_context(
                     viewport={'width': 1280, 'height': 720},
                     user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 )
+                logger.info("✅ 上下文已创建")
                 
+                logger.info("🎭 Step 4: 创建新页面...")
                 page = await context.new_page()
+                logger.info("✅ 页面已创建")
                 
                 # 访问链接
-                logger.info(f"📱 正在访问页面...")
+                logger.info(f"🎭 Step 5: 访问页面 {url}...")
                 try:
                     await page.goto(url, timeout=15000, wait_until='networkidle')
                     logger.info("✅ 页面加载完成")
@@ -84,16 +92,20 @@ class LinkVerifier:
                     return result
                 
                 # 等待页面渲染（TikTok 需要时间加载动态内容）
+                logger.info("🎭 Step 6: 等待页面渲染...")
                 try:
                     await page.wait_for_timeout(3000)
+                    logger.info("✅ 页面渲染完成")
                 except Exception as e:
                     logger.warning(f"等待超时: {e}")
                 
                 # 获取页面标题
+                logger.info("🎭 Step 7: 获取页面标题...")
                 result['page_title'] = await page.title()
-                logger.info(f"📄 页面标题: {result['page_title']}")
+                logger.info(f"✅ 页面标题: {result['page_title']}")
                 
                 # 提取视频描述和标签
+                logger.info("🎭 Step 8: 提取描述和标签...")
                 try:
                     result['page_text'] = await self._extract_description_and_tags(page, url)
                     logger.info(f"📝 提取到的描述和标签: {result['page_text'][:300] if result['page_text'] else '(空)'}...")
@@ -102,6 +114,7 @@ class LinkVerifier:
                     result['page_text'] = ''
                 
                 # 截图保存
+                logger.info("🎭 Step 9: 截图...")
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 screenshot_filename = f"verify_{timestamp}.png"
                 screenshot_path = os.path.join(self.screenshots_dir, screenshot_filename)
@@ -113,8 +126,10 @@ class LinkVerifier:
                 except Exception as e:
                     logger.warning(f"截图失败: {e}")
                 
+                logger.info("🎭 Step 10: 关闭浏览器...")
                 try:
                     await browser.close()
+                    logger.info("✅ 浏览器已关闭")
                 except Exception as e:
                     logger.warning(f"关闭浏览器失败: {e}")
                 
