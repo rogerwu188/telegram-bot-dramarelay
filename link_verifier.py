@@ -276,7 +276,7 @@ class LinkVerifier:
         # 转换为小写
         page_content = page_text.lower()
         
-        # 从任务标题和描述中提取关键词
+        # 从任务标题中提取关键词（不使用描述）
         keywords = set()
         
         # 提取任务标题中的关键词（去除标点符号）
@@ -284,15 +284,19 @@ class LinkVerifier:
         # 过滤掉单字和常见词
         keywords.update([w.lower() for w in title_words if len(w) > 1])
         
-        # 提取任务描述中的关键词
-        if task_description:
-            desc_words = re.findall(r'[\w\u4e00-\u9fff]+', task_description)
-            keywords.update([w.lower() for w in desc_words if len(w) > 1])
+        # 不再从描述中提取关键词，因为描述包含大量营销性词语
         
-        # 移除常见停用词
-        stopwords = {'的', '了', '是', '在', '和', '有', '我', '你', '他', '她', '它', '这', '那',
-                     'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'to',
-                     '推荐', '观看', '这部', '精彩', '短剧', '片段', '剧情', '跌宕起伏', '不容错过'}
+        # 移除常见停用词和营销词语
+        stopwords = {
+            # 基础停用词
+            '的', '了', '是', '在', '和', '有', '我', '你', '他', '她', '它', '这', '那', '一', '二', '三', '四', '五',
+            'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'to', 'of', 'for',
+            # 营销性词语
+            '推荐', '观看', '这部', '精彩', '短剧', '片段', '剧情', '跌宕起伏', '不容错过',
+            '精选', '热门', '好看', '必看', '强烈推荐', '热播', '爆款', '热剧',
+            '女主', '男主', '角色', '觉醒', '逆袭', '复仇', '重生', '穿越',
+            '第', '集', 'ep', 'episode'
+        }
         keywords = keywords - stopwords
         
         logger.info(f"🔑 关键词列表: {keywords}")
@@ -309,8 +313,8 @@ class LinkVerifier:
         logger.info(f"📋 匹配的关键词: {[k for k in keywords if k in page_content]}")
         logger.info(f"❌ 未匹配的关键词: {[k for k in keywords if k not in page_content]}")
         
-        # 至少匹配 30% 的关键词才算通过
-        return match_rate >= 0.3
+        # 至少匹配 20% 的关键词才算通过（降低阈值因为只使用标题关键词）
+        return match_rate >= 0.2
 
 
 # 测试代码
