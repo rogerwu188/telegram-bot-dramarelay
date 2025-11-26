@@ -1193,14 +1193,23 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
         ]])
         
+        logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
         if task_card_message_id and task_card_chat_id:
-            await context.bot.edit_message_text(
-                chat_id=task_card_chat_id,
-                message_id=task_card_message_id,
-                text=error_msg,
-                reply_markup=retry_button,
-                parse_mode='Markdown'
-            )
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=task_card_chat_id,
+                    message_id=task_card_message_id,
+                    text=error_msg,
+                    reply_markup=retry_button,
+                    parse_mode='Markdown'
+                )
+                logger.info("✅ 不匹配错误消息已发送")
+            except Exception as e:
+                logger.error(f"❌ 发送不匹配错误消息失败: {e}", exc_info=True)
+        else:
+            logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空")
+        
+        logger.info("✅ 返回 SUBMIT_LINK 状态")
         return SUBMIT_LINK
     
     if not verify_result['matched']:
@@ -1223,14 +1232,23 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
         ]])
         
+        logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
         if task_card_message_id and task_card_chat_id:
-            await context.bot.edit_message_text(
-                chat_id=task_card_chat_id,
-                message_id=task_card_message_id,
-                text=error_msg,
-                reply_markup=retry_button,
-                parse_mode='Markdown'
-            )
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=task_card_chat_id,
+                    message_id=task_card_message_id,
+                    text=error_msg,
+                    reply_markup=retry_button,
+                    parse_mode='Markdown'
+                )
+                logger.info("✅ 不匹配错误消息已发送")
+            except Exception as e:
+                logger.error(f"❌ 发送不匹配错误消息失败: {e}", exc_info=True)
+        else:
+            logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空")
+        
+        logger.info("✅ 返回 SUBMIT_LINK 状态")
         return SUBMIT_LINK
     
     # 验证通过，提交链接
