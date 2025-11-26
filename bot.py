@@ -454,7 +454,9 @@ def get_user_in_progress_tasks(user_id: int) -> List[dict]:
         SELECT ut.*, dt.title, dt.node_power_reward
         FROM user_tasks ut
         JOIN drama_tasks dt ON ut.task_id = dt.task_id
-        WHERE ut.user_id = %s AND ut.status = 'in_progress'
+        WHERE ut.user_id = %s 
+          AND ut.status = 'in_progress'
+          AND dt.status = 'active'
         ORDER BY ut.created_at DESC
     """, (user_id,))
     
