@@ -1021,11 +1021,24 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         )
     ]]
     
-    sent_msg = await query.edit_message_text(
-        message,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    logger.info(f"✏️ 准备编辑原消息: message_id={query.message.message_id}, chat_id={query.message.chat_id}")
+    try:
+        sent_msg = await query.edit_message_text(
+            message,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        logger.info(f"✅ 成功编辑原消息: message_id={sent_msg.message_id}")
+    except Exception as e:
+        logger.error(f"❌ 编辑原消息失败: {e}", exc_info=True)
+        # 如果编辑失败，尝试发送新消息
+        sent_msg = await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=message,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        logger.warning(f"⚠️ 已发送新消息: message_id={sent_msg.message_id}")
     
     # 保存任务卡片消息 ID
     context.user_data['task_card_message_id'] = sent_msg.message_id
