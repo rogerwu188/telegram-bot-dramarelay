@@ -226,7 +226,8 @@ class LinkVerifier:
             for selector in selectors:
                 try:
                     if selector.startswith('meta'):
-                        content = await page.get_attribute(selector, 'content', timeout=2000)
+                        element = page.locator(selector).first
+                        content = await element.get_attribute('content', timeout=2000)
                         if content:
                             text_parts.append(content)
                             logger.info(f"✓ 提取到 meta 内容: {content[:100]}")
