@@ -168,14 +168,14 @@ MESSAGES = {
 单条视频爆款可挖 10,000+ x2c
 
 👇 点击下方指令，激活节点开始挖矿：""",
-        'menu_get_tasks': '🎬 领取短剧任务',
-        'menu_submit_link': '📤 提交链接',
+        'menu_get_tasks': '⛏️ 领取挖矿原料',
+        'menu_submit_link': '🔗 提交工作凭证',
         'menu_my_power': '📊 我的算力',
-        'menu_ranking': '🏆 排行榜',
-        'menu_airdrop': '🎁 空投状态',
-        'menu_bind_wallet': '💼 绑定钱包',
-        'menu_tutorial': 'ℹ️ 使用教程',
-        'menu_language': '🌐 切换语言',
+        'menu_ranking': '⚡ 全网算力榜',
+        'menu_airdrop': '👥 邀请好友 (+10%)',
+        'menu_bind_wallet': '📤 钱包提现',
+        'menu_tutorial': '📚 节点挖矿手册',
+        'menu_language': '🌐 语言 / Language',
         'no_tasks_available': '暂无可用任务，请稍后再试。',
         'task_details': """📋 任务详情
 
@@ -246,25 +246,32 @@ MESSAGES = {
         'cancel': '取消',
     },
     'en': {
-        'welcome': """🎬 Welcome to DramaRelayBot!
+        'welcome': """🎬 X2C Traffic Node Connected
+Welcome back, Node @{username}.
+This is the world's first Post-to-Earn decentralized drama distribution network.
 
-This is the task portal for X2C Global Drama Distribution Network.
-Get drama clips → Upload to TikTok / YouTube / IG → 
-Submit links here → Earn Node Power points and join X2C reward pool.
+📊 Node Dashboard:
+• Hashrate Status: 🔴 Idle
+• Global Token Price: $0.002 / x2c 📈
+• Mining Difficulty: 🔥 Easy (TikTok/Reels/Shorts)
 
-👉 Get drama tasks from menu
-👉 Upload clips to your favorite platforms
-👉 Submit links to complete node contribution
+⛏️ How to Mine x2c?
+1️⃣ Get Materials: Claim viral drama clips
+2️⃣ Contribute Hashrate: Upload to social media (0 followers OK)
+3️⃣ Submit Proof: Post link, more traffic = more x2c!
 
-Let's build the global drama distribution network together.""",
-        'menu_get_tasks': '🎬 Get Drama Tasks',
-        'menu_submit_link': '📤 Submit Link',
-        'menu_my_power': '📊 My Node Power',
-        'menu_ranking': '🏆 Ranking',
-        'menu_airdrop': '🎁 Airdrop Status',
-        'menu_bind_wallet': '💼 Bind Wallet',
-        'menu_tutorial': 'ℹ️ How It Works',
-        'menu_language': '🌐 Switch Language',
+💰 Expected Earnings:
+Viral videos can mine 10,000+ x2c
+
+👇 Click commands below to activate node and start mining:""",
+        'menu_get_tasks': '⛏️ Get Mining Materials',
+        'menu_submit_link': '🔗 Submit Work Proof',
+        'menu_my_power': '📊 My Hashrate',
+        'menu_ranking': '⚡ Global Hashrate Board',
+        'menu_airdrop': '👥 Invite Friends (+10%)',
+        'menu_bind_wallet': '📤 Wallet Withdrawal',
+        'menu_tutorial': '📚 Node Mining Guide',
+        'menu_language': '🌐 Language / 语言',
         'no_tasks_available': 'No tasks available at the moment. Please try again later.',
         'task_details': """📋 Task Details
 
