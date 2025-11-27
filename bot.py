@@ -864,6 +864,15 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
                 hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
                 
+                # 提取剧情关键词（从 keywords_list 中取第一个）
+                plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+                
+                # 提取剧名（从 title 中提取《》中的内容）
+                import re
+                drama_name_match = re.search(r'《(.+?)》', title)
+                drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
+                drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
+                
                 if user_lang == 'zh':
                     final_msg = f"""📥 下载已完成，请按以下提示上传：
 
@@ -871,10 +880,15 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 🎬【YouTube 上传内容】
 
 ▶️ 视频文件名称（右键直接另存，或直接拖拽）：
-{title}
+{plot_keyword} · {drama_name_with_brackets}
 
-▶ 视频描述（复制到 YouTube 描述栏）：
-{description}
+▶️ 复制到 YouTube Title栏：
+{plot_keyword} | {drama_name}
+
+▶️ 复制到 YouTube Description栏：
+Clip from @X2CDramaOfficial
+
+{description} {drama_name_with_brackets}
 
 （YouTube 不需要填写标签，保持空白即可）
 
