@@ -779,15 +779,13 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     logger.info(f"📊 claim_task result: {claim_result}")
     
     if claim_result:
-        message = get_message(user_lang, 'task_claimed')
-        logger.info(f"✅ Task claimed successfully, sending confirmation message")
+        logger.info(f"✅ Task claimed successfully")
         
-        # 先发送确认消息，只显示2个按钮：提交链接 + 返回主菜单
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(get_message(user_lang, 'menu_submit_link'), callback_data='submit_link')],
-            [InlineKeyboardButton("« 返回主菜单" if user_lang == 'zh' else "« Back to Menu", callback_data='back_to_menu')]
-        ])
-        await query.edit_message_text(message, reply_markup=keyboard)
+        # 删除任务详情消息
+        try:
+            await query.delete_message()
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to delete task details message: {e}")
         
         # 如果任务有视频链接，下载并发送视频
         video_url = task.get('video_file_id')
