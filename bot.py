@@ -1632,19 +1632,17 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     
     set_user_language(user_id, new_lang)
     
-    # 获取完整的欢迎消息
-    welcome_message = get_message(new_lang, 'welcome')
+    # 获取用户信息
+    user = query.from_user
+    
+    # 格式化欢迎消息，替换用户名
+    welcome_message = get_message(new_lang, 'welcome').format(
+        username=user.username or user.first_name or f"User{user.id}"
+    )
     keyboard = get_main_menu_keyboard(new_lang)
     
-    # 删除旧消息
-    try:
-        await query.message.delete()
-    except:
-        pass
-    
-    # 发送完整的欢迎消息和菜单
-    await context.bot.send_message(
-        chat_id=query.message.chat_id,
+    # 直接编辑消息，而不是删除后发送新消息
+    await query.edit_message_text(
         text=welcome_message,
         reply_markup=keyboard
     )
