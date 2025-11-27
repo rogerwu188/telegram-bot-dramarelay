@@ -1120,9 +1120,13 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     # 自动识别平台
     platform = detect_platform(link)
+    logger.info(f"🔍 平台识别结果: platform={platform}")
     
     # 验证链接格式
-    if not validate_link(platform, link):
+    validation_passed = validate_link(platform, link)
+    logger.info(f"🔍 validate_link 结果: platform={platform}, validation_passed={validation_passed}")
+    
+    if not validation_passed:
         error_msg = (
             "❌ **链接验证失败**\n\n"
             "🔍 请检查：\n"
