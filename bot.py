@@ -849,12 +849,18 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                         safe_filename = f"video_{task_id}"
                     filename = f"{safe_filename}.mp4"
                     
-                    await context.bot.send_video(
+                    video_msg = await context.bot.send_video(
                         chat_id=query.message.chat_id,
                         video=video_file,
                         filename=filename,
                         supports_streaming=True
                     )
+                    
+                    # 保存视频消息 ID 以便后续删除
+                    if 'task_video_messages' not in context.user_data:
+                        context.user_data['task_video_messages'] = {}
+                    context.user_data['task_video_messages'][task_id] = video_msg.message_id
+                    logger.info(f"📹 保存视频消息 ID: task_id={task_id}, message_id={video_msg.message_id}")
                 
                 # 删除临时文件
                 os.unlink(tmp_file_path)
@@ -1390,6 +1396,19 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             logger.info(f"✅ Deleted hint message for task {task_id}")
     except Exception as e:
         logger.warning(f"⚠️ Failed to delete hint message: {e}")
+    
+    # 删除视频消息
+    try:
+        if 'task_video_messages' in context.user_data and task_id in context.user_data['task_video_messages']:
+            video_msg_id = context.user_data['task_video_messages'][task_id]
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=video_msg_id
+            )
+            del context.user_data['task_video_messages'][task_id]
+            logger.info(f"✅ Deleted video message for task {task_id}")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to delete video message: {e}")
     
     # 显示提交成功消息（编辑任务卡片）
     platform_emoji = {
