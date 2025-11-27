@@ -208,7 +208,7 @@ MESSAGES = {
 ⏰ 下次快照：{next_snapshot}
 
 最低要求：100 Node Power""",
-        'bind_wallet_prompt': '请输入你的 EVM 钱包地址（以 0x 开头）：',
+        'bind_wallet_prompt': '请输入你的 SOL 钱包地址：',
         'wallet_bound': '✅ 钱包绑定成功！\n\n地址：{address}',
         'invalid_wallet': '❌ 钱包地址格式不正确，请重新输入。',
         'tutorial': """ℹ️ 使用教程
