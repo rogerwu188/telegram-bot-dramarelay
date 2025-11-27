@@ -150,17 +150,24 @@ def init_database():
 
 MESSAGES = {
     'zh': {
-        'welcome': """🎬 欢迎使用 DramaRelayBot！
+        'welcome': """🎬 X2C 流量节点 (Traffic Node) 已连接
+欢迎回来，节点 @{username}。
+这里是全球首个 Post-to-Earn 去中心化短剧分发网络。
 
-这是 X2C 全球短剧分发节点的任务入口。
-你可以领取短剧素材 → 上传到 TikTok / YouTube / IG 等平台 → 
-回到这里提交链接 → 获得 Node Power 算力点数，参与 X2C 的奖励池。
+📊 节点面板 (Dashboard):
+• 算力状态： 🔴 Idle (空闲)
+• 全网币价： $0.002 / x2c 📈
+• 挖矿难度： 🔥 简单 (TikTok/Reels/Shorts)
 
-👉 点击菜单领取短剧任务
-👉 上传片段到你喜欢的平台
-👉 提交链接完成节点贡献
+⛏️ 如何产出 x2c？
+1️⃣ 获取原料： 领取爆款短剧切片
+2️⃣ 贡献算力： 上传至社媒平台 (0粉可用)
+3️⃣ 提交凭证： 回填链接，流量越大 = x2c 越多！
 
-一起构建全球短剧分发网络。""",
+💰 预期收益：
+单条视频爆款可挖 10,000+ x2c
+
+👇 点击下方指令，激活节点开始挖矿：""",
         'menu_get_tasks': '🎬 领取短剧任务',
         'menu_submit_link': '📤 提交链接',
         'menu_my_power': '📊 我的算力',
@@ -649,7 +656,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_or_create_user(user.id, user.username, user.first_name)
     user_lang = get_user_language(user.id)
     
-    welcome_message = get_message(user_lang, 'welcome')
+    # 格式化欢迎消息，替换用户名
+    welcome_message = get_message(user_lang, 'welcome').format(
+        username=user.username or user.first_name or f"User{user.id}"
+    )
     keyboard = get_main_menu_keyboard(user_lang)
     
     await update.message.reply_text(welcome_message, reply_markup=keyboard)
