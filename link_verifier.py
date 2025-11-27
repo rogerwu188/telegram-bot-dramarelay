@@ -259,6 +259,16 @@ class LinkVerifier:
                 except:
                     continue
         
+        # 如果没有提取到任何内容，尝试使用页面标题
+        if not text_parts:
+            try:
+                page_title = await page.title()
+                if page_title:
+                    logger.warning(f"⚠️ 未提取到描述和标签，使用页面标题: {page_title}")
+                    text_parts.append(page_title)
+            except Exception as e:
+                logger.error(f"获取页面标题失败: {e}")
+        
         return ' '.join(text_parts)
     
     def _check_keywords_match(self, page_text: str, task_title: str, task_description: str) -> bool:
