@@ -886,9 +886,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 {plot_keyword} | {drama_name}
 
 ▶️ 复制到 YouTube Description栏：
-Clip from @X2CDramaOfficial
-
-{description} {drama_name_with_brackets}
+{description}
 
 （YouTube 不需要填写标签，保持空白即可）
 
