@@ -675,9 +675,34 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
     
+    # 获取用户已领取的任务ID列表
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT task_id FROM user_tasks
+        WHERE user_id = %s
+    """, (user_id,))
+    claimed_task_ids = {row['task_id'] for row in cur.fetchall()}
+    cur.close()
+    conn.close()
+    logger.info(f"📋 用户 {user_id} 已领取的任务ID: {claimed_task_ids}")
+    
+    # 过滤掉已领取的任务
+    available_tasks = [task for task in tasks if task['task_id'] not in claimed_task_ids]
+    logger.info(f"🎯 可领取的任务数量: {len(available_tasks)}/{len(tasks)}")
+    
+    if not available_tasks:
+        await query.edit_message_text(
+            "✅ 你已经领取了所有可用的任务！" if user_lang == 'zh' else "✅ You have claimed all available tasks!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+            ]])
+        )
+        return
+    
     # 显示任务列表
     keyboard = []
-    for task in tasks:
+    for task in available_tasks:
         button_text = f"🎬 {task['title']} ({task['duration']}s) - {task['node_power_reward']} NP"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
     
