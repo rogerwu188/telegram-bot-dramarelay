@@ -1317,14 +1317,14 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     try:
         stats = get_user_stats(user_id)
-        logger.info(f"✅ 获取用户统计成功: total_np={stats.get('total_node_power')}")
-        # 确保 total_node_power 不为 None
-        if stats.get('total_node_power') is None:
-            stats['total_node_power'] = 0
-            logger.warning("⚠️ total_node_power 为 None，设置为 0")
+        logger.info(f"✅ 获取用户统计成功: total_power={stats.get('total_power')}")
+        # 确保 total_power 不为 None
+        if stats.get('total_power') is None:
+            stats['total_power'] = 0
+            logger.warning("⚠️ total_power 为 None，设置为 0")
     except Exception as e:
         logger.error(f"❌ 获取用户统计失败: {e}", exc_info=True)
-        stats = {'total_node_power': 0}
+        stats = {'total_power': 0}
     
     # 删除之前的提示消息
     try:
@@ -1352,13 +1352,13 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"✅ **提交成功！**\n\n"
         f"平台：{platform_emoji.get(platform, platform)}\n"
         f"🎁 奖励：+{reward} NP\n"
-        f"📊 总算力：{stats['total_node_power']} NP\n\n"
+        f"📊 总算力：{stats['total_power']} NP\n\n"
         f"🚀 继续分享更多视频获得更多奖励！"
     ) if user_lang == 'zh' else (
         f"✅ **Submitted Successfully!**\n\n"
         f"Platform: {platform_emoji.get(platform, platform)}\n"
         f"🎁 Reward: +{reward} NP\n"
-        f"📊 Total Power: {stats['total_node_power']} NP\n\n"
+        f"📊 Total Power: {stats['total_power']} NP\n\n"
         f"🚀 Keep sharing more videos to earn more rewards!"
     )
     
