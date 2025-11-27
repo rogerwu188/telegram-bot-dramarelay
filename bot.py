@@ -601,7 +601,7 @@ def validate_link(platform: str, link: str) -> bool:
     """验证链接格式"""
     patterns = {
         'TikTok': r'https?://(www\.)?tiktok\.com/@[\w.-]+/video/\d+',
-        'YouTube': r'https?://(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+',
+        'YouTube': r'https?://(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+',
         'Instagram': r'https?://(www\.)?instagram\.com/(p|reel)/[\w-]+',
         'Facebook': r'https?://(www\.)?facebook\.com/.*',
         'Twitter': r'https?://(www\.)?(twitter\.com|x\.com)/.*',
