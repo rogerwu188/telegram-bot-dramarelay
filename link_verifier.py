@@ -31,6 +31,7 @@ class LinkVerifier:
             dict: {'valid': bool, 'error_message': str}
         """
         url_lower = url.lower()
+        platform_lower = platform.lower()  # 转换为小写
         
         platform_patterns = {
             'tiktok': ['tiktok.com'],
@@ -40,13 +41,13 @@ class LinkVerifier:
             'twitter': ['twitter.com', 'x.com']
         }
         
-        if platform not in platform_patterns:
+        if platform_lower not in platform_patterns:
             return {
                 'valid': False,
                 'error_message': f'不支持的平台: {platform}'
             }
         
-        patterns = platform_patterns[platform]
+        patterns = platform_patterns[platform_lower]
         for pattern in patterns:
             if pattern in url_lower:
                 return {'valid': True, 'error_message': ''}
