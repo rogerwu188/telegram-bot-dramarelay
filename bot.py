@@ -1143,6 +1143,45 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             parse_mode='Markdown'
         )
     
+    # 先验证链接格式
+    logger.info(f"🔍 验证链接格式: platform={platform}, url={link[:50]}...")
+    validation_result = link_verifier.validate_platform_url(link, platform)
+    
+    if not validation_result['valid']:
+        logger.warning(f"⚠️ 链接格式不合法: {validation_result['error_message']}")
+        
+        error_text = (
+            f"❌ **链接格式错误**\n\n"
+            f"📝 {validation_result['error_message']}\n\n"
+            f"🔗 您提供的链接: {link[:100]}...\n\n"
+            f"✅ 请确保提交的是正确的平台视频链接。"
+        ) if user_lang == 'zh' else (
+            f"❌ **Invalid Link Format**\n\n"
+            f"📝 {validation_result['error_message']}\n\n"
+            f"🔗 Your link: {link[:100]}...\n\n"
+            f"✅ Please make sure to submit a valid platform video link."
+        )
+        
+        try:
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_text,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f"submit_link_{task_id}")],
+                    [InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data=f"view_task_{task_id}")]
+                ])
+            )
+            logger.info("✅ 链接格式错误消息已发送")
+        except Exception as e:
+            logger.error(f"❌ 发送链接格式错误消息失败: {e}", exc_info=True)
+        
+        logger.info("🔙 返回 SUBMIT_LINK 状态")
+        return ConversationHandler.END
+    
+    logger.info("✅ 链接格式验证通过，开始内容验证")
+    
     # 调用验证器（异步）并设置超时
     logger.info(f"🔍 开始调用 verify_link: url={link[:50]}...")
     try:
@@ -1279,6 +1318,10 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         stats = get_user_stats(user_id)
         logger.info(f"✅ 获取用户统计成功: total_np={stats.get('total_node_power')}")
+        # 确保 total_node_power 不为 None
+        if stats.get('total_node_power') is None:
+            stats['total_node_power'] = 0
+            logger.warning("⚠️ total_node_power 为 None，设置为 0")
     except Exception as e:
         logger.error(f"❌ 获取用户统计失败: {e}", exc_info=True)
         stats = {'total_node_power': 0}

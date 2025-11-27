@@ -19,6 +19,53 @@ class LinkVerifier:
         self.screenshots_dir = screenshots_dir
         os.makedirs(screenshots_dir, exist_ok=True)
     
+    def validate_platform_url(self, url: str, platform: str) -> dict:
+        """
+        验证链接是否为指定平台的合法链接
+        
+        Args:
+            url: 要验证的链接
+            platform: 平台名称 (tiktok, youtube, instagram, facebook, twitter)
+        
+        Returns:
+            dict: {'valid': bool, 'error_message': str}
+        """
+        url_lower = url.lower()
+        
+        platform_patterns = {
+            'tiktok': ['tiktok.com'],
+            'youtube': ['youtube.com', 'youtu.be'],
+            'instagram': ['instagram.com'],
+            'facebook': ['facebook.com', 'fb.com', 'fb.watch'],
+            'twitter': ['twitter.com', 'x.com']
+        }
+        
+        if platform not in platform_patterns:
+            return {
+                'valid': False,
+                'error_message': f'不支持的平台: {platform}'
+            }
+        
+        patterns = platform_patterns[platform]
+        for pattern in patterns:
+            if pattern in url_lower:
+                return {'valid': True, 'error_message': ''}
+        
+        # 链接不匹配
+        platform_names = {
+            'tiktok': 'TikTok',
+            'youtube': 'YouTube',
+            'instagram': 'Instagram',
+            'facebook': 'Facebook',
+            'twitter': 'Twitter/X'
+        }
+        
+        expected_domains = ' 或 '.join(patterns)
+        return {
+            'valid': False,
+            'error_message': f'请提供正确的 {platform_names.get(platform, platform)} 链接（应包含 {expected_domains}）'
+        }
+    
     async def verify_link(self, url: str, task_title: str, task_description: str, timeout: int = 20000) -> dict:
         """
         验证视频链接 - 检查描述和标签是否包含任务关键词
