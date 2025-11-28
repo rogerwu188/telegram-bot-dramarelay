@@ -1485,25 +1485,14 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空，无法删除消息")
     
-    # 发送成功通知消息（简短版本，3秒后自动删除）
+    # 发送成功通知消息（保留，不删除）
     try:
         notification_msg = await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=success_msg,
             parse_mode='HTML'
         )
-        logger.info("✅ 成功通知已发送")
-        
-        # 3秒后删除通知消息
-        await asyncio.sleep(3)
-        try:
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=notification_msg.message_id
-            )
-            logger.info("✅ 成功通知已删除")
-        except Exception as e:
-            logger.warning(f"⚠️ 删除成功通知失败: {e}")
+        logger.info("✅ 成功通知已发送并保留")
     except Exception as e:
         logger.error(f"❌ 发送成功通知失败: {e}", exc_info=True)
     
