@@ -165,7 +165,7 @@ async def send_task_completed_webhook(
         
         # 获取用户信息
         cur.execute("""
-            SELECT user_id, username, first_name, last_name
+            SELECT user_id, username, first_name
             FROM users
             WHERE user_id = %s
         """, (user_id,))

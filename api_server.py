@@ -242,8 +242,9 @@ def create_task():
             INSERT INTO drama_tasks (
                 title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
-                video_url, task_template, keywords_template, video_title
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                video_url, task_template, keywords_template, video_title,
+                callback_url, callback_secret
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING task_id, title, created_at
         """, (
             data.get('title'),
@@ -257,7 +258,9 @@ def create_task():
             data.get('video_url'),
             data.get('task_template'),
             data.get('keywords_template'),
-            data.get('video_title')
+            data.get('video_title'),
+            data.get('callback_url'),
+            data.get('callback_secret')
         ))
         
         new_task = cur.fetchone()
