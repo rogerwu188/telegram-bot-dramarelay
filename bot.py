@@ -1041,7 +1041,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     cur = conn.cursor()
     logger.info(f"📊 Querying task info for user_id={user_id}, task_id={task_id}")
     cur.execute("""
-        SELECT dt.title, dt.node_power_reward
+        SELECT dt.title, dt.node_power_reward, dt.video_title, dt.task_template, dt.keywords_template
         FROM user_tasks ut
         JOIN drama_tasks dt ON ut.task_id = dt.task_id
         WHERE ut.user_id = %s AND ut.task_id = %s
@@ -1061,18 +1061,62 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         )
         return ConversationHandler.END
     
-    # 显示提交界面
-    message = (
-        f"📤 <b>提交任务</b>\n"
-        f"🎬 {task['title']}\n"
-        f"💰 完成可获得：{task['node_power_reward']} NP\n\n"
-        f"📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）"
-    ) if user_lang == 'zh' else (
-        f"📤 <b>Submit Task</b>\n"
-        f"🎬 {task['title']}\n"
-        f"💰 Reward: {task['node_power_reward']} NP\n\n"
-        f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
-    )
+    # 显示提交界面（包含完整的描述和标签）
+    video_title = task.get('video_title', '')
+    task_template = task.get('task_template', '')
+    keywords_template = task.get('keywords_template', '')
+    
+    # 构建消息
+    message_parts = []
+    
+    if user_lang == 'zh':
+        message_parts.append(f"📤 <b>提交任务</b>")
+        message_parts.append(f"🎬 {task['title']}")
+        message_parts.append(f"💰 完成可获得：{task['node_power_reward']} NP")
+        message_parts.append("")
+        
+        # 添加 TikTok 描述
+        if video_title:
+            message_parts.append("📹 <b>TikTok 视频描述（请完整复制以下内容）：</b>")
+            message_parts.append(video_title)
+            message_parts.append("")
+        
+        if task_template:
+            message_parts.append(task_template)
+            message_parts.append("")
+        
+        if keywords_template:
+            message_parts.append(keywords_template)
+            message_parts.append("")
+        
+        message_parts.append("─" * 30)
+        message_parts.append("")
+        message_parts.append("📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）")
+    else:
+        message_parts.append(f"📤 <b>Submit Task</b>")
+        message_parts.append(f"🎬 {task['title']}")
+        message_parts.append(f"💰 Reward: {task['node_power_reward']} NP")
+        message_parts.append("")
+        
+        # 添加 TikTok 描述
+        if video_title:
+            message_parts.append("📹 <b>TikTok Video Description (Please copy the content below):</b>")
+            message_parts.append(video_title)
+            message_parts.append("")
+        
+        if task_template:
+            message_parts.append(task_template)
+            message_parts.append("")
+        
+        if keywords_template:
+            message_parts.append(keywords_template)
+            message_parts.append("")
+        
+        message_parts.append("─" * 30)
+        message_parts.append("")
+        message_parts.append("📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)")
+    
+    message = "\n".join(message_parts)
     
     keyboard = [[
         InlineKeyboardButton(
