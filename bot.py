@@ -810,11 +810,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
             logger.info(f"✅ Starting video download from: {video_url}")
             try:
-                # 发送下载提示
-                download_msg = await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text="⏳ 正在下载视频..." if user_lang == 'zh' else "⏳ Downloading video..."
-                )
+                # 不显示下载提示,直接下载
                 
                 # 下载视频
                 import requests
@@ -882,7 +878,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # 删除临时文件
                 os.unlink(tmp_file_path)
                 
-                # 更新为最终提示消息（不删除）
+                # 发送最终提示消息（新消息，在视频之后）
                 # 格式化关键词为 #tag 格式
                 keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
                 hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
@@ -967,12 +963,18 @@ to receive 🎉 {reward} Node Power"""
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                await download_msg.edit_text(final_msg, reply_markup=reply_markup, parse_mode=None)
+                # 发送新的提示消息（在视频之后）
+                hint_msg = await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text=final_msg,
+                    reply_markup=reply_markup,
+                    parse_mode=None
+                )
                 
                 # 保存提示消息ID，以便用户提交链接时删除
                 if 'task_hint_messages' not in context.user_data:
                     context.user_data['task_hint_messages'] = {}
-                context.user_data['task_hint_messages'][task_id] = download_msg.message_id
+                context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
                 
                 logger.info(f"✅ Video sent successfully, waiting for user to submit link")
                 
