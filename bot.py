@@ -1203,13 +1203,11 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if task_card_message_id and task_card_chat_id:
         verifying_text = (
             f"🔍 <b>正在验证视频内容...</b>\n\n"
-            f"🎬 任务：{task['title']}\n"
-            f"🔗 链接：{link[:50]}...\n\n"
+            f"🎬 任务：{task['title']}\n\n"
             f"⏳ 请稍候，这可能需要 5-15 秒"
         ) if user_lang == 'zh' else (
             f"🔍 <b>Verifying video content...</b>\n\n"
-            f"🎬 Task: {task['title']}\n"
-            f"🔗 Link: {link[:50]}...\n\n"
+            f"🎬 Task: {task['title']}\n\n"
             f"⏳ Please wait, this may take 5-15 seconds"
         )
         
@@ -1217,7 +1215,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             chat_id=task_card_chat_id,
             message_id=task_card_message_id,
             text=verifying_text,
-            parse_mode='HTML'
+            parse_mode='HTML',
+            disable_web_page_preview=True
         )
     
     # 先验证链接格式
