@@ -1498,12 +1498,14 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     success_msg = (
         f"✅ <b>提交成功！</b>\n\n"
+        f"🎬 任务：{task['title']}\n"
         f"平台：{platform_emoji.get(platform, platform)}\n"
         f"🎁 奖励：+{reward} NP\n"
         f"📊 总算力：{stats['total_power']} NP\n\n"
         f"🚀 继续分享更多视频获得更多奖励！"
     ) if user_lang == 'zh' else (
         f"✅ <b>Submitted Successfully!</b>\n\n"
+        f"🎬 Task: {task['title']}\n"
         f"Platform: {platform_emoji.get(platform, platform)}\n"
         f"🎁 Reward: +{reward} NP\n"
         f"📊 Total Power: {stats['total_power']} NP\n\n"
