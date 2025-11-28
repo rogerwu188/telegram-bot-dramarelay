@@ -1374,15 +1374,15 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # 发送 Webhook 回调通知
         try:
             from webhook_notifier import send_task_completed_webhook
-            asyncio.create_task(send_task_completed_webhook(
+            await send_task_completed_webhook(
                 task_id=task_id,
                 user_id=user_id,
                 platform=platform.lower(),
                 submission_link=link,
                 node_power_earned=reward,
                 verification_details=verify_result
-            ))
-            logger.info(f"📤 Webhook 回调已调度: task_id={task_id}")
+            )
+            logger.info(f"📤 Webhook 回调已发送: task_id={task_id}")
         except Exception as webhook_error:
             logger.error(f"⚠️ Webhook 回调失败 (不影响任务提交): {webhook_error}", exc_info=True)
     except Exception as e:
