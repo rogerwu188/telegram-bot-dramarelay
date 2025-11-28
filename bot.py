@@ -1471,21 +1471,54 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     logger.info(f"📣 准备发送成功消息: task_card_message_id={task_card_message_id}, task_card_chat_id={task_card_chat_id}")
     
+    # 先删除任务卡片消息
     if task_card_message_id and task_card_chat_id:
         try:
-            await context.bot.edit_message_text(
+            await context.bot.delete_message(
                 chat_id=task_card_chat_id,
-                message_id=task_card_message_id,
-                text=success_msg,
-                reply_markup=back_button,
-                parse_mode='HTML'
+                message_id=task_card_message_id
             )
-            logger.info("✅ 成功消息已发送")
+            logger.info("✅ 任务卡片已删除")
         except Exception as e:
-            logger.error(f"❌ 发送成功消息失败: {e}", exc_info=True)
-            # 即使发送失败，任务也已经提交成功
+            logger.error(f"❌ 删除任务卡片失败: {e}", exc_info=True)
     else:
-        logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空，无法编辑消息")
+        logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空，无法删除消息")
+    
+    # 发送成功通知消息（简短版本，3秒后自动删除）
+    try:
+        notification_msg = await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=success_msg,
+            parse_mode='HTML'
+        )
+        logger.info("✅ 成功通知已发送")
+        
+        # 3秒后删除通知消息
+        await asyncio.sleep(3)
+        try:
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=notification_msg.message_id
+            )
+            logger.info("✅ 成功通知已删除")
+        except Exception as e:
+            logger.warning(f"⚠️ 删除成功通知失败: {e}")
+    except Exception as e:
+        logger.error(f"❌ 发送成功通知失败: {e}", exc_info=True)
+    
+    # 自动显示主菜单
+    try:
+        welcome_message = get_message(user_lang, 'welcome')
+        keyboard = get_main_menu_keyboard(user_lang)
+        
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=welcome_message,
+            reply_markup=keyboard
+        )
+        logger.info("✅ 主菜单已自动显示")
+    except Exception as e:
+        logger.error(f"❌ 显示主菜单失败: {e}", exc_info=True)
     
     logger.info("✅ link_input_handler 完成，返回 ConversationHandler.END")
     return ConversationHandler.END
