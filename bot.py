@@ -1061,12 +1061,12 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     
     # 显示提交界面
     message = (
-        f"📤 **提交任务**\n"
+        f"📤 <b>提交任务</b>\n"
         f"🎬 {task['title']}\n"
         f"💰 完成可获得：{task['node_power_reward']} NP\n\n"
         f"📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）"
     ) if user_lang == 'zh' else (
-        f"📤 **Submit Task**\n"
+        f"📤 <b>Submit Task</b>\n"
         f"🎬 {task['title']}\n"
         f"💰 Reward: {task['node_power_reward']} NP\n\n"
         f"📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"
@@ -1084,7 +1084,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         sent_msg = await query.edit_message_text(
             message,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         logger.info(f"✅ 成功编辑原消息: message_id={sent_msg.message_id}")
     except Exception as e:
@@ -1094,7 +1094,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
             chat_id=query.message.chat_id,
             text=message,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         logger.warning(f"⚠️ 已发送新消息: message_id={sent_msg.message_id}")
     
@@ -1176,7 +1176,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 message_id=task_card_message_id,
                 text=error_msg,
                 reply_markup=retry_button,
-                parse_mode='Markdown'
+                parse_mode='HTML'
             )
         return SUBMIT_LINK
     
@@ -1200,12 +1200,12 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 更新任务卡片显示"验证中"
     if task_card_message_id and task_card_chat_id:
         verifying_text = (
-            f"🔍 **正在验证视频内容...**\n\n"
+            f"🔍 <b>正在验证视频内容...</b>\n\n"
             f"🎬 任务：{task['title']}\n"
             f"🔗 链接：{link[:50]}...\n\n"
             f"⏳ 请稍候，这可能需要 5-15 秒"
         ) if user_lang == 'zh' else (
-            f"🔍 **Verifying video content...**\n\n"
+            f"🔍 <b>Verifying video content...</b>\n\n"
             f"🎬 Task: {task['title']}\n"
             f"🔗 Link: {link[:50]}...\n\n"
             f"⏳ Please wait, this may take 5-15 seconds"
@@ -1215,7 +1215,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             chat_id=task_card_chat_id,
             message_id=task_card_message_id,
             text=verifying_text,
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
     
     # 先验证链接格式
@@ -1242,7 +1242,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 chat_id=task_card_chat_id,
                 message_id=task_card_message_id,
                 text=error_text,
-                parse_mode='Markdown',
+                parse_mode='HTML',
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f"submit_link_{task_id}")],
                     [InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data=f"view_task_{task_id}")]
@@ -1315,7 +1315,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     message_id=task_card_message_id,
                     text=error_msg,
                     reply_markup=retry_button,
-                    parse_mode='Markdown'
+                    parse_mode='HTML'
                 )
                 logger.info("✅ 不匹配错误消息已发送")
             except Exception as e:
@@ -1354,7 +1354,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     message_id=task_card_message_id,
                     text=error_msg,
                     reply_markup=retry_button,
-                    parse_mode='Markdown'
+                    parse_mode='HTML'
                 )
                 logger.info("✅ 不匹配错误消息已发送")
             except Exception as e:
@@ -1388,11 +1388,11 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.error(f"❌ 提交任务失败: {e}", exc_info=True)
         error_msg = (
-            f"❌ **提交失败**\n\n"
+            f"❌ <b>提交失败</b>\n\n"
             f"验证成功但保存失败，请联系管理员\n\n"
             f"错误信息：{str(e)}"
         ) if user_lang == 'zh' else (
-            f"❌ **Submission Failed**\n\n"
+            f"❌ <b>Submission Failed</b>\n\n"
             f"Verification passed but save failed, please contact admin\n\n"
             f"Error: {str(e)}"
         )
@@ -1401,7 +1401,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 chat_id=task_card_chat_id,
                 message_id=task_card_message_id,
                 text=error_msg,
-                parse_mode='Markdown'
+                parse_mode='HTML'
             )
         return ConversationHandler.END
     
@@ -1452,13 +1452,13 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     }
     
     success_msg = (
-        f"✅ **提交成功！**\n\n"
+        f"✅ <b>提交成功！</b>\n\n"
         f"平台：{platform_emoji.get(platform, platform)}\n"
         f"🎁 奖励：+{reward} NP\n"
         f"📊 总算力：{stats['total_power']} NP\n\n"
         f"🚀 继续分享更多视频获得更多奖励！"
     ) if user_lang == 'zh' else (
-        f"✅ **Submitted Successfully!**\n\n"
+        f"✅ <b>Submitted Successfully!</b>\n\n"
         f"Platform: {platform_emoji.get(platform, platform)}\n"
         f"🎁 Reward: +{reward} NP\n"
         f"📊 Total Power: {stats['total_power']} NP\n\n"
@@ -1478,7 +1478,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 message_id=task_card_message_id,
                 text=success_msg,
                 reply_markup=back_button,
-                parse_mode='Markdown'
+                parse_mode='HTML'
             )
             logger.info("✅ 成功消息已发送")
         except Exception as e:
