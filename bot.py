@@ -925,7 +925,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 💰【奖励说明】
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
-即可获得 🎉 **{reward} Node Power**"""
+即可获得 🎉 {reward} Node Power"""
                     
                     # 创建 inline keyboard 按钮
                     keyboard = [
@@ -959,7 +959,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 💰【Reward】
 
 Complete the task above and submit your published video link in this bot  
-to receive 🎉 **{reward} Node Power**"""
+to receive 🎉 {reward} Node Power"""
                     
                     # 创建 inline keyboard 按钮
                     keyboard = [
@@ -967,7 +967,7 @@ to receive 🎉 **{reward} Node Power**"""
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                await download_msg.edit_text(final_msg, reply_markup=reply_markup)
+                await download_msg.edit_text(final_msg, reply_markup=reply_markup, parse_mode=None)
                 
                 # 保存提示消息ID，以便用户提交链接时删除
                 if 'task_hint_messages' not in context.user_data:
