@@ -55,11 +55,14 @@ link_verifier = LinkVerifier()
     SUBMIT_PLATFORM,
     SUBMIT_LINK,
     BIND_WALLET,
+    WITHDRAW_ADDRESS,
+    WITHDRAW_AMOUNT,
+    WITHDRAW_CONFIRM,
     ADMIN_ADD_TASK_TITLE,
     ADMIN_ADD_TASK_DESC,
     ADMIN_ADD_TASK_VIDEO,
     ADMIN_ADD_TASK_REWARD,
-) = range(7)
+) = range(10)
 
 # ============================================================
 # 数据库连接
@@ -216,9 +219,56 @@ MESSAGES = {
 ⏰ 下次快照：{next_snapshot}
 
 最低要求：100 Node Power""",
-        'bind_wallet_prompt': '请输入你的 SOL 钱包地址：',
-        'wallet_bound': '✅ 钱包绑定成功！\n\n地址：{address}',
-        'invalid_wallet': '❌ 钱包地址格式不正确，请重新输入。',
+        'withdraw_prompt': """💰 X2C 钱包提现
+
+请输入你要提取的 SOL 地址（支持 Phantom、OKX、Bybit 等钱包）：
+
+📌 请直接粘贴你的 SOL 地址（以 4 开头或长度 44 字符）
+⚠️ 地址一旦提交无法撤回，请务必确认正确无误。""",
+        'withdraw_amount_prompt': """📥 已收到你的提现地址：
+
+`{address}`
+
+现在请输入你要提取的 X2C 数量：
+
+💡 可提现余额：{balance} X2C""",
+        'withdraw_confirm': """📤 提现确认
+
+你正在提现：
+
+🔹 数量：{amount} X2C
+🔹 地址：{address}
+
+是否确认提交提现请求？""",
+        'withdraw_processing': """⏳ 正在处理你的提现请求…
+
+我们正在将 {amount} X2C 转账至：
+
+`{address}`
+
+请稍候，大约需要 5–20 秒。""",
+        'withdraw_success': """✅ 提现成功！
+
+你的 {amount} X2C 已成功发送到：
+
+📥 地址： `{address}`
+🔗 交易哈希（Tx Hash）：
+{tx_hash}
+
+你可在 Solscan 查看交易详情：
+https://solscan.io/tx/{tx_hash}
+
+📘 你的提现已登记完毕，如有疑问可随时联系管理员。""",
+        'withdraw_failed': """❌ 提现失败
+
+原因：{error}
+
+💡 请确认地址格式正确，或稍后重试。""",
+        'invalid_sol_address': '❌ SOL 地址格式不正确，请重新输入。',
+        'invalid_amount': '❌ 提现数量不正确，请输入正整数。',
+        'insufficient_balance': '❌ 余额不足，你的可用余额为 {balance} X2C。',
+        'confirm_withdraw': '✅ 确认提现',
+        'cancel_withdraw': '❌ 取消并返回主菜单',
         'tutorial': """ℹ️ 使用教程
 
 1️⃣ 领取任务
@@ -332,9 +382,56 @@ Your Power: {your_power} Node Power""",
 ⏰ Next Snapshot: {next_snapshot}
 
 Minimum Requirement: 100 Node Power""",
-        'bind_wallet_prompt': 'Please enter your EVM wallet address (starting with 0x):',
-        'wallet_bound': '✅ Wallet bound successfully!\n\nAddress: {address}',
-        'invalid_wallet': '❌ Invalid wallet address format. Please try again.',
+        'withdraw_prompt': """💰 X2C Wallet Withdrawal
+
+Please enter your SOL address (supports Phantom, OKX, Bybit, etc.):
+
+📌 Paste your SOL address (starts with 4 or 44 characters long)
+⚠️ Address cannot be changed once submitted. Please confirm carefully.""",
+        'withdraw_amount_prompt': """📥 Received your withdrawal address:
+
+`{address}`
+
+Now please enter the amount of X2C you want to withdraw:
+
+💡 Available balance: {balance} X2C""",
+        'withdraw_confirm': """📤 Withdrawal Confirmation
+
+You are withdrawing:
+
+🔹 Amount: {amount} X2C
+🔹 Address: {address}
+
+Confirm withdrawal request?""",
+        'withdraw_processing': """⏳ Processing your withdrawal request…
+
+Transferring {amount} X2C to:
+
+`{address}`
+
+Please wait, this may take 5–20 seconds.""",
+        'withdraw_success': """✅ Withdrawal Successful!
+
+Your {amount} X2C has been sent to:
+
+📥 Address: `{address}`
+🔗 Transaction Hash (Tx Hash):
+{tx_hash}
+
+View transaction details on Solscan:
+https://solscan.io/tx/{tx_hash}
+
+📘 Your withdrawal has been recorded. Contact admin if you have questions.""",
+        'withdraw_failed': """❌ Withdrawal Failed
+
+Reason: {error}
+
+💡 Please confirm address format is correct, or try again later.""",
+        'invalid_sol_address': '❌ Invalid SOL address format. Please try again.',
+        'invalid_amount': '❌ Invalid withdrawal amount. Please enter a positive number.',
+        'insufficient_balance': '❌ Insufficient balance. Your available balance is {balance} X2C.',
+        'confirm_withdraw': '✅ Confirm Withdrawal',
+        'cancel_withdraw': '❌ Cancel and Return to Menu',
         'tutorial': """ℹ️ How It Works
 
 1️⃣ Get Tasks
@@ -1899,35 +1996,159 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     
     await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True)
 
-async def bind_wallet_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理绑定钱包"""
+async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理提现 - Step 1: 输入 SOL 地址"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    await query.edit_message_text(get_message(user_lang, 'bind_wallet_prompt'))
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+    ]])
     
-    return BIND_WALLET
+    await query.edit_message_text(
+        get_message(user_lang, 'withdraw_prompt'),
+        reply_markup=keyboard
+    )
+    
+    return WITHDRAW_ADDRESS
 
-async def wallet_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理钱包地址输入"""
+async def withdraw_address_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理 SOL 地址输入 - Step 2: 输入提现数量"""
     user_id = update.effective_user.id
     user_lang = get_user_language(user_id)
     
     address = update.message.text.strip()
     
-    if not validate_wallet_address(address):
-        await update.message.reply_text(get_message(user_lang, 'invalid_wallet'))
-        return BIND_WALLET
+    # 验证 SOL 地址
+    from withdrawal_system import validate_sol_address
+    if not validate_sol_address(address):
+        await update.message.reply_text(get_message(user_lang, 'invalid_sol_address'))
+        return WITHDRAW_ADDRESS
     
-    bind_wallet(user_id, address)
+    # 保存地址到 context
+    context.user_data['withdraw_address'] = address
     
-    message = get_message(user_lang, 'wallet_bound', address=address)
-    keyboard = get_main_menu_keyboard(user_lang)
+    # 获取用户余额
+    from withdrawal_system import get_user_balance
+    balance = get_user_balance(user_id)
     
-    await update.message.reply_text(message, reply_markup=keyboard)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+    ]])
+    
+    await update.message.reply_text(
+        get_message(user_lang, 'withdraw_amount_prompt', address=address, balance=balance),
+        reply_markup=keyboard
+    )
+    
+    return WITHDRAW_AMOUNT
+
+async def withdraw_amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理提现数量输入 - Step 3: 二次确认"""
+    user_id = update.effective_user.id
+    user_lang = get_user_language(user_id)
+    
+    amount_str = update.message.text.strip()
+    
+    # 验证数量
+    try:
+        amount = float(amount_str)
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+    except ValueError:
+        await update.message.reply_text(get_message(user_lang, 'invalid_amount'))
+        return WITHDRAW_AMOUNT
+    
+    # 检查余额
+    from withdrawal_system import get_user_balance
+    balance = get_user_balance(user_id)
+    
+    if amount > balance:
+        await update.message.reply_text(
+            get_message(user_lang, 'insufficient_balance', balance=balance)
+        )
+        return WITHDRAW_AMOUNT
+    
+    # 保存数量到 context
+    context.user_data['withdraw_amount'] = amount
+    
+    # 显示确认消息
+    address = context.user_data.get('withdraw_address')
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_message(user_lang, 'confirm_withdraw'), callback_data='confirm_withdraw')],
+        [InlineKeyboardButton(get_message(user_lang, 'cancel_withdraw'), callback_data='back_to_menu')]
+    ])
+    
+    await update.message.reply_text(
+        get_message(user_lang, 'withdraw_confirm', amount=amount, address=address),
+        reply_markup=keyboard
+    )
+    
+    return WITHDRAW_CONFIRM
+
+async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """确认提现 - Step 4: 执行转账"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user_lang = get_user_language(user_id)
+    
+    address = context.user_data.get('withdraw_address')
+    amount = context.user_data.get('withdraw_amount')
+    
+    if not address or not amount:
+        await query.edit_message_text(
+            get_message(user_lang, 'withdraw_failed', error='Missing withdrawal information')
+        )
+        return ConversationHandler.END
+    
+    # 显示处理中消息
+    await query.edit_message_text(
+        get_message(user_lang, 'withdraw_processing', amount=amount, address=address)
+    )
+    
+    # 创建提现请求
+    from withdrawal_system import create_withdrawal_request, process_withdrawal
+    withdrawal_id = create_withdrawal_request(user_id, address, amount)
+    
+    if not withdrawal_id:
+        await query.edit_message_text(
+            get_message(user_lang, 'withdraw_failed', error='余额不足或创建请求失败')
+        )
+        return ConversationHandler.END
+    
+    # 异步处理转账
+    result = await process_withdrawal(withdrawal_id)
+    
+    # 显示结果
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+    ]])
+    
+    if result['success']:
+        await query.edit_message_text(
+            get_message(user_lang, 'withdraw_success',
+                amount=amount,
+                address=address,
+                tx_hash=result['tx_hash']
+            ),
+            reply_markup=keyboard,
+            disable_web_page_preview=True
+        )
+    else:
+        await query.edit_message_text(
+            get_message(user_lang, 'withdraw_failed', error=result.get('error', 'Unknown error')),
+            reply_markup=keyboard
+        )
+    
+    # 清理 context
+    context.user_data.pop('withdraw_address', None)
+    context.user_data.pop('withdraw_amount', None)
     
     return ConversationHandler.END
 
@@ -2063,15 +2284,20 @@ def main():
     )
     application.add_handler(submit_conv_handler)
     
-    # 对话处理器 - 绑定钱包
-    wallet_conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(bind_wallet_callback, pattern='^bind_wallet$')],
+    # 对话处理器 - 提现
+    withdraw_conv_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(withdraw_callback, pattern='^bind_wallet$')],
         states={
-            BIND_WALLET: [MessageHandler(filters.TEXT & ~filters.COMMAND, wallet_input_handler)],
+            WITHDRAW_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_address_handler)],
+            WITHDRAW_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, withdraw_amount_handler)],
+            WITHDRAW_CONFIRM: [
+                CallbackQueryHandler(confirm_withdraw_callback, pattern='^confirm_withdraw$'),
+                CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$')
+            ],
         },
         fallbacks=[CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$')],
     )
-    application.add_handler(wallet_conv_handler)
+    application.add_handler(withdraw_conv_handler)
     
     # 检查是否有 WEBHOOK_URL 环境变量
     webhook_url = os.getenv('WEBHOOK_URL')
