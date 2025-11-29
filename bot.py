@@ -691,7 +691,7 @@ def get_main_menu_keyboard(user_lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(get_message(user_lang, 'menu_ranking'), callback_data='ranking'),
         ],
         [
-            InlineKeyboardButton(get_message(user_lang, 'menu_airdrop'), callback_data='airdrop'),
+            InlineKeyboardButton(get_message(user_lang, 'menu_airdrop'), callback_data='invite_friends'),
             InlineKeyboardButton(get_message(user_lang, 'menu_bind_wallet'), callback_data='bind_wallet'),
         ],
         [
