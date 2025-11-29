@@ -1136,9 +1136,17 @@ to receive 🎉 {reward} Node Power"""
         except Exception as e:
             logger.error(f"Error downloading video: {e}")
             error_msg = "❌ 视频下载失败，请稍后重试" if user_lang == 'zh' else "❌ Failed to download video, please try again later"
+            
+            # 创建返回主菜单按钮
+            keyboard = [
+                [InlineKeyboardButton("« 返回主菜单" if user_lang == 'zh' else "« Back to Menu", callback_data="back_to_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await context.bot.send_message(
                 chat_id=query.message.chat_id,
-                text=f"{error_msg}\n\n📎 视频链接: {video_url}"
+                text=f"{error_msg}\n\n📎 视频链接: {video_url}",
+                reply_markup=reply_markup
             )
 
 async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
