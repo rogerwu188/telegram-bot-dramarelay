@@ -792,73 +792,82 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
     
-    claim_result = claim_task(user_id, task_id)
-    logger.info(f"📊 claim_task result: {claim_result}")
+    # 先检查是否已经领取
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM user_tasks WHERE user_id = %s AND task_id = %s", (user_id, task_id))
+    existing_claim = cur.fetchone()
+    cur.close()
+    conn.close()
     
-    if claim_result:
-        logger.info(f"✅ Task claimed successfully")
-        
-        # 删除任务详情消息
+    if existing_claim:
+        logger.info(f"⚠️ Task already claimed by user")
+        message = get_message(user_lang, 'task_already_claimed')
+        keyboard = get_main_menu_keyboard(user_lang)
+        await query.edit_message_text(message, reply_markup=keyboard)
+        return
+    
+    # 删除任务详情消息
+    try:
+        await query.delete_message()
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to delete task details message: {e}")
+    
+    # 如果任务有视频链接，下载并发送视频
+    video_url = task.get('video_file_id')
+    logger.info(f"🎥 video_url from task: {video_url}")
+    if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
+        logger.info(f"✅ Starting video download from: {video_url}")
         try:
-            await query.delete_message()
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to delete task details message: {e}")
-        
-        # 如果任务有视频链接，下载并发送视频
-        video_url = task.get('video_file_id')
-        logger.info(f"🎥 video_url from task: {video_url}")
-        if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
-            logger.info(f"✅ Starting video download from: {video_url}")
-            try:
-                # 先检查文件大小
-                import requests
-                import tempfile
-                import os
+            # 先检查文件大小
+            import requests
+            import tempfile
+            import os
+            
+            # 获取文件大小
+            head_response = requests.head(video_url, timeout=10)
+            file_size = int(head_response.headers.get('content-length', 0))
+            file_size_mb = file_size / (1024 * 1024)
+            
+            logger.info(f"📊 Video file size: {file_size_mb:.2f} MB")
+            
+            # 如果文件大于50MB,不下载,直接提供下载链接
+            if file_size > 50 * 1024 * 1024:
+                logger.warning(f"⚠️ Video file too large ({file_size_mb:.2f} MB), providing download link instead")
                 
-                # 获取文件大小
-                head_response = requests.head(video_url, timeout=10)
-                file_size = int(head_response.headers.get('content-length', 0))
-                file_size_mb = file_size / (1024 * 1024)
+                # 准备任务信息
+                title = task.get('title', '')
+                description = task.get('description', '')
+                keywords_raw = task.get('keywords_template', '')
+                reward = task.get('node_power_reward', 0)
                 
-                logger.info(f"📊 Video file size: {file_size_mb:.2f} MB")
+                # 清理 keywords_template
+                keywords_lines = keywords_raw.split('\n')
+                cleaned_keywords = []
+                for line in keywords_lines:
+                    if '视频链接：' not in line and line.strip():
+                        if 'keywords_template=' in line:
+                            cleaned_keywords.append(line.split('keywords_template=')[1])
+                        elif '上传关键词描述：' in line:
+                            cleaned_keywords.append(line.split('上传关键词描述：')[1])
+                        else:
+                            cleaned_keywords.append(line)
+                keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
                 
-                # 如果文件大于50MB,不下载,直接提供下载链接
-                if file_size > 50 * 1024 * 1024:
-                    logger.warning(f"⚠️ Video file too large ({file_size_mb:.2f} MB), providing download link instead")
-                    
-                    # 准备任务信息
-                    title = task.get('title', '')
-                    description = task.get('description', '')
-                    keywords_raw = task.get('keywords_template', '')
-                    reward = task.get('node_power_reward', 0)
-                    
-                    # 清理 keywords_template
-                    keywords_lines = keywords_raw.split('\n')
-                    cleaned_keywords = []
-                    for line in keywords_lines:
-                        if '视频链接：' not in line and line.strip():
-                            if 'keywords_template=' in line:
-                                cleaned_keywords.append(line.split('keywords_template=')[1])
-                            elif '上传关键词描述：' in line:
-                                cleaned_keywords.append(line.split('上传关键词描述：')[1])
-                            else:
-                                cleaned_keywords.append(line)
-                    keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
-                    
-                    # 格式化关键词为 #tag 格式
-                    keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
-                    hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])
-                    
-                    # 提取剧情关键词和剧名
-                    plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
-                    import re
-                    drama_name_match = re.search(r'《(.+?)》', title)
-                    drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
-                    drama_name_with_brackets = f"《{drama_name}》"
-                    
-                    # 发送下载链接消息
-                    if user_lang == 'zh':
-                        download_msg = f"""📥 <b>视频文件过大({file_size_mb:.0f} MB)</b>
+                # 格式化关键词为 #tag 格式
+                keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+                hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])
+                
+                # 提取剧情关键词和剧名
+                plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+                import re
+                drama_name_match = re.search(r'《(.+?)》', title)
+                drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
+                drama_name_with_brackets = f"《{drama_name}》"
+                
+                # 发送下载链接消息
+                if user_lang == 'zh':
+                    download_msg = f"""📥 <b>视频文件过大({file_size_mb:.0f} MB)</b>
 
 请点击下面的链接直接下载：
 
@@ -896,8 +905,8 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
 即可获得 🎉 {reward} Node Power"""
-                    else:
-                        download_msg = f"""📥 <b>Video file is too large ({file_size_mb:.0f} MB)</b>
+                else:
+                    download_msg = f"""📥 <b>Video file is too large ({file_size_mb:.0f} MB)</b>
 
 Please click the link below to download:
 
@@ -933,109 +942,111 @@ Please click the link below to download:
 
 Complete the task above and submit your published video link in this bot  
 to receive 🎉 {reward} Node Power"""
-                    
-                    # 创建提交链接按钮
-                    keyboard = [
-                        [InlineKeyboardButton("📎 提交链接" if user_lang == 'zh' else "📎 Submit Link", callback_data=f"submit_link_{task_id}")]
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                    
-                    # 发送消息
-                    hint_msg = await context.bot.send_message(
-                        chat_id=query.message.chat_id,
-                        text=download_msg,
-                        reply_markup=reply_markup,
-                        parse_mode='HTML',
-                        disable_web_page_preview=False
-                    )
-                    
-                    # 保存提示消息ID
-                    if 'task_hint_messages' not in context.user_data:
-                        context.user_data['task_hint_messages'] = {}
-                    context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
-                    
-                    logger.info(f"✅ Download link sent for large video file")
-                    return
                 
-                # 文件小于50MB,正常下载并发送
-                logger.info(f"✅ File size OK, downloading video...")
-                response = requests.get(video_url, stream=True, timeout=60)
-                response.raise_for_status()
+                # 创建提交链接按钮
+                keyboard = [
+                    [InlineKeyboardButton("📎 提交链接" if user_lang == 'zh' else "📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                # 保存到临时文件
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            tmp_file.write(chunk)
-                    tmp_file_path = tmp_file.name
+                # 发送消息
+                hint_msg = await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text=download_msg,
+                    reply_markup=reply_markup,
+                    parse_mode='HTML',
+                    disable_web_page_preview=False
+                )
                 
-                logger.info(f"✅ Video downloaded successfully, file size: {os.path.getsize(tmp_file_path)} bytes")
+                # 保存提示消息ID
+                if 'task_hint_messages' not in context.user_data:
+                    context.user_data['task_hint_messages'] = {}
+                context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
                 
-                # 发送视频
-                with open(tmp_file_path, 'rb') as video_file:
-                    # 构建多行模版格式
-                    logger.info(f"📝 Task data for caption: title={task.get('title')}, description={task.get('description')}, keywords_template={task.get('keywords_template')}")
-                    
-                    # 确保每个字段都有值，并且格式正确
-                    title = task.get('title', '')
-                    description = task.get('description', '')
-                    keywords_raw = task.get('keywords_template', '')
-                    reward = task.get('node_power_reward', 0)
-                    
-                    # 清理 keywords_template：完全删除包含"视频链接："的行
-                    keywords_lines = keywords_raw.split('\n')
-                    cleaned_keywords = []
-                    for line in keywords_lines:
-                        # 跳过包含"视频链接："的行
-                        if '视频链接：' not in line and line.strip():
-                            # 如果行中包含"keywords_template="，提取后面的内容
-                            if 'keywords_template=' in line:
-                                cleaned_keywords.append(line.split('keywords_template=')[1])
-                            # 如果行中包含"上传关键词描述："，提取后面的内容
-                            elif '上传关键词描述：' in line:
-                                cleaned_keywords.append(line.split('上传关键词描述：')[1])
-                            else:
-                                cleaned_keywords.append(line)
-                    keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
-                    
-                    # 生成合法的文件名（去掉特殊字符）
-                    safe_filename = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '·', '《', '》')).strip()
-                    if not safe_filename:
-                        safe_filename = f"video_{task_id}"
-                    filename = f"{safe_filename}.mp4"
-                    
-                    video_msg = await context.bot.send_video(
-                        chat_id=query.message.chat_id,
-                        video=video_file,
-                        filename=filename,
-                        supports_streaming=True
-                    )
-                    
-                    # 保存视频消息 ID 以便后续删除
-                    if 'task_video_messages' not in context.user_data:
-                        context.user_data['task_video_messages'] = {}
-                    context.user_data['task_video_messages'][task_id] = video_msg.message_id
-                    logger.info(f"📹 保存视频消息 ID: task_id={task_id}, message_id={video_msg.message_id}")
+                # 标记任务为已领取
+                claim_result = claim_task(user_id, task_id)
+                logger.info(f"✅ Download link sent for large video file, task claimed: {claim_result}")
+                return
+            
+            # 文件小于50MB,正常下载并发送
+            logger.info(f"✅ File size OK, downloading video...")
+            response = requests.get(video_url, stream=True, timeout=60)
+            response.raise_for_status()
+            
+            # 保存到临时文件
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        tmp_file.write(chunk)
+                tmp_file_path = tmp_file.name
+            
+            logger.info(f"✅ Video downloaded successfully, file size: {os.path.getsize(tmp_file_path)} bytes")
+            
+            # 发送视频
+            with open(tmp_file_path, 'rb') as video_file:
+                # 构建多行模版格式
+                logger.info(f"📝 Task data for caption: title={task.get('title')}, description={task.get('description')}, keywords_template={task.get('keywords_template')}")
                 
-                # 删除临时文件
-                os.unlink(tmp_file_path)
+                # 确保每个字段都有值，并且格式正确
+                title = task.get('title', '')
+                description = task.get('description', '')
+                keywords_raw = task.get('keywords_template', '')
+                reward = task.get('node_power_reward', 0)
                 
-                # 发送最终提示消息（新消息，在视频之后）
-                # 格式化关键词为 #tag 格式
-                keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
-                hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
+                # 清理 keywords_template：完全删除包含"视频链接："的行
+                keywords_lines = keywords_raw.split('\n')
+                cleaned_keywords = []
+                for line in keywords_lines:
+                    # 跳过包含"视频链接："的行
+                    if '视频链接：' not in line and line.strip():
+                        # 如果行中包含"keywords_template="，提取后面的内容
+                        if 'keywords_template=' in line:
+                            cleaned_keywords.append(line.split('keywords_template=')[1])
+                        # 如果行中包含"上传关键词描述："，提取后面的内容
+                        elif '上传关键词描述：' in line:
+                            cleaned_keywords.append(line.split('上传关键词描述：')[1])
+                        else:
+                            cleaned_keywords.append(line)
+                keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
                 
-                # 提取剧情关键词（从 keywords_list 中取第一个）
-                plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+                # 生成合法的文件名（去掉特殊字符）
+                safe_filename = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '·', '《', '》')).strip()
+                if not safe_filename:
+                    safe_filename = f"video_{task_id}"
+                filename = f"{safe_filename}.mp4"
                 
-                # 提取剧名（从 title 中提取《》中的内容）
-                import re
-                drama_name_match = re.search(r'《(.+?)》', title)
-                drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
-                drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
+                video_msg = await context.bot.send_video(
+                    chat_id=query.message.chat_id,
+                    video=video_file,
+                    filename=filename,
+                    supports_streaming=True
+                )
                 
-                if user_lang == 'zh':
-                    final_msg = f"""📥 下载已完成，请按以下提示上传：
+                # 保存视频消息 ID 以便后续删除
+                if 'task_video_messages' not in context.user_data:
+                    context.user_data['task_video_messages'] = {}
+                context.user_data['task_video_messages'][task_id] = video_msg.message_id
+                logger.info(f"📹 保存视频消息 ID: task_id={task_id}, message_id={video_msg.message_id}")
+            
+            # 删除临时文件
+            os.unlink(tmp_file_path)
+            
+            # 发送最终提示消息（新消息，在视频之后）
+            # 格式化关键词为 #tag 格式
+            keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+            hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
+            
+            # 提取剧情关键词（从 keywords_list 中取第一个）
+            plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+            
+            # 提取剧名（从 title 中提取《》中的内容）
+            import re
+            drama_name_match = re.search(r'《(.+?)》', title)
+            drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
+            drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
+            
+            if user_lang == 'zh':
+                final_msg = f"""📥 下载已完成，请按以下提示上传：
 
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube 上传内容】
@@ -1064,14 +1075,14 @@ to receive 🎉 {reward} Node Power"""
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
 即可获得 🎉 {reward} Node Power"""
-                    
-                    # 创建 inline keyboard 按钮
-                    keyboard = [
-                        [InlineKeyboardButton("📎 提交链接", callback_data=f"submit_link_{task_id}")]
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                else:
-                    final_msg = f"""📤 Please follow the instructions below to upload the video and complete the task:
+                
+                # 创建 inline keyboard 按钮
+                keyboard = [
+                    [InlineKeyboardButton("📎 提交链接", callback_data=f"submit_link_{task_id}")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+            else:
+                final_msg = f"""📤 Please follow the instructions below to upload the video and complete the task:
 
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube Upload Content】
@@ -1098,39 +1109,37 @@ to receive 🎉 {reward} Node Power"""
 
 Complete the task above and submit your published video link in this bot  
 to receive 🎉 {reward} Node Power"""
-                    
-                    # 创建 inline keyboard 按钮
-                    keyboard = [
-                        [InlineKeyboardButton("📎 Submit Link", callback_data=f"submit_link_{task_id}")]
-                    ]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
                 
-                # 发送新的提示消息（在视频之后）
-                hint_msg = await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text=final_msg,
-                    reply_markup=reply_markup,
-                    parse_mode=None
-                )
-                
-                # 保存提示消息ID，以便用户提交链接时删除
-                if 'task_hint_messages' not in context.user_data:
-                    context.user_data['task_hint_messages'] = {}
-                context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
-                
-                logger.info(f"✅ Video sent successfully, waiting for user to submit link")
-                
-            except Exception as e:
-                logger.error(f"Error downloading video: {e}")
-                error_msg = "❌ 视频下载失败，请稍后重试" if user_lang == 'zh' else "❌ Failed to download video, please try again later"
-                await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text=f"{error_msg}\n\n📎 视频链接: {video_url}"
-                )
-    else:
-        message = get_message(user_lang, 'task_already_claimed')
-        keyboard = get_main_menu_keyboard(user_lang)
-        await query.edit_message_text(message, reply_markup=keyboard)
+                # 创建 inline keyboard 按钮
+                keyboard = [
+                    [InlineKeyboardButton("📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # 发送新的提示消息（在视频之后）
+            hint_msg = await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=final_msg,
+                reply_markup=reply_markup,
+                parse_mode=None
+            )
+            
+            # 保存提示消息ID，以便用户提交链接时删除
+            if 'task_hint_messages' not in context.user_data:
+                context.user_data['task_hint_messages'] = {}
+            context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
+            
+            # 标记任务为已领取
+            claim_result = claim_task(user_id, task_id)
+            logger.info(f"✅ Video sent successfully, task claimed: {claim_result}, waiting for user to submit link")
+            
+        except Exception as e:
+            logger.error(f"Error downloading video: {e}")
+            error_msg = "❌ 视频下载失败，请稍后重试" if user_lang == 'zh' else "❌ Failed to download video, please try again later"
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"{error_msg}\n\n📎 视频链接: {video_url}"
+            )
 
 async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理提交链接"""
@@ -1144,10 +1153,10 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     
     if not tasks:
         await query.edit_message_text(
-            get_message(user_lang, 'no_tasks_in_progress'),
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
-            ]])
+        get_message(user_lang, 'no_tasks_in_progress'),
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+        ]])
         )
         return
     
