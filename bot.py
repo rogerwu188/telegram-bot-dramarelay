@@ -268,30 +268,39 @@ https://solscan.io/tx/{tx_hash}
         'insufficient_balance': '❌ 余额不足，你的可用余额为 {balance} X2C。',
         'confirm_withdraw': '✅ 确认提现',
         'cancel_withdraw': '❌ 取消并返回主菜单',
-        'tutorial': """ℹ️ 使用教程
+        'tutorial': """📚 X2C · 挖矿手册（官方指南）
 
 1️⃣ 领取任务
-   点击“领取短剧任务”，选择你喜欢的短剧
 
-2️⃣ 下载视频
-   点击“确认领取”后，下载任务视频
+进入「🎬 领取短剧任务」，选择你希望分发的官方短剧内容。
 
-3️⃣ 上传到平台
-   将视频上传到 TikTok、YouTube、Instagram 等平台
+2️⃣ 下载素材
 
-4️⃣ 提交链接
-   点击“提交链接”，选择任务，输入平台和链接
+点击「确认领取」后，即可下载本次任务的视频素材。
 
-5️⃣ 获得奖励
-   提交成功后立即获得 X2C
+3️⃣ 发布到平台
 
-6️⃣ 参与空投
-   累积 100+ X2C 即可参与每月空投
+将素材发布至 TikTok / YouTube 等视频平台，并确保视频可公开访问。
 
-💡 小贴士：
-- 每个任务只能提交一次
-- 链接必须真实有效
-- 多平台分发可获得更多奖励""",
+4️⃣ 提交内容链接
+
+在「🔗 提交链接」中选择任务，填写发布平台及对应链接，用于系统自动验证。
+
+5️⃣ 获得算力奖励
+
+内容验证通过后，系统将立即发放对应的 X2C（算力）到你的账户。
+
+6️⃣ 参与月度空投
+
+累计达到 100+ X2C 的用户，可自动获得当月 X2C 月度空投的参与资格。
+
+───
+
+💡 使用说明
+• 每条任务 限提交一次
+• 提交链接须真实有效且为本人发布
+• 建议分发到 多个平台，可获得更高算力收益
+• 请遵守各平台发布规范，避免违规内容"""",
         'invite_friends': """👥 邀请好友奖励机制
 
 你邀请的好友完成首次任务验证后：
@@ -430,30 +439,39 @@ Reason: {error}
         'insufficient_balance': '❌ Insufficient balance. Your available balance is {balance} X2C.',
         'confirm_withdraw': '✅ Confirm Withdrawal',
         'cancel_withdraw': '❌ Cancel and Return to Menu',
-        'tutorial': """ℹ️ How It Works
+        'tutorial': """📚 X2C · Mining Manual (Official Guide)
 
-1️⃣ Get Tasks
-   Click "Get Drama Tasks" and choose your favorite drama
+1️⃣ Claim Tasks
 
-2️⃣ Download Video
-   Click "Claim Task" and download the task video
+Go to "🎬 Get Drama Tasks" and select the official drama content you want to distribute.
 
-3️⃣ Upload to Platform
-   Upload the video to TikTok, YouTube, Instagram, etc.
+2️⃣ Download Materials
 
-4️⃣ Submit Link
-   Click "Submit Link", select task, enter platform and link
+After clicking "Confirm Claim", you can download the video materials for this task.
 
-5️⃣ Get Rewards
-   Earn X2C immediately after submission
+3️⃣ Publish to Platforms
 
-6️⃣ Join Airdrop
-   Accumulate 100+ X2C to join monthly airdrops
+Publish the materials to video platforms such as TikTok / YouTube, and ensure the video is publicly accessible.
 
-💡 Tips:
-- Each task can only be submitted once
-- Links must be valid and real
-- Multi-platform distribution earns more rewards""",
+4️⃣ Submit Content Link
+
+In "🔗 Submit Link", select the task, fill in the publishing platform and corresponding link for automatic system verification.
+
+5️⃣ Get Computing Power Rewards
+
+After content verification passes, the system will immediately distribute the corresponding X2C (computing power) to your account.
+
+6️⃣ Join Monthly Airdrop
+
+Users who accumulate 100+ X2C can automatically qualify for the monthly X2C airdrop.
+
+───
+
+💡 Usage Instructions
+• Each task can only be submitted once
+• Submitted links must be real, valid, and published by yourself
+• It is recommended to distribute to multiple platforms for higher computing power rewards
+• Please follow the publishing rules of each platform and avoid violating content""",
         'invite_friends': """👥 Invite Friends Rewards
 
 When your invited friend completes their first task:
