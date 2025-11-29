@@ -2102,8 +2102,12 @@ async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAUL
     amount = context.user_data.get('withdraw_amount')
     
     if not address or not amount:
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+        ]])
         await query.edit_message_text(
-            get_message(user_lang, 'withdraw_failed', error='Missing withdrawal information')
+            get_message(user_lang, 'withdraw_failed', error='Missing withdrawal information'),
+            reply_markup=keyboard
         )
         return ConversationHandler.END
     
@@ -2117,8 +2121,12 @@ async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAUL
     withdrawal_id = create_withdrawal_request(user_id, address, amount)
     
     if not withdrawal_id:
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+        ]])
         await query.edit_message_text(
-            get_message(user_lang, 'withdraw_failed', error='余额不足或创建请求失败')
+            get_message(user_lang, 'withdraw_failed', error='余额不足或创建请求失败'),
+            reply_markup=keyboard
         )
         return ConversationHandler.END
     
