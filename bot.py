@@ -24,6 +24,7 @@ from telegram.ext import (
 )
 from auto_migrate import auto_migrate
 from link_verifier import LinkVerifier
+from anti_fraud import check_all_limits, update_last_submit_time, get_user_submit_stats
 
 # ============================================================
 # 配置和日志
@@ -1564,8 +1565,28 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
         return SUBMIT_LINK
     
-    # 获取任务信息
+    # 反刷量检查
     conn = get_db_connection()
+    allowed, error_msg = check_all_limits(conn, user_id, link)
+    
+    if not allowed:
+        # 显示限制错误
+        if task_card_message_id and task_card_chat_id:
+            retry_button = InlineKeyboardMarkup([[
+                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+            ]])
+            
+            await context.bot.edit_message_text(
+                chat_id=task_card_chat_id,
+                message_id=task_card_message_id,
+                text=error_msg,
+                reply_markup=retry_button,
+                parse_mode='HTML'
+            )
+        conn.close()
+        return SUBMIT_LINK
+    
+    # 获取任务信息
     cur = conn.cursor()
     cur.execute("SELECT title, description, node_power_reward FROM drama_tasks WHERE task_id = %s", (task_id,))
     task = cur.fetchone()
@@ -1754,6 +1775,20 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reward = submit_task_link(user_id, task_id, platform, link)
         logger.info(f"✅ 任务提交成功，奖励: {reward} X2C")
         
+        # 更新最后提交时间
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE users SET last_submission_time = NOW() WHERE user_id = %s",
+                (user_id,)
+            )
+            conn.commit()
+            cur.close()
+            logger.info(f"✅ 已更新用户 {user_id} 的最后提交时间")
+        except Exception as update_error:
+            logger.error(f"⚠️ 更新最后提交时间失败: {update_error}")
+            conn.rollback()
+        
         # 发送 Webhook 回调通知
         try:
             from webhook_notifier import send_task_completed_webhook
@@ -1786,7 +1821,11 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 text=error_msg,
                 parse_mode='HTML'
             )
+        conn.close()
         return ConversationHandler.END
+    
+    # 关闭数据库连接
+    conn.close()
     
     try:
         stats = get_user_stats(user_id)
