@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # 环境变量
 BOT_TOKEN = os.getenv('BOT_TOKEN') or '8580007118:AAFmA9OlAT1D_XzUnKGL-0qU_FPK7G6uwyQ'
+BOT_USERNAME = os.getenv('BOT_USERNAME') or 'X2CDramaRelayBot'  # Bot username without @
 ADMIN_IDS_STR = os.getenv('ADMIN_IDS') or '5156570084'
 DATABASE_URL = os.getenv('DATABASE_URL') or 'postgresql://postgres:UTKrUjgtzTzfCRQcXtohVuKalpdeCLns@postgres.railway.internal:5432/railway'
 
@@ -221,16 +222,16 @@ MESSAGES = {
         'tutorial': """ℹ️ 使用教程
 
 1️⃣ 领取任务
-   点击"领取短剧任务"，选择你喜欢的短剧
+   点击“领取短剧任务”，选择你喜欢的短剧
 
 2️⃣ 下载视频
-   点击"确认领取"后，下载任务视频
+   点击“确认领取”后，下载任务视频
 
 3️⃣ 上传到平台
    将视频上传到 TikTok、YouTube、Instagram 等平台
 
 4️⃣ 提交链接
-   点击"提交链接"，选择任务，输入平台和链接
+   点击“提交链接”，选择任务，输入平台和链接
 
 5️⃣ 获得奖励
    提交成功后立即获得 Node Power
@@ -242,8 +243,28 @@ MESSAGES = {
 - 每个任务只能提交一次
 - 链接必须真实有效
 - 多平台分发可获得更多奖励""",
+        'invite_friends': """👥 邀请好友奖励机制
+
+你邀请的好友完成首次任务验证后：
+
+🔸 你将获得：对方每次任务奖励的「10% 永久算力加成」
+🔸 对方不会损失任何奖励（平台额外发放）
+🔸 好友首次任务完成，你还可额外领取 +5 X2C 新人奖励
+
+📈 多邀好友 = 多条长期算力通道
+🔥 邀得越多，挖得越快
+
+🔗 你的邀请链接：
+{invite_link}
+
+📊 邀请统计：
+• 已邀请人数：{invited_count} 人
+• 有效邀请：{active_count} 人
+• 累计推荐奖励：{total_rewards} X2C""",
         'back_to_menu': '« 返回主菜单',
         'cancel': '取消',
+        'copy_link': '📋 复制邀请链接',
+        'share_link': '📤 分享给好友',
     },
     'en': {
         'welcome': """🎬 X2C Traffic Node Connected
@@ -338,8 +359,28 @@ Minimum Requirement: 100 Node Power""",
 - Each task can only be submitted once
 - Links must be valid and real
 - Multi-platform distribution earns more rewards""",
+        'invite_friends': """👥 Invite Friends Rewards
+
+When your invited friend completes their first task:
+
+🔸 You get: 10% permanent power bonus from every task they complete
+🔸 They don't lose any rewards (platform bonus)
+🔸 You also get +5 X2C bonus when they complete first task
+
+📈 More invites = More passive income channels
+🔥 Invite more, earn more
+
+🔗 Your invitation link:
+{invite_link}
+
+📊 Invitation Stats:
+• Total invites: {invited_count}
+• Active invites: {active_count}
+• Total referral rewards: {total_rewards} X2C""",
         'back_to_menu': '« Back to Menu',
         'cancel': 'Cancel',
+        'copy_link': '📋 Copy Invite Link',
+        'share_link': '📤 Share to Friends',
     }
 }
 
@@ -513,6 +554,13 @@ def submit_task_link(user_id: int, task_id: int, platform: str, link: str) -> in
     cur.close()
     conn.close()
     
+    # 处理推荐奖励
+    try:
+        from invitation_system import process_referral_reward
+        process_referral_reward(user_id, task_id, reward)
+    except Exception as e:
+        logger.error(f"⚠️ Failed to process referral reward: {e}")
+    
     return reward
 
 def get_user_stats(user_id: int) -> dict:
@@ -662,6 +710,21 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_or_create_user(user.id, user.username, user.first_name)
     user_lang = get_user_language(user.id)
+    
+    # 处理邀请链接参数
+    if context.args and len(context.args) > 0:
+        arg = context.args[0]
+        if arg.startswith('invite_'):
+            try:
+                inviter_id = int(arg.replace('invite_', ''))
+                if inviter_id != user.id:  # 不能邀请自己
+                    from invitation_system import record_invitation
+                    success = record_invitation(inviter_id, user.id)
+                    if success:
+                        logger.info(f"✅ User {user.id} was invited by {inviter_id}")
+                        # 可以在这里发送欢迎消息提示被邀请
+            except ValueError:
+                logger.warning(f"⚠️ Invalid invite parameter: {arg}")
     
     # 格式化欢迎消息，替换用户名
     username = user.username or user.first_name or f"User{user.id}"
@@ -1807,6 +1870,35 @@ async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(message, reply_markup=keyboard)
 
+async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理邀请好友"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user_lang = get_user_language(user_id)
+    
+    # 生成邀请链接
+    invite_link = f"https://t.me/{BOT_USERNAME}?start=invite_{user_id}"
+    
+    # 获取邀请统计
+    from invitation_system import get_invitation_stats
+    stats = get_invitation_stats(user_id)
+    
+    message = get_message(user_lang, 'invite_friends',
+        invite_link=invite_link,
+        invited_count=stats['invited_count'],
+        active_count=stats['active_count'],
+        total_rewards=stats['total_rewards']
+    )
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_message(user_lang, 'share_link'), url=f"https://t.me/share/url?url={invite_link}")],
+        [InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')]
+    ])
+    
+    await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True)
+
 async def bind_wallet_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理绑定钱包"""
     query = update.callback_query
@@ -1946,6 +2038,7 @@ def main():
     application.add_handler(CallbackQueryHandler(my_power_callback, pattern='^my_power$'))
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
+    application.add_handler(CallbackQueryHandler(invite_friends_callback, pattern='^invite_friends$'))
     application.add_handler(CallbackQueryHandler(tutorial_callback, pattern='^tutorial$'))
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
