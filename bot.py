@@ -1639,7 +1639,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logger.info(f"✅ 验证通过，开始提交任务: user_id={user_id}, task_id={task_id}, platform={platform}")
     try:
         reward = submit_task_link(user_id, task_id, platform, link)
-        logger.info(f"✅ 任务提交成功，奖励: {reward} NP")
+        logger.info(f"✅ 任务提交成功，奖励: {reward} X2C")
         
         # 发送 Webhook 回调通知
         try:
