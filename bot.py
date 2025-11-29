@@ -782,7 +782,7 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 显示任务列表
     keyboard = []
     for task in available_tasks:
-        button_text = f"🎬 {task['title']} ({task['duration']}s) - {task['node_power_reward']} NP"
+        button_text = f"🎬 {task['title']} ({task['duration']}s) - {task['node_power_reward']} X2C"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
     
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
@@ -1237,7 +1237,7 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     # 显示进行中的任务列表
     keyboard = []
     for task in tasks:
-        button_text = f"📤 {task['title']} ({task['node_power_reward']} NP)"
+        button_text = f"📤 {task['title']} ({task['node_power_reward']} X2C)"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task['task_id']}")])
     
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
@@ -1320,7 +1320,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     else:
         message_parts.append(f"📤 <b>Submit Task</b>")
         message_parts.append(f"🎬 {task['title']}")
-        message_parts.append(f"💰 Reward: {task['node_power_reward']} NP")
+        message_parts.append(f"💰 Reward: {task['node_power_reward']} X2C")
         message_parts.append("")
         
         # 添加 TikTok 描述
