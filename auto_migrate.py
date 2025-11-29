@@ -43,6 +43,7 @@ def auto_migrate():
             ('completed_tasks', 'INTEGER DEFAULT 0'),
             ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
             ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+            ('last_submission_time', 'TIMESTAMP'),  # 反刷量：最后提交时间
         ]
         
         # 逐个检查并添加 users 表缺失的字段
