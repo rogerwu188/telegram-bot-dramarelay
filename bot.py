@@ -907,7 +907,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 💰【奖励说明】
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
-即可获得 🎉 {reward} Node Power"""
+即可获得 🎉 {reward} X2C"""
             else:
                 download_msg = f"""📥 <b>Video file is too large ({file_size_mb:.0f} MB)</b>
 
@@ -944,7 +944,7 @@ Please click the link below to download:
 💰【Reward】
 
 Complete the task above and submit your published video link in this bot  
-to receive 🎉 {reward} Node Power"""
+to receive 🎉 {reward} X2C"""
             
             # 创建提交链接按钮
             keyboard = [
@@ -1078,7 +1078,7 @@ to receive 🎉 {reward} Node Power"""
 💰【奖励说明】
 
 完成以上任务，并在本机器人提交你发布后的视频链接  
-即可获得 🎉 {reward} Node Power"""
+即可获得 🎉 {reward} X2C"""
                 
                 # 创建 inline keyboard 按钮
                 keyboard = [
@@ -1112,7 +1112,7 @@ to receive 🎉 {reward} Node Power"""
 💰【Reward】
 
 Complete the task above and submit your published video link in this bot  
-to receive 🎉 {reward} Node Power"""
+to receive 🎉 {reward} X2C"""
                 
                 # 创建 inline keyboard 按钮
                 keyboard = [
@@ -1235,7 +1235,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     if user_lang == 'zh':
         message_parts.append(f"📤 <b>提交任务</b>")
         message_parts.append(f"🎬 {task['title']}")
-        message_parts.append(f"💰 完成可获得：{task['node_power_reward']} NP")
+        message_parts.append(f"💰 完成可获得：{task['node_power_reward']} X2C")
         message_parts.append("")
         
         # 添加 TikTok 描述
