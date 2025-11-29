@@ -2229,6 +2229,11 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     keyboard = get_main_menu_keyboard(user_lang)
     
     await query.edit_message_text(welcome_message, reply_markup=keyboard)
+    
+    # 清理 context 数据
+    context.user_data.clear()
+    
+    return ConversationHandler.END
 
 # ============================================================
 # 主函数
@@ -2263,7 +2268,7 @@ def main():
     application.add_handler(CallbackQueryHandler(tutorial_callback, pattern='^tutorial$'))
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
-    application.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$'))
+    # back_to_menu 由 ConversationHandler 的 fallback 处理，不需要全局 handler
     
     # 对话处理器 - 提交链接
     submit_conv_handler = ConversationHandler(
@@ -2298,6 +2303,9 @@ def main():
         fallbacks=[CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$')],
     )
     application.add_handler(withdraw_conv_handler)
+    
+    # 全局 back_to_menu handler（放在 ConversationHandler 之后）
+    application.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$'))
     
     # 检查是否有 WEBHOOK_URL 环境变量
     webhook_url = os.getenv('WEBHOOK_URL')
