@@ -810,13 +810,155 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
             logger.info(f"✅ Starting video download from: {video_url}")
             try:
-                # 不显示下载提示,直接下载
-                
-                # 下载视频
+                # 先检查文件大小
                 import requests
                 import tempfile
                 import os
                 
+                # 获取文件大小
+                head_response = requests.head(video_url, timeout=10)
+                file_size = int(head_response.headers.get('content-length', 0))
+                file_size_mb = file_size / (1024 * 1024)
+                
+                logger.info(f"📊 Video file size: {file_size_mb:.2f} MB")
+                
+                # 如果文件大于50MB,不下载,直接提供下载链接
+                if file_size > 50 * 1024 * 1024:
+                    logger.warning(f"⚠️ Video file too large ({file_size_mb:.2f} MB), providing download link instead")
+                    
+                    # 准备任务信息
+                    title = task.get('title', '')
+                    description = task.get('description', '')
+                    keywords_raw = task.get('keywords_template', '')
+                    reward = task.get('node_power_reward', 0)
+                    
+                    # 清理 keywords_template
+                    keywords_lines = keywords_raw.split('\n')
+                    cleaned_keywords = []
+                    for line in keywords_lines:
+                        if '视频链接：' not in line and line.strip():
+                            if 'keywords_template=' in line:
+                                cleaned_keywords.append(line.split('keywords_template=')[1])
+                            elif '上传关键词描述：' in line:
+                                cleaned_keywords.append(line.split('上传关键词描述：')[1])
+                            else:
+                                cleaned_keywords.append(line)
+                    keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
+                    
+                    # 格式化关键词为 #tag 格式
+                    keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+                    hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])
+                    
+                    # 提取剧情关键词和剧名
+                    plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+                    import re
+                    drama_name_match = re.search(r'《(.+?)》', title)
+                    drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
+                    drama_name_with_brackets = f"《{drama_name}》"
+                    
+                    # 发送下载链接消息
+                    if user_lang == 'zh':
+                        download_msg = f"""📥 <b>视频文件过大({file_size_mb:.0f} MB)</b>
+
+请点击下面的链接直接下载：
+
+🔗 <a href=\"{video_url}\">点击下载视频</a>
+
+💡 <b>提示：</b>
+• 点击链接在浏览器中打开
+• 右键"另存为"或直接下载
+• 下载后上传到 TikTok/YouTube
+
+━━━━━━━━━━━━━━━━━━
+🎬【YouTube 上传内容】
+
+▶️ 视频文件名称：
+{plot_keyword} · {drama_name_with_brackets}
+
+▶️ 复制到 YouTube Title栏：
+{plot_keyword} | {drama_name}
+
+▶️ 复制到 YouTube Description栏：
+{description}
+
+（YouTube 不需要填写标签，保持空白即可）
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok 上传内容】
+
+▶️ TikTok 视频描述（请完整复制以下内容）：
+{description}
+
+{hashtags}
+
+━━━━━━━━━━━━━━━━━━
+💰【奖励说明】
+
+完成以上任务，并在本机器人提交你发布后的视频链接  
+即可获得 🎉 {reward} Node Power"""
+                    else:
+                        download_msg = f"""📥 <b>Video file is too large ({file_size_mb:.0f} MB)</b>
+
+Please click the link below to download:
+
+🔗 <a href=\"{video_url}\">Click to download video</a>
+
+💡 <b>Tips:</b>
+• Click the link to open in browser
+• Right-click "Save as" or download directly
+• Upload to TikTok/YouTube after downloading
+
+━━━━━━━━━━━━━━━━━━
+🎬【YouTube Upload Content】
+
+▶ Video Title:
+{title}
+
+▶ Video Description:
+{description}
+
+(YouTube does not require tags, leave blank)
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok Upload Content】
+
+▶ TikTok Description:
+{description}
+
+▶ TikTok Hashtags:
+{hashtags}
+
+━━━━━━━━━━━━━━━━━━
+💰【Reward】
+
+Complete the task above and submit your published video link in this bot  
+to receive 🎉 {reward} Node Power"""
+                    
+                    # 创建提交链接按钮
+                    keyboard = [
+                        [InlineKeyboardButton("📎 提交链接" if user_lang == 'zh' else "📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    # 发送消息
+                    hint_msg = await context.bot.send_message(
+                        chat_id=query.message.chat_id,
+                        text=download_msg,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML',
+                        disable_web_page_preview=False
+                    )
+                    
+                    # 保存提示消息ID
+                    if 'task_hint_messages' not in context.user_data:
+                        context.user_data['task_hint_messages'] = {}
+                    context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
+                    
+                    logger.info(f"✅ Download link sent for large video file")
+                    return
+                
+                # 文件小于50MB,正常下载并发送
+                logger.info(f"✅ File size OK, downloading video...")
                 response = requests.get(video_url, stream=True, timeout=60)
                 response.raise_for_status()
                 
