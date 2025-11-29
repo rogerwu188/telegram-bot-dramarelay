@@ -1496,20 +1496,27 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         'twitter': '🐦 Twitter'
     }
     
+    # 截断链接显示（最多50个字符）
+    link_display = link if len(link) <= 50 else link[:47] + '...'
+    
     success_msg = (
-        f"✅ <b>提交成功！</b>\n\n"
-        f"🎬 任务：{task['title']}\n"
-        f"平台：{platform_emoji.get(platform, platform)}\n"
-        f"🎁 奖励：+{reward} NP\n"
-        f"📊 总算力：{stats['total_power']} NP\n\n"
-        f"🚀 继续分享更多视频获得更多奖励！"
+        f"✅ <b>任务提交成功！</b>\n\n"
+        f"🎯 任务名称：{task['title']}\n"
+        f"📱 平台：{platform.capitalize()}\n"
+        f"🔗 已提交：{link_display}\n\n"
+        f"🎁 获得奖励：{reward} X2C\n"
+        f"📊 累计算力：{stats['total_power']}\n\n"
+        f"🔥 你正在推动短剧全球传播！\n"
+        f"继续分发更多内容，解锁更高等级与更多X2C 奖励。"
     ) if user_lang == 'zh' else (
-        f"✅ <b>Submitted Successfully!</b>\n\n"
-        f"🎬 Task: {task['title']}\n"
-        f"Platform: {platform_emoji.get(platform, platform)}\n"
-        f"🎁 Reward: +{reward} NP\n"
-        f"📊 Total Power: {stats['total_power']} NP\n\n"
-        f"🚀 Keep sharing more videos to earn more rewards!"
+        f"✅ <b>Task Submitted Successfully!</b>\n\n"
+        f"🎯 Task Name: {task['title']}\n"
+        f"📱 Platform: {platform.capitalize()}\n"
+        f"🔗 Submitted: {link_display}\n\n"
+        f"🎁 Reward Earned: {reward} X2C\n"
+        f"📊 Total Power: {stats['total_power']}\n\n"
+        f"🔥 You're driving global short drama distribution!\n"
+        f"Keep distributing more content to unlock higher levels and more X2C rewards."
     )
     
     back_button = InlineKeyboardMarkup([[
