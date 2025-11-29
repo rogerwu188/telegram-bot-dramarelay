@@ -1706,7 +1706,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         notification_msg = await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=success_msg,
-            parse_mode='HTML'
+            parse_mode='HTML',
+            disable_web_page_preview=True
         )
         logger.info("✅ 成功通知已发送并保留")
     except Exception as e:

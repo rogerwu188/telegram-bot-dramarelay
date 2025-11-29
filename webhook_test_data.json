@@ -1,0 +1,117 @@
+{
+  "test_info": {
+    "test_time": "2025-11-28T04:12:44.240437Z",
+    "test_status": "SUCCESS",
+    "webhook_url": "https://rxkcgquecleofqhyfchx.supabase.co/functions/v1/x2c-webhook-receiver",
+    "http_status": 200,
+    "response_time_ms": 543
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://rxkcgquecleofqhyfchx.supabase.co/functions/v1/x2c-webhook-receiver",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Webhook-Event": "task.completed",
+      "X-Webhook-Timestamp": "1764303164",
+      "X-Webhook-Secret": "X2C_WEBHOOK_SECRET",
+      "X-Webhook-Signature": "sha256=57a911e4de97985cdfe10987ab7f234a3dd586509365d44053faa4a71bc2f305",
+      "User-Agent": "X2C-Bot-Webhook/1.0"
+    },
+    "body": {
+      "event": "task.completed",
+      "timestamp": "2025-11-28T04:12:44.240437Z",
+      "data": {
+        "task_id": 38,
+        "task_title": "短剧片段 · 《ruthless-kindness》",
+        "user_id": 5156570084,
+        "username": "test_user",
+        "platform": "tiktok",
+        "submission_link": "https://www.tiktok.com/@wu.roger7/video/7577587517487107341",
+        "submitted_at": "2025-11-28T04:12:44.240445Z",
+        "verified_at": "2025-11-28T04:12:44.240447Z",
+        "node_power_earned": 10,
+        "verification_status": "verified",
+        "verification_details": {
+          "matched": true,
+          "match_rate": 100,
+          "matched_keywords": [
+            "test"
+          ]
+        }
+      }
+    },
+    "body_size_bytes": 537
+  },
+  "signature": {
+    "algorithm": "HMAC-SHA256",
+    "secret": "X2C_WEBHOOK_SECRET",
+    "payload_string": "{\"event\": \"task.completed\", \"timestamp\": \"2025-11-28T04:12:44.240437Z\", \"data\": {\"task_id\": 38, \"task_title\": \"短剧片段 · 《ruthless-kindness》\", \"user_id\": 5156570084, \"username\": \"test_user\", \"platform\": \"tiktok\", \"submission_link\": \"https://www.tiktok.com/@wu.roger7/video/7577587517487107341\", \"submitted_at\": \"2025-11-28T04:12:44.240445Z\", \"verified_at\": \"2025-11-28T04:12:44.240447Z\", \"node_power_earned\": 10, \"verification_status\": \"verified\", \"verification_details\": {\"matched\": true, \"match_rate\": 100, \"matched_keywords\": [\"test\"]}}}",
+    "signature": "sha256=57a911e4de97985cdfe10987ab7f234a3dd586509365d44053faa4a71bc2f305",
+    "hex_digest": "57a911e4de97985cdfe10987ab7f234a3dd586509365d44053faa4a71bc2f305"
+  },
+  "response": {
+    "status_code": 200,
+    "headers": {
+      "Date": "Fri, 28 Nov 2025 04:12:44 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "120",
+      "Server": "cloudflare",
+      "Access-Control-Allow-Origin": "*",
+      "sb-project-ref": "rxkcgquecleofqhyfchx",
+      "sb-request-id": "019ac8a9-d371-76f2-a297-4803f9d34225",
+      "x-deno-execution-id": "47f81aac-fe5f-4772-adc0-51761c5fede6",
+      "x-sb-edge-region": "us-east-1",
+      "x-served-by": "supabase-edge-runtime"
+    },
+    "body": {
+      "success": true,
+      "message": "Webhook received and processed successfully",
+      "received_at": "2025-11-28T04:12:44.783Z"
+    }
+  },
+  "expected_database_record": {
+    "table_name": "task_completions",
+    "expected_fields": {
+      "task_id": 38,
+      "task_title": "短剧片段 · 《ruthless-kindness》",
+      "user_id": 5156570084,
+      "username": "test_user",
+      "platform": "tiktok",
+      "submission_link": "https://www.tiktok.com/@wu.roger7/video/7577587517487107341",
+      "submitted_at": "2025-11-28T04:12:44.240445Z",
+      "verified_at": "2025-11-28T04:12:44.240447Z",
+      "node_power_earned": 10,
+      "verification_status": "verified",
+      "match_rate": 100,
+      "matched_keywords": ["test"]
+    },
+    "query_example": "SELECT * FROM task_completions WHERE user_id = 5156570084 AND task_id = 38 ORDER BY created_at DESC LIMIT 1;"
+  },
+  "verification_checklist": [
+    {
+      "item": "Webhook 请求成功发送",
+      "status": "✅ PASS",
+      "details": "HTTP 200 响应"
+    },
+    {
+      "item": "签名验证通过",
+      "status": "✅ PASS",
+      "details": "HMAC-SHA256 签名正确"
+    },
+    {
+      "item": "Supabase 接收成功",
+      "status": "✅ PASS",
+      "details": "返回 success: true"
+    },
+    {
+      "item": "数据格式正确",
+      "status": "✅ PASS",
+      "details": "JSON payload 符合规范"
+    },
+    {
+      "item": "数据库记录插入",
+      "status": "⏳ PENDING",
+      "details": "需要 Supabase 端确认"
+    }
+  ]
+}
