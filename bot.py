@@ -664,9 +664,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_lang = get_user_language(user.id)
     
     # 格式化欢迎消息，替换用户名
-    welcome_message = get_message(user_lang, 'welcome').format(
-        username=user.username or user.first_name or f"User{user.id}"
-    )
+    username = user.username or user.first_name or f"User{user.id}"
+    welcome_message = get_message(user_lang, 'welcome', username=username)
     keyboard = get_main_menu_keyboard(user_lang)
     
     await update.message.reply_text(welcome_message, reply_markup=keyboard)
@@ -1910,7 +1909,10 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    welcome_message = get_message(user_lang, 'welcome')
+    # 获取用户名
+    username = query.from_user.username or query.from_user.first_name or "用户"
+    
+    welcome_message = get_message(user_lang, 'welcome', username=username)
     keyboard = get_main_menu_keyboard(user_lang)
     
     await query.edit_message_text(welcome_message, reply_markup=keyboard)
