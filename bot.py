@@ -197,13 +197,13 @@ MESSAGES = {
         'select_platform': '请选择你上传的平台：',
         'enter_link': '请输入你上传的链接：',
         'link_submitted': '✅ 链接提交成功！\n\n你获得了 {reward} X2C！\n\n总算力：{total_power}',
-        'invalid_link': '❌ 链接格式不正确，请重新输入        'my_power': """📊 我的算力统计
+        'invalid_link': '❌ 链接格式不正确，请重新输入。',
+        'my_power': """📊 我的算力统计
 
 💰 总 X2C：{total_power}
 ✅ 已完成任务：{completed_tasks}
 🔄 进行中任务：{in_progress_tasks}
 📈 本周排名：#{rank}""",
-🎁 预计空投：{estimated_airdrop} X2C""",
         'ranking': """🏆 全球排行榜
 
 {ranking_list}
@@ -374,7 +374,7 @@ Viral videos can mine 10,000+ x2c
 💰 Total X2C: {total_power}
 ✅ Completed Tasks: {completed_tasks}
 🔄 In Progress: {in_progress_tasks}
-📈 This Week Rank: #{rank}""",stimated Airdrop: {estimated_airdrop} X2C""",
+📈 This Week Rank: #{rank}""",
         'ranking': """🏆 Global Ranking
 
 {ranking_list}
