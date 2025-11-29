@@ -186,7 +186,7 @@ MESSAGES = {
 🎬 标题：{title}
 📝 描述：{description}
 ⏱ 时长：{duration}秒
-💰 奖励：{reward} Node Power
+💰 奖励：{reward} X2C
 📱 平台：{platforms}
 
 ⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。""",
@@ -196,21 +196,20 @@ MESSAGES = {
         'no_tasks_in_progress': '你当前没有进行中的任务。\n\n请先领取任务！',
         'select_platform': '请选择你上传的平台：',
         'enter_link': '请输入你上传的链接：',
-        'link_submitted': '✅ 链接提交成功！\n\n你获得了 {reward} Node Power！\n\n总算力：{total_power}',
-        'invalid_link': '❌ 链接格式不正确，请重新输入。',
-        'my_power': """📊 我的算力统计
+        'link_submitted': '✅ 链接提交成功！\n\n你获得了 {reward} X2C！\n\n总算力：{total_power}',
+        'invalid_link': '❌ 链接格式不正确，请重新输入        'my_power': """📊 我的算力统计
 
-💰 总 Node Power：{total_power}
+💰 总 X2C：{total_power}
 ✅ 已完成任务：{completed_tasks}
 🔄 进行中任务：{in_progress_tasks}
-📈 本周排名：#{rank}
+📈 本周排名：#{rank}""",
 🎁 预计空投：{estimated_airdrop} X2C""",
         'ranking': """🏆 全球排行榜
 
 {ranking_list}
 
 你的排名：#{your_rank}
-你的算力：{your_power} Node Power""",
+你的算力：{your_power} X2C""",
         'airdrop_status': """🎁 空投状态
 
 📅 当前轮次：第 {round} 轮
@@ -218,7 +217,7 @@ MESSAGES = {
 💰 预计空投：{estimated} X2C
 ⏰ 下次快照：{next_snapshot}
 
-最低要求：100 Node Power""",
+最低要求：100 X2C""",
         'withdraw_prompt': """💰 X2C 钱包提现
 
 请输入你要提取的 SOL 地址（支持 Phantom、OKX、Bybit 等钱包）：
@@ -284,10 +283,10 @@ https://solscan.io/tx/{tx_hash}
    点击“提交链接”，选择任务，输入平台和链接
 
 5️⃣ 获得奖励
-   提交成功后立即获得 Node Power
+   提交成功后立即获得 X2C
 
 6️⃣ 参与空投
-   累积 100+ Node Power 即可参与每月空投
+   累积 100+ X2C 即可参与每月空投
 
 💡 小贴士：
 - 每个任务只能提交一次
@@ -349,7 +348,7 @@ Viral videos can mine 10,000+ x2c
 🎬 Title: {title}
 📝 Description: {description}
 ⏱ Duration: {duration}s
-💰 Reward: {reward} Node Power
+💰 Reward: {reward} X2C
 📱 Platforms: {platforms}
 
 ⬇️ Click the button below to claim the task. The video will be automatically downloaded to the chat.""",
@@ -359,21 +358,20 @@ Viral videos can mine 10,000+ x2c
         'no_tasks_in_progress': 'You have no tasks in progress.\n\nPlease claim a task first!',
         'select_platform': 'Please select the platform you uploaded to:',
         'enter_link': 'Please enter your upload link:',
-        'link_submitted': '✅ Link submitted successfully!\n\nYou earned {reward} Node Power!\n\nTotal Power: {total_power}',
+        'link_submitted': '✅ Link submitted successfully!\n\nYou earned {reward} X2C!\n\nTotal Power: {total_power}',
         'invalid_link': '❌ Invalid link format. Please try again.',
-        'my_power': """📊 My Node Power Stats
+        'my_power': """📊 My X2C Stats
 
-💰 Total Node Power: {total_power}
+💰 Total X2C: {total_power}
 ✅ Completed Tasks: {completed_tasks}
 🔄 In Progress: {in_progress_tasks}
-📈 This Week Rank: #{rank}
-🎁 Estimated Airdrop: {estimated_airdrop} X2C""",
+📈 This Week Rank: #{rank}""",stimated Airdrop: {estimated_airdrop} X2C""",
         'ranking': """🏆 Global Ranking
 
 {ranking_list}
 
 Your Rank: #{your_rank}
-Your Power: {your_power} Node Power""",
+Your Power: {your_power} X2C""",
         'airdrop_status': """🎁 Airdrop Status
 
 📅 Current Round: Round {round}
@@ -381,7 +379,7 @@ Your Power: {your_power} Node Power""",
 💰 Estimated Airdrop: {estimated} X2C
 ⏰ Next Snapshot: {next_snapshot}
 
-Minimum Requirement: 100 Node Power""",
+Minimum Requirement: 100 X2C""",
         'withdraw_prompt': """💰 X2C Wallet Withdrawal
 
 Please enter your SOL address (supports Phantom, OKX, Bybit, etc.):
@@ -447,10 +445,10 @@ Reason: {error}
    Click "Submit Link", select task, enter platform and link
 
 5️⃣ Get Rewards
-   Earn Node Power immediately after submission
+   Earn X2C immediately after submission
 
 6️⃣ Join Airdrop
-   Accumulate 100+ Node Power to join monthly airdrops
+   Accumulate 100+ X2C to join monthly airdrops
 
 💡 Tips:
 - Each task can only be submitted once
@@ -1927,7 +1925,7 @@ async def ranking_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ranking_list = []
     for r in ranking:
         name = r['first_name'] or r['username'] or f"User {r['user_id']}"
-        ranking_list.append(f"{r['rank']}. {name} - {r['total_node_power']} NP")
+        ranking_list.append(f"{r['rank']}. {name} - {r['total_node_power']} X2C")
     
     message = get_message(user_lang, 'ranking',
         ranking_list='\n'.join(ranking_list),
@@ -1950,9 +1948,9 @@ async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_lang = get_user_language(user_id)
     
     stats = get_user_stats(user_id)
-    eligible = "✅ 是" if stats['total_power'] >= 100 else "❌ 否（需要 100+ NP）"
+    eligible = "✅ 是" if stats['total_power'] >= 100 else "❌ 否（需要 100+ X2C）"
     if user_lang == 'en':
-        eligible = "✅ Yes" if stats['total_power'] >= 100 else "❌ No (Need 100+ NP)"
+        eligible = "✅ Yes" if stats['total_power'] >= 100 else "❌ No (Need 100+ X2C)"
     
     message = get_message(user_lang, 'airdrop_status',
         round=1,
