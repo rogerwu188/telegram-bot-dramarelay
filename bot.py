@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # 环境变量
 BOT_TOKEN = os.getenv('BOT_TOKEN') or '8580007118:AAFmA9OlAT1D_XzUnKGL-0qU_FPK7G6uwyQ'
-BOT_USERNAME = os.getenv('BOT_USERNAME') or 'X2CDramaRelayBot'  # Bot username without @
+BOT_USERNAME = os.getenv('BOT_USERNAME') or 'DramaRelayBot'  # Bot username without @
 ADMIN_IDS_STR = os.getenv('ADMIN_IDS') or '5156570084'
 DATABASE_URL = os.getenv('DATABASE_URL') or 'postgresql://postgres:UTKrUjgtzTzfCRQcXtohVuKalpdeCLns@postgres.railway.internal:5432/railway'
 
