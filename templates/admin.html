@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DramaRelay Bot - 管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .controls label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .controls select {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .controls select:hover {
+            border-color: #667eea;
+        }
+        
+        .controls button {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .controls button:hover {
+            background: #5568d3;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5em;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge.danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge.secondary {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .timestamp {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            header h1 {
+                font-size: 1.5em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 0.9em;
+            }
+            
+            table th, table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🤖 DramaRelay Bot 管理面板</h1>
+            <p>实时监控任务分发、完成情况和 Webhook 回调状态</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="number" id="stat-tasks">-</div>
+                <div class="label">总任务数</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-users">-</div>
+                <div class="label">参与用户</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-completed">-</div>
+                <div class="label">完成用户</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-webhooks-success">-</div>
+                <div class="label">成功回调</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="stat-webhooks-failed">-</div>
+                <div class="label">失败回调</div>
+            </div>
+        </div>
+        
+        <!-- 控制面板 -->
+        <div class="controls">
+            <label for="time-range">时间范围:</label>
+            <select id="time-range">
+                <option value="1">最近 1 小时</option>
+                <option value="6">最近 6 小时</option>
+                <option value="24" selected>最近 24 小时</option>
+                <option value="72">最近 3 天</option>
+                <option value="168">最近 7 天</option>
+            </select>
+            
+            <label for="limit">显示条数:</label>
+            <select id="limit">
+                <option value="20">20 条</option>
+                <option value="50" selected>50 条</option>
+                <option value="100">100 条</option>
+                <option value="200">200 条</option>
+            </select>
+            
+            <button onclick="refreshData()">🔄 刷新数据</button>
+            <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
+        </div>
+        
+        <!-- Webhook 回调日志 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📤 Webhook 回调日志</h2>
+            </div>
+            <div class="section-content">
+                <div id="webhooks-loading" class="loading">加载中...</div>
+                <div id="webhooks-error" class="error" style="display: none;"></div>
+                <div id="webhooks-empty" class="empty" style="display: none;">暂无回调记录</div>
+                <div id="webhooks-table" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>任务ID</th>
+                                <th>任务标题</th>
+                                <th>Project ID</th>
+                                <th>完成数</th>
+                                <th>回调状态</th>
+                                <th>重试次数</th>
+                                <th>最后尝试</th>
+                                <th>回调URL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="webhooks-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 任务完成日志 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>✅ 任务完成日志</h2>
+            </div>
+            <div class="section-content">
+                <div id="completions-loading" class="loading">加载中...</div>
+                <div id="completions-error" class="error" style="display: none;"></div>
+                <div id="completions-empty" class="empty" style="display: none;">暂无完成记录</div>
+                <div id="completions-table" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>用户</th>
+                                <th>任务标题</th>
+                                <th>平台</th>
+                                <th>奖励</th>
+                                <th>完成时间</th>
+                                <th>用时</th>
+                                <th>提交链接</th>
+                            </tr>
+                        </thead>
+                        <tbody id="completions-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 任务接收日志 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📥 任务接收日志</h2>
+            </div>
+            <div class="section-content">
+                <div id="tasks-loading" class="loading">加载中...</div>
+                <div id="tasks-error" class="error" style="display: none;"></div>
+                <div id="tasks-empty" class="empty" style="display: none;">暂无任务记录</div>
+                <div id="tasks-table" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>任务ID</th>
+                                <th>External ID</th>
+                                <th>Project ID</th>
+                                <th>标题</th>
+                                <th>平台</th>
+                                <th>奖励</th>
+                                <th>分发数</th>
+                                <th>完成数</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let autoRefreshTimer = null;
+        
+        // 格式化时间
+        function formatTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', { 
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        // 格式化时长
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}分${secs}秒`;
+        }
+        
+        // 截断文本
+        function truncate(text, maxLength = 50) {
+            if (!text) return '-';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+        
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const hours = document.getElementById('time-range').value;
+                const response = await fetch(`/api/logs/stats?hours=${hours}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    document.getElementById('stat-tasks').textContent = data.total_tasks || 0;
+                    document.getElementById('stat-users').textContent = data.total_users || 0;
+                    document.getElementById('stat-completed').textContent = data.completed_users || 0;
+                    document.getElementById('stat-webhooks-success').textContent = data.successful_callbacks || 0;
+                    document.getElementById('stat-webhooks-failed').textContent = data.failed_callbacks || 0;
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+        
+        // 加载 Webhook 日志
+        async function loadWebhooks() {
+            const loading = document.getElementById('webhooks-loading');
+            const error = document.getElementById('webhooks-error');
+            const empty = document.getElementById('webhooks-empty');
+            const table = document.getElementById('webhooks-table');
+            const tbody = document.getElementById('webhooks-body');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+            
+            try {
+                const hours = document.getElementById('time-range').value;
+                const limit = document.getElementById('limit').value;
+                const response = await fetch(`/api/logs/webhooks?hours=${hours}&limit=${limit}`);
+                const result = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (!result.success) {
+                    error.textContent = '加载失败: ' + result.error;
+                    error.style.display = 'block';
+                    return;
+                }
+                
+                if (result.count === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                result.data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.external_task_id || item.task_id}</td>
+                        <td>${truncate(item.title, 30)}</td>
+                        <td><small>${truncate(item.project_id, 20)}</small></td>
+                        <td>${item.completed_count}</td>
+                        <td><span class="badge ${item.status_class}">${item.status_label}</span></td>
+                        <td>${item.callback_retry_count || 0}</td>
+                        <td class="timestamp">${formatTime(item.callback_last_attempt)}</td>
+                        <td><a href="${item.callback_url}" target="_blank" class="link">${truncate(item.callback_url, 40)}</a></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                table.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                error.textContent = '加载失败: ' + err.message;
+                error.style.display = 'block';
+            }
+        }
+        
+        // 加载完成日志
+        async function loadCompletions() {
+            const loading = document.getElementById('completions-loading');
+            const error = document.getElementById('completions-error');
+            const empty = document.getElementById('completions-empty');
+            const table = document.getElementById('completions-table');
+            const tbody = document.getElementById('completions-body');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+            
+            try {
+                const hours = document.getElementById('time-range').value;
+                const limit = document.getElementById('limit').value;
+                const response = await fetch(`/api/logs/completions?hours=${hours}&limit=${limit}`);
+                const result = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (!result.success) {
+                    error.textContent = '加载失败: ' + result.error;
+                    error.style.display = 'block';
+                    return;
+                }
+                
+                if (result.count === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                result.data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.display_name} <small>(${item.user_id})</small></td>
+                        <td>${truncate(item.title, 30)}</td>
+                        <td>${item.platform_requirements}</td>
+                        <td>${item.node_power_reward} X2C</td>
+                        <td class="timestamp">${formatTime(item.completed_at)}</td>
+                        <td>${formatDuration(item.duration_seconds)}</td>
+                        <td><a href="${item.submission_link}" target="_blank" class="link">${truncate(item.submission_link, 40)}</a></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                table.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                error.textContent = '加载失败: ' + err.message;
+                error.style.display = 'block';
+            }
+        }
+        
+        // 加载任务日志
+        async function loadTasks() {
+            const loading = document.getElementById('tasks-loading');
+            const error = document.getElementById('tasks-error');
+            const empty = document.getElementById('tasks-empty');
+            const table = document.getElementById('tasks-table');
+            const tbody = document.getElementById('tasks-body');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+            
+            try {
+                const hours = document.getElementById('time-range').value;
+                const limit = document.getElementById('limit').value;
+                const response = await fetch(`/api/logs/tasks?hours=${hours}&limit=${limit}`);
+                const result = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (!result.success) {
+                    error.textContent = '加载失败: ' + result.error;
+                    error.style.display = 'block';
+                    return;
+                }
+                
+                if (result.count === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                result.data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.task_id}</td>
+                        <td>${item.external_task_id || '-'}</td>
+                        <td><small>${truncate(item.project_id, 20)}</small></td>
+                        <td>${truncate(item.title, 30)}</td>
+                        <td>${item.platform_requirements}</td>
+                        <td>${item.node_power_reward} X2C</td>
+                        <td>${item.assigned_users}</td>
+                        <td>${item.completed_users}</td>
+                        <td class="timestamp">${formatTime(item.created_at)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                table.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                error.textContent = '加载失败: ' + err.message;
+                error.style.display = 'block';
+            }
+        }
+        
+        // 刷新所有数据
+        function refreshData() {
+            loadStats();
+            loadWebhooks();
+            loadCompletions();
+            loadTasks();
+        }
+        
+        // 自动刷新
+        function autoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+                alert('已停止自动刷新');
+            } else {
+                autoRefreshTimer = setInterval(refreshData, 30000);
+                alert('已启动自动刷新 (每 30 秒)');
+                refreshData();
+            }
+        }
+        
+        // 监听控制变化
+        document.getElementById('time-range').addEventListener('change', refreshData);
+        document.getElementById('limit').addEventListener('change', refreshData);
+        
+        // 页面加载时初始化
+        window.addEventListener('load', refreshData);
+    </script>
+</body>
+</html>
