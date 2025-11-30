@@ -885,8 +885,15 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logger.info(f"🎯 可领取的任务数量: {len(available_tasks)}/{len(tasks)}")
     
     if not available_tasks:
+        msg_text = (
+            "你今天的所有任务已完成！\n"
+            "邀请好友加入即可继续获得额外奖励与算力加成。"
+        ) if user_lang == 'zh' else (
+            "You have completed all tasks for today!\n"
+            "Invite friends to join and earn extra rewards and power bonuses."
+        )
         await query.edit_message_text(
-            "✅ 你已经领取了所有可用的任务！" if user_lang == 'zh' else "✅ You have claimed all available tasks!",
+            msg_text,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
             ]])
