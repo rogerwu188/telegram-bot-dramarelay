@@ -1090,7 +1090,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 ━━━━━━━━━━━━━━━━━━
 💰【奖励说明】
 
-完成以上任务，并在本机器人提交你发布后的视频链接  
+完成以上任务，点击下方的"提交链接"按钮，机器人验证通过你发布后的视频链接  
 即可获得 🎉 {reward} X2C"""
             else:
                 download_msg = f"""📥 <b>Video file is too large ({file_size_mb:.0f} MB)</b>
@@ -1261,7 +1261,7 @@ to receive 🎉 {reward} X2C"""
 ━━━━━━━━━━━━━━━━━━
 💰【奖励说明】
 
-完成以上任务，并在本机器人提交你发布后的视频链接  
+完成以上任务，点击下方的"提交链接"按钮，机器人验证通过你发布后的视频链接  
 即可获得 🎉 {reward} X2C"""
                 
                 # 创建 inline keyboard 按钮
@@ -1411,11 +1411,15 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     # 显示提交界面（包含完整的描述和标签）
     title = task.get('title', '')
     description = task.get('description', '')
-    keywords_raw = task.get('keywords', '')
+    keywords_raw = task.get('keywords', '') or ''
     reward = task.get('node_power_reward', 0)
     
+    # 确保 description 不为 None
+    if description is None:
+        description = ''
+    
     # 清理 keywords：完全删除包含“视频链接：”的行
-    keywords_lines = keywords_raw.split('\n')
+    keywords_lines = keywords_raw.split('\n') if keywords_raw else []
     cleaned_keywords = []
     for line in keywords_lines:
         # 跳过包含“视频链接：”的行
