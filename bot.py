@@ -74,6 +74,125 @@ def get_db_connection():
     """获取数据库连接"""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def auto_migrate():
+    """自动运行数据库迁移"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        logger.info("🔄 检查数据库迁移...")
+        
+        # 检查 users 表是否有 invited_by 字段
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='users' AND column_name='invited_by'
+        """)
+        has_invited_by = cur.fetchone() is not None
+        
+        if not has_invited_by:
+            logger.info("📝 添加邀请系统字段到 users 表...")
+            
+            # 添加 invited_by 字段
+            cur.execute("""
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS invited_by BIGINT
+            """)
+            
+            # 添加 invitation_reward_received 字段
+            cur.execute("""
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS invitation_reward_received BOOLEAN DEFAULT FALSE
+            """)
+            
+            # 添加 invitation_reward_received_at 字段
+            cur.execute("""
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS invitation_reward_received_at TIMESTAMP
+            """)
+            
+            logger.info("✅ users 表字段已添加")
+        
+        # 检查 user_invitations 表是否存在
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'user_invitations'
+            )
+        """)
+        has_invitations_table = cur.fetchone()['exists']
+        
+        if not has_invitations_table:
+            logger.info("📝 创建 user_invitations 表...")
+            cur.execute("""
+                CREATE TABLE user_invitations (
+                    id SERIAL PRIMARY KEY,
+                    inviter_id BIGINT NOT NULL,
+                    invitee_id BIGINT NOT NULL UNIQUE,
+                    first_task_completed BOOLEAN DEFAULT FALSE,
+                    first_task_completed_at TIMESTAMP,
+                    total_referral_rewards DECIMAL(18, 2) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+                    FOREIGN KEY (invitee_id) REFERENCES users(user_id)
+                )
+            """)
+            logger.info("✅ user_invitations 表已创建")
+        
+        # 检查 referral_rewards 表是否存在
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'referral_rewards'
+            )
+        """)
+        has_rewards_table = cur.fetchone()['exists']
+        
+        if not has_rewards_table:
+            logger.info("📝 创建 referral_rewards 表...")
+            cur.execute("""
+                CREATE TABLE referral_rewards (
+                    id SERIAL PRIMARY KEY,
+                    inviter_id BIGINT NOT NULL,
+                    invitee_id BIGINT NOT NULL,
+                    task_id INTEGER NOT NULL,
+                    original_reward DECIMAL(18, 2) NOT NULL,
+                    referral_reward DECIMAL(18, 2) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+                    FOREIGN KEY (invitee_id) REFERENCES users(user_id),
+                    FOREIGN KEY (task_id) REFERENCES drama_tasks(task_id)
+                )
+            """)
+            logger.info("✅ referral_rewards 表已创建")
+        
+        # 同步已有的邀请关系
+        if not has_invitations_table and has_invited_by:
+            logger.info("📝 同步已有邀请关系...")
+            cur.execute("""
+                INSERT INTO user_invitations (inviter_id, invitee_id, created_at)
+                SELECT invited_by, user_id, created_at
+                FROM users
+                WHERE invited_by IS NOT NULL
+                ON CONFLICT (invitee_id) DO NOTHING
+            """)
+            synced = cur.rowcount
+            logger.info(f"✅ 已同步 {synced} 条邀请关系")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info("✅ 数据库迁移完成")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ 数据库迁移失败: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
+
 def init_database():
     """初始化数据库表"""
     logger.info("Initializing database...")
