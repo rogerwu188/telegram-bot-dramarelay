@@ -1076,6 +1076,103 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
         logger.error(f"❌ 检查邀请数据失败: {e}", exc_info=True)
         await update.message.reply_text(f"❌ 查询失败: {str(e)}")
 
+async def manual_reward_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """手动补发推荐奖励的临时命令"""
+    user_id = update.effective_user.id
+    
+    # 仅允许管理员使用
+    if user_id != 5156570084:
+        await update.message.reply_text("❌ 此命令仅供管理员使用")
+        return
+    
+    await update.message.reply_text("🔧 正在补发推荐奖励...")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        inviter_id = 5156570084
+        invitee_id = 8550836392
+        task_id = 51  # 从查询结果中看到的任务ID
+        original_reward = 10  # 原始奖励
+        referral_reward = int(original_reward * 0.1)  # 10%的推荐奖励
+        
+        # 1. 检查是否已经补发过
+        cur.execute("""
+            SELECT * FROM referral_rewards 
+            WHERE inviter_id = %s AND invitee_id = %s AND task_id = %s
+        """, (inviter_id, invitee_id, task_id))
+        existing = cur.fetchone()
+        
+        if existing:
+            await update.message.reply_text("⚠️ 该任务的推荐奖励已经发放过了")
+            cur.close()
+            conn.close()
+            return
+        
+        # 2. 插入推荐奖励记录
+        cur.execute("""
+            INSERT INTO referral_rewards 
+            (inviter_id, invitee_id, task_id, original_reward, referral_reward)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (inviter_id, invitee_id, task_id, original_reward, referral_reward))
+        
+        # 3. 更新邀请关系表
+        cur.execute("""
+            UPDATE user_invitations
+            SET first_task_completed = TRUE,
+                first_task_completed_at = CURRENT_TIMESTAMP,
+                total_referral_rewards = total_referral_rewards + %s
+            WHERE inviter_id = %s AND invitee_id = %s
+        """, (referral_reward, inviter_id, invitee_id))
+        
+        # 4. 给邀请人增加算力
+        cur.execute("""
+            UPDATE users
+            SET total_node_power = total_node_power + %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = %s
+        """, (referral_reward, inviter_id))
+        
+        # 5. 给被邀请人发放新人奖励（+5 X2C）
+        cur.execute("""
+            UPDATE users
+            SET total_node_power = total_node_power + 5,
+                invitation_reward_received = TRUE,
+                invitation_reward_received_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = %s AND invitation_reward_received = FALSE
+        """, (invitee_id,))
+        invitee_bonus_given = cur.rowcount > 0
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        result_text = "✅ **推荐奖励补发成功！**\n\n"
+        result_text += f"🎯 任务ID: {task_id}\n"
+        result_text += f"💰 原始奖励: {original_reward} X2C\n"
+        result_text += f"🎁 推荐奖励: {referral_reward} X2C (10%)\n\n"
+        result_text += f"✅ 已给邀请人增加 {referral_reward} X2C\n"
+        
+        if invitee_bonus_given:
+            result_text += f"✅ 已给被邀请人发放新人奖励 +5 X2C\n"
+        else:
+            result_text += f"⚠️ 被邀请人已领取过新人奖励\n"
+        
+        result_text += "\n🔄 请再次发送 /check_invitation 查看更新后的数据"
+        
+        await update.message.reply_text(result_text, parse_mode='Markdown')
+        
+        logger.info(f"✅ 手动补发推荐奖励成功: inviter={inviter_id}, invitee={invitee_id}, task={task_id}, reward={referral_reward}")
+        
+    except Exception as e:
+        logger.error(f"❌ 补发推荐奖励失败: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ 补发失败: {str(e)}")
+        if conn:
+            conn.rollback()
+            conn.close()
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理 /start 命令"""
     user = update.effective_user
@@ -2646,6 +2743,7 @@ def main():
     # 命令处理器
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("check_invitation", check_invitation_command))
+    application.add_handler(CommandHandler("manual_reward", manual_reward_command))
     
     # 回调查询处理器
     application.add_handler(CallbackQueryHandler(get_tasks_callback, pattern='^get_tasks$'))
