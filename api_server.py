@@ -243,8 +243,8 @@ def create_task():
                 project_id, external_task_id, title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
                 video_url, task_template, keywords_template, video_title,
-                callback_url, callback_secret
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                callback_url, callback_secret, title_en, description_en
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING task_id, project_id, external_task_id, title, created_at
         """, (
             data.get('project_id'),
@@ -262,7 +262,9 @@ def create_task():
             data.get('keywords_template'),
             data.get('video_title'),
             data.get('callback_url'),
-            data.get('callback_secret')
+            data.get('callback_secret'),
+            data.get('title_en'),
+            data.get('description_en')
         ))
         
         new_task = cur.fetchone()

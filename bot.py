@@ -31,6 +31,19 @@ from retry_submit_handler import retry_submit_callback
 # 配置和日志
 # ============================================================
 
+# 多语言辅助函数
+def get_task_title(task, user_lang):
+    """根据用户语言获取任务标题"""
+    if user_lang == 'en' and task.get('title_en'):
+        return task['title_en']
+    return task['title']
+
+def get_task_description(task, user_lang):
+    """根据用户语言获取任务描述"""
+    if user_lang == 'en' and task.get('description_en'):
+        return task['description_en']
+    return task.get('description', '')
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -1268,7 +1281,9 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 显示任务列表
     keyboard = []
     for task in available_tasks:
-        button_text = f"🎬 {task['title']} ({task['duration']}s) - {task['node_power_reward']} X2C"
+        # 根据用户语言选择标题
+        title = task.get('title_en') if user_lang == 'en' and task.get('title_en') else task['title']
+        button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
     
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
@@ -1293,10 +1308,13 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("任务不存在" if user_lang == 'zh' else "Task not found")
         return
     
-    # 显示任务详情
+    # 显示任务详情，根据用户语言选择内容
+    title = task.get('title_en') if user_lang == 'en' and task.get('title_en') else task['title']
+    description = task.get('description_en') if user_lang == 'en' and task.get('description_en') else task.get('description')
+    
     message = get_message(user_lang, 'task_details',
-        title=task['title'],
-        description=task['description'] or 'N/A',
+        title=title,
+        description=description or 'N/A',
         duration=task['duration'],
         reward=task['node_power_reward'],
         platforms=task['platform_requirements']
