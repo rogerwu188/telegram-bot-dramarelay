@@ -10,8 +10,8 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 # 配置参数
-DAILY_SUBMIT_LIMIT = 10  # 每日提交上限
-SUBMIT_INTERVAL_MINUTES = 3  # 提交间隔(分钟)
+DAILY_SUBMIT_LIMIT = 100  # 每日提交上限
+SUBMIT_INTERVAL_MINUTES = 1  # 提交间隔(分钟)
 NEW_USER_COOLDOWN_MINUTES = 5  # 新用户冷却期(分钟)
 LINK_VERIFY_TIMEOUT = 10  # 链接验证超时(秒)
 
