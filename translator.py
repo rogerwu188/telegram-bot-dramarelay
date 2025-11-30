@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 自动翻译模块
-使用 OpenAI API 将中文内容翻译成英文
+使用 Gemini API (通过 OpenAI 兼容接口) 将中文内容翻译成英文
 """
 
 import os
 import logging
-from openai import OpenAI
+import requests
 
 logger = logging.getLogger(__name__)
 
-# 初始化 OpenAI 客户端
-client = OpenAI()
+# 使用 OpenAI 兼容的 Gemini API
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
 
 def translate_to_english(text, context="drama task"):
     """
@@ -30,26 +31,43 @@ def translate_to_english(text, context="drama task"):
     try:
         logger.info(f"🌐 Translating text: {text[:50]}...")
         
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
+        # 使用 OpenAI 兼容接口
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {OPENAI_API_KEY}'
+        }
+        
+        payload = {
+            "model": "gemini-2.5-flash",
+            "messages": [
                 {
                     "role": "system",
-                    "content": f"You are a professional translator. Translate the following Chinese text to English. Context: {context}. Keep the translation natural and concise."
+                    "content": f"You are a professional translator. Translate Chinese text to English. Context: {context}. Keep the translation natural and concise."
                 },
                 {
                     "role": "user",
                     "content": text
                 }
             ],
-            temperature=0.3,
-            max_tokens=500
+            "temperature": 0.3,
+            "max_tokens": 500
+        }
+        
+        response = requests.post(
+            f"{OPENAI_BASE_URL}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15
         )
         
-        translated = response.choices[0].message.content.strip()
-        logger.info(f"✅ Translation successful: {translated[:50]}...")
-        
-        return translated
+        if response.status_code == 200:
+            result = response.json()
+            translated = result['choices'][0]['message']['content'].strip()
+            logger.info(f"✅ Translation successful: {translated[:50]}...")
+            return translated
+        else:
+            logger.error(f"❌ API error: {response.status_code} - {response.text}")
+            return text
     
     except Exception as e:
         logger.error(f"❌ Translation failed: {e}")
