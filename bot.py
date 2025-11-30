@@ -91,6 +91,9 @@ def init_database():
             wallet_address VARCHAR(42),
             total_node_power INTEGER DEFAULT 0,
             completed_tasks INTEGER DEFAULT 0,
+            invited_by BIGINT,
+            invitation_reward_received BOOLEAN DEFAULT FALSE,
+            invitation_reward_received_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -141,6 +144,37 @@ def init_database():
             estimated_airdrop DECIMAL(18, 6),
             snapshot_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )
+    """)
+    
+    # 用户邀请关系表
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_invitations (
+            id SERIAL PRIMARY KEY,
+            inviter_id BIGINT NOT NULL,
+            invitee_id BIGINT NOT NULL UNIQUE,
+            first_task_completed BOOLEAN DEFAULT FALSE,
+            first_task_completed_at TIMESTAMP,
+            total_referral_rewards DECIMAL(18, 2) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+            FOREIGN KEY (invitee_id) REFERENCES users(user_id)
+        )
+    """)
+    
+    # 推荐奖励记录表
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS referral_rewards (
+            id SERIAL PRIMARY KEY,
+            inviter_id BIGINT NOT NULL,
+            invitee_id BIGINT NOT NULL,
+            task_id INTEGER NOT NULL,
+            original_reward DECIMAL(18, 2) NOT NULL,
+            referral_reward DECIMAL(18, 2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+            FOREIGN KEY (invitee_id) REFERENCES users(user_id),
+            FOREIGN KEY (task_id) REFERENCES drama_tasks(task_id)
         )
     """)
     
