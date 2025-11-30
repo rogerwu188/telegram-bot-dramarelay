@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # 配置参数
 DAILY_SUBMIT_LIMIT = 10  # 每日提交上限
 SUBMIT_INTERVAL_MINUTES = 3  # 提交间隔(分钟)
-NEW_USER_COOLDOWN_HOURS = 1  # 新用户冷却期(小时)
+NEW_USER_COOLDOWN_MINUTES = 5  # 新用户冷却期(分钟)
 LINK_VERIFY_TIMEOUT = 10  # 链接验证超时(秒)
 
 
@@ -34,12 +34,11 @@ def check_new_user_cooldown(conn, user_id: int) -> tuple[bool, str]:
             return False, "用户不存在"
         
         created_at = result['created_at']
-        cooldown_end = created_at + timedelta(hours=NEW_USER_COOLDOWN_HOURS)
+        cooldown_end = created_at + timedelta(minutes=NEW_USER_COOLDOWN_MINUTES)
         now = datetime.now()
         
         if now < cooldown_end:
-            remaining_minutes = int((cooldown_end - now).total_seconds() / 60)
-            return False, f"⏳ 新用户需要等待 {remaining_minutes} 分钟后才能提交任务。\n\n这是为了防止刷量行为,感谢理解!"
+            return False, "新注册用户需要等待5分钟,请稍后重试"
         
         return True, ""
         
