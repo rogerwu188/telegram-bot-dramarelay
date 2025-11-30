@@ -991,10 +991,10 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
         inviter_id = 5156570084
         invitee_id = 8550836392
         
-        result_text = "📊 **邀请系统数据检查**\n\n"
+        result_text = "📊 邀请系统数据检查\n\n"
         
         # 1. 检查邀请关系
-        result_text += "**【1. 邀请关系】**\n"
+        result_text += "\u30101. 邀请关系】\n"
         cur.execute("""
             SELECT * FROM user_invitations 
             WHERE inviter_id = %s AND invitee_id = %s
@@ -1011,7 +1011,7 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
             result_text += "❌ 未找到邀请关系记录\n"
         
         # 2. 检查被邀请人的任务
-        result_text += "\n**【2. 被邀请人任务】**\n"
+        result_text += "\n\u30102. 被邀请人任务】\n"
         cur.execute("""
             SELECT ut.*, dt.title
             FROM user_tasks ut
@@ -1031,7 +1031,7 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
             result_text += "❌ 没有完成任何任务\n"
         
         # 3. 检查推荐奖励记录
-        result_text += "\n**【3. 推荐奖励记录】**\n"
+        result_text += "\n\u30103. 推荐奖励记录】\n"
         cur.execute("""
             SELECT * FROM referral_rewards 
             WHERE inviter_id = %s AND invitee_id = %s
@@ -1047,20 +1047,20 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
             result_text += "❌ 没有推荐奖励记录\n"
         
         # 4. 问题分析
-        result_text += "\n**【4. 问题分析】**\n"
+        result_text += "\n\u30104. 问题分析】\n"
         if invitation and tasks and not rewards:
-            result_text += "⚠️ **发现问题**：\n"
+            result_text += "⚠️ 发现问题：\n"
             result_text += "   • 邀请关系已记录\n"
             result_text += "   • 被邀请人完成了任务\n"
             result_text += "   • 但没有推荐奖励记录\n\n"
             
             if tasks[0]['submitted_at'] and invitation['created_at']:
                 if tasks[0]['submitted_at'] < invitation['created_at']:
-                    result_text += "❌ **原因**：任务完成时间早于邀请时间\n"
+                    result_text += "❌ 原因：任务完成时间早于邀请时间\n"
                 else:
-                    result_text += "❌ **原因**：process_referral_reward() 执行失败\n"
+                    result_text += "❌ 原因：process_referral_reward() 执行失败\n"
         elif invitation and not invitation['first_task_completed'] and tasks:
-            result_text += "⚠️ **发现问题**：\n"
+            result_text += "⚠️ 发现问题：\n"
             result_text += "   • 邀请关系已记录\n"
             result_text += "   • 被邀请人完成了任务\n"
             result_text += "   • 但 first_task_completed 未标记\n"
@@ -1070,7 +1070,7 @@ async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT
         cur.close()
         conn.close()
         
-        await update.message.reply_text(result_text, parse_mode='Markdown')
+        await update.message.reply_text(result_text)
         
     except Exception as e:
         logger.error(f"❌ 检查邀请数据失败: {e}", exc_info=True)
@@ -1149,7 +1149,7 @@ async def manual_reward_command(update: Update, context: ContextTypes.DEFAULT_TY
         cur.close()
         conn.close()
         
-        result_text = "✅ **推荐奖励补发成功！**\n\n"
+        result_text = "✅ 推荐奖励补发成功！\n\n"
         result_text += f"🎯 任务ID: {task_id}\n"
         result_text += f"💰 原始奖励: {original_reward} X2C\n"
         result_text += f"🎁 推荐奖励: {referral_reward} X2C (10%)\n\n"
@@ -1162,7 +1162,7 @@ async def manual_reward_command(update: Update, context: ContextTypes.DEFAULT_TY
         
         result_text += "\n🔄 请再次发送 /check_invitation 查看更新后的数据"
         
-        await update.message.reply_text(result_text, parse_mode='Markdown')
+        await update.message.reply_text(result_text)
         
         logger.info(f"✅ 手动补发推荐奖励成功: inviter={inviter_id}, invitee={invitee_id}, task={task_id}, reward={referral_reward}")
         
