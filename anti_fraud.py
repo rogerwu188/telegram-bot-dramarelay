@@ -33,7 +33,7 @@ def check_new_user_cooldown(conn, user_id: int) -> tuple[bool, str]:
         if not result:
             return False, "用户不存在"
         
-        created_at = result[0]
+        created_at = result['created_at']
         cooldown_end = created_at + timedelta(hours=NEW_USER_COOLDOWN_HOURS)
         now = datetime.now()
         
@@ -58,15 +58,15 @@ def check_submit_interval(conn, user_id: int) -> tuple[bool, str]:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT last_submit_time FROM users WHERE user_id = %s
+            SELECT last_submission_time FROM users WHERE user_id = %s
         """, (user_id,))
         
         result = cursor.fetchone()
-        if not result or not result[0]:
+        if not result or not result['last_submission_time']:
             # 首次提交
             return True, ""
         
-        last_submit_time = result[0]
+        last_submit_time = result['last_submission_time']
         next_allowed_time = last_submit_time + timedelta(minutes=SUBMIT_INTERVAL_MINUTES)
         now = datetime.now()
         
@@ -94,13 +94,14 @@ def check_daily_limit(conn, user_id: int) -> tuple[bool, str]:
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT COUNT(*) FROM submissions
+            SELECT COUNT(*) FROM user_tasks
             WHERE user_id = %s
             AND DATE(created_at) = CURRENT_DATE
+            AND status = 'completed'
         """, (user_id,))
         
         result = cursor.fetchone()
-        today_count = result[0] if result else 0
+        today_count = result['count'] if result else 0
         
         if today_count >= DAILY_SUBMIT_LIMIT:
             return False, f"🚫 今日提交次数已达上限!\n\n每天最多提交 {DAILY_SUBMIT_LIMIT} 次任务。\n明天再来吧!"
@@ -179,7 +180,7 @@ def update_last_submit_time(conn, user_id: int):
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE users
-            SET last_submit_time = NOW()
+            SET last_submission_time = NOW()
             WHERE user_id = %s
         """, (user_id,))
         conn.commit()
@@ -227,18 +228,20 @@ def get_user_submit_stats(conn, user_id: int) -> dict:
         
         # 今日提交次数
         cursor.execute("""
-            SELECT COUNT(*) FROM submissions
+            SELECT COUNT(*) FROM user_tasks
             WHERE user_id = %s
             AND DATE(created_at) = CURRENT_DATE
+            AND status = 'completed'
         """, (user_id,))
-        today_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        today_count = result['count'] if result else 0
         
         # 最后提交时间
         cursor.execute("""
-            SELECT last_submit_time FROM users WHERE user_id = %s
+            SELECT last_submission_time FROM users WHERE user_id = %s
         """, (user_id,))
         result = cursor.fetchone()
-        last_submit = result[0] if result and result[0] else None
+        last_submit = result['last_submission_time'] if result and result.get('last_submission_time') else None
         
         # 计算下次可提交时间
         next_allowed = None
