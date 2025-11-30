@@ -1522,10 +1522,29 @@ to receive 🎉 {reward} X2C"""
         # 不下载视频，直接发送链接
         logger.info(f"✅ Sending video link instead of downloading...")
         try:
-            # 准备任务信息（从上面已经定义的变量中获取）
-            # title, description, keywords_raw, reward 已经在上面定义过了
+            # 准备任务信息
+            title = task.get('title', '')
+            description = task.get('description', '')
+            keywords_raw = task.get('keywords_template', '') or ''
+            reward = task.get('node_power_reward', 0)
             
-            # 发送最终提示消息（新消息，在视频之后）
+            # 清理 keywords_template
+            if keywords_raw:
+                keywords_lines = keywords_raw.split('\n')
+                cleaned_keywords = []
+                for line in keywords_lines:
+                    if '视频链接：' not in line and line.strip():
+                        if 'keywords_template=' in line:
+                            cleaned_keywords.append(line.split('keywords_template=')[1])
+                        elif '上传关键词描述：' in line:
+                            cleaned_keywords.append(line.split('上传关键词描述：')[1])
+                        else:
+                            cleaned_keywords.append(line)
+                keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else ''
+            else:
+                keywords = ''
+            
+            # 发送最终提示消息
             # 格式化关键词为 #tag 格式
             keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
             hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
