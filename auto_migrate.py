@@ -80,6 +80,7 @@ def auto_migrate():
             ('task_template', 'TEXT'),
             ('keywords_template', 'TEXT'),
             ('video_title', 'VARCHAR(500)'),
+            ('external_task_id', 'INTEGER'),  # X2C平台提供的task_id
         ]
         
         for column_name, column_def in task_fields_to_add:

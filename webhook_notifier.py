@@ -144,7 +144,7 @@ async def send_task_completed_webhook(
         
         # 获取任务信息
         cur.execute("""
-            SELECT task_id, project_id, title, callback_url, callback_secret, callback_retry_count
+            SELECT task_id, project_id, external_task_id, title, duration, callback_url, callback_secret, callback_retry_count
             FROM drama_tasks
             WHERE task_id = %s
         """, (task_id,))
@@ -182,26 +182,39 @@ async def send_task_completed_webhook(
         cur.close()
         conn.close()
         
-        # 构建回调数据
-        username = user['username'] if user else f"user_{user_id}"
+        # 构建回调数据（按照最小改动原则）
+        # 根据平台生成对应的统计字段
+        stats_data = {
+            'project_id': task.get('project_id'),
+            'task_id': task.get('external_task_id'),  # 使用X2C的task_id
+            'duration': task.get('duration', 30),
+            'account_count': 1  # 单个用户完成
+        }
+        
+        # 从 verification_details 中获取数据（如果有）
+        if verification_details:
+            view_count = verification_details.get('views') or verification_details.get('view_count', 0)
+            like_count = verification_details.get('likes') or verification_details.get('like_count', 0)
+            
+            # 根据平台填充对应的字段
+            platform_lower = platform.lower()
+            if 'youtube' in platform_lower or 'yt' in platform_lower:
+                if view_count > 0:
+                    stats_data['yt_view_count'] = view_count
+                if like_count > 0:
+                    stats_data['yt_like_count'] = like_count
+                stats_data['yt_account_count'] = 1
+            elif 'tiktok' in platform_lower or 'tt' in platform_lower:
+                if view_count > 0:
+                    stats_data['tt_view_count'] = view_count
+                if like_count > 0:
+                    stats_data['tt_like_count'] = like_count
+                stats_data['tt_account_count'] = 1
+            # 其他平台可以类似扩展
         
         payload = {
-            'event': 'task.completed',
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'data': {
-                'project_id': task.get('project_id'),
-                'task_id': task_id,
-                'task_title': task['title'],
-                'user_id': user_id,
-                'username': username,
-                'platform': platform,
-                'submission_link': submission_link,
-                'submitted_at': submission['submitted_at'].isoformat() + 'Z' if submission and submission['submitted_at'] else None,
-                'verified_at': submission['verified_at'].isoformat() + 'Z' if submission and submission['verified_at'] else datetime.utcnow().isoformat() + 'Z',
-                'node_power_earned': node_power_earned,
-                'verification_status': 'verified',
-                'verification_details': verification_details or {}
-            }
+            'site_name': 'DramaRelayBot',
+            'stats': [stats_data]
         }
         
         # 发送回调

@@ -240,14 +240,15 @@ def create_task():
         
         cur.execute("""
             INSERT INTO drama_tasks (
-                project_id, title, description, video_file_id, thumbnail_url,
+                project_id, external_task_id, title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
                 video_url, task_template, keywords_template, video_title,
                 callback_url, callback_secret
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING task_id, project_id, title, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING task_id, project_id, external_task_id, title, created_at
         """, (
             data.get('project_id'),
+            data.get('task_id'),  # X2C平台提供的task_id，存储到external_task_id
             data.get('title'),
             data.get('description'),
             video_url,
@@ -273,11 +274,13 @@ def create_task():
         if task_dict.get('created_at'):
             task_dict['created_at'] = task_dict['created_at'].isoformat()
         
-        logger.info(f"✅ Created new task: {task_dict['task_id']} - {task_dict['title']}")
+        logger.info(f"✅ Created new task: internal_id={task_dict['task_id']}, external_id={task_dict.get('external_task_id')} - {task_dict['title']}")
         
+        # 按照最小改动原则，只返回project_id和task_id（X2C的ID）
         return jsonify({
             'success': True,
-            'data': task_dict
+            'project_id': task_dict.get('project_id'),
+            'task_id': task_dict.get('external_task_id')  # 返回X2C提供的task_id
         }), 201
     
     except Exception as e:
