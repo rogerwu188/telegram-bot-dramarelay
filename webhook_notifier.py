@@ -144,7 +144,7 @@ async def send_task_completed_webhook(
         
         # 获取任务信息
         cur.execute("""
-            SELECT task_id, title, callback_url, callback_secret, callback_retry_count
+            SELECT task_id, project_id, title, callback_url, callback_secret, callback_retry_count
             FROM drama_tasks
             WHERE task_id = %s
         """, (task_id,))
@@ -189,6 +189,7 @@ async def send_task_completed_webhook(
             'event': 'task.completed',
             'timestamp': datetime.utcnow().isoformat() + 'Z',
             'data': {
+                'project_id': task.get('project_id'),
                 'task_id': task_id,
                 'task_title': task['title'],
                 'user_id': user_id,

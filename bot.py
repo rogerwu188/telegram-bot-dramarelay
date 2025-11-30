@@ -156,15 +156,25 @@ def auto_migrate():
                     inviter_id BIGINT NOT NULL,
                     invitee_id BIGINT NOT NULL,
                     task_id INTEGER NOT NULL,
-                    original_reward DECIMAL(18, 2) NOT NULL,
-                    referral_reward DECIMAL(18, 2) NOT NULL,
+                    original_reward INTEGER NOT NULL,
+                    referral_reward INTEGER NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (inviter_id) REFERENCES users(user_id),
-                    FOREIGN KEY (invitee_id) REFERENCES users(user_id),
-                    FOREIGN KEY (task_id) REFERENCES drama_tasks(task_id)
+                    FOREIGN KEY (invitee_id) REFERENCES users(user_id)
                 )
             """)
             logger.info("✅ referral_rewards 表已创建")
+        
+        # 添加 project_id 字段到 drama_tasks 表
+        logger.info("📝 添加 project_id 字段到 drama_tasks 表...")
+        try:
+            cur.execute("""
+                ALTER TABLE drama_tasks 
+                ADD COLUMN IF NOT EXISTS project_id VARCHAR(255)
+            """)
+            logger.info("✅ project_id 字段已添加")
+        except Exception as e:
+            logger.info(f"ℹ️ project_id 字段已存在或添加失败: {e}")
         
         # 同步已有的邀请关系
         if not has_invitations_table and has_invited_by:
@@ -222,6 +232,7 @@ def init_database():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS drama_tasks (
             task_id SERIAL PRIMARY KEY,
+            project_id VARCHAR(255),
             title VARCHAR(255) NOT NULL,
             description TEXT,
             video_file_id TEXT,

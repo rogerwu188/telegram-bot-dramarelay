@@ -240,13 +240,14 @@ def create_task():
         
         cur.execute("""
             INSERT INTO drama_tasks (
-                title, description, video_file_id, thumbnail_url,
+                project_id, title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
                 video_url, task_template, keywords_template, video_title,
                 callback_url, callback_secret
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING task_id, title, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING task_id, project_id, title, created_at
         """, (
+            data.get('project_id'),
             data.get('title'),
             data.get('description'),
             video_url,
