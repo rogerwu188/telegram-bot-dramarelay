@@ -25,6 +25,7 @@ from telegram.ext import (
 from auto_migrate import auto_migrate
 from link_verifier import LinkVerifier
 from anti_fraud import check_all_limits, update_last_submit_time, get_user_submit_stats
+from retry_submit_handler import retry_submit_callback
 
 # ============================================================
 # 配置和日志
@@ -1777,6 +1778,17 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.info("✅ 返回 SUBMIT_LINK 状态")
         return SUBMIT_LINK
     
+    # 验证通过，缓存验证结果以便重试
+    context.user_data['verified_submission'] = {
+        'task_id': task_id,
+        'platform': platform,
+        'link': link,
+        'verify_result': verify_result,
+        'task': task,
+        'timestamp': datetime.now().timestamp()
+    }
+    logger.info(f"✅ 已缓存验证结果，有效期10分钟")
+    
     # 验证通过，提交链接
     logger.info(f"✅ 验证通过，开始提交任务: user_id={user_id}, task_id={task_id}, platform={platform}")
     try:
@@ -1815,18 +1827,25 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.error(f"❌ 提交任务失败: {e}", exc_info=True)
         error_msg = (
             f"❌ <b>提交失败</b>\n\n"
-            f"验证成功但保存失败，请联系管理员\n\n"
+            f"验证成功但保存失败，请点击下方按钮重试\n\n"
             f"错误信息：{str(e)}"
         ) if user_lang == 'zh' else (
             f"❌ <b>Submission Failed</b>\n\n"
-            f"Verification passed but save failed, please contact admin\n\n"
+            f"Verification passed but save failed, please click the button below to retry\n\n"
             f"Error: {str(e)}"
         )
+        
+        # 添加重试按钮
+        retry_button = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔁 重试提交" if user_lang == 'zh' else "🔁 Retry Submission", callback_data=f'retry_submit_{task_id}')
+        ]])
+        
         if task_card_message_id and task_card_chat_id:
             await context.bot.edit_message_text(
                 chat_id=task_card_chat_id,
                 message_id=task_card_message_id,
                 text=error_msg,
+                reply_markup=retry_button,
                 parse_mode='HTML'
             )
         conn.close()
@@ -2377,6 +2396,9 @@ def main():
     
     # 全局 back_to_menu handler（放在 ConversationHandler 之后）
     application.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$'))
+    
+    # 重试提交 handler
+    application.add_handler(CallbackQueryHandler(retry_submit_callback, pattern='^retry_submit_\d+$'))
     
     # 检查是否有 WEBHOOK_URL 环境变量
     webhook_url = os.getenv('WEBHOOK_URL')
