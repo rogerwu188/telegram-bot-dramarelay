@@ -776,6 +776,38 @@ def health_check():
         }), 500
 
 # ============================================================
+# 管理页面集成
+# ============================================================
+
+from flask import send_from_directory
+import admin_api
+
+@app.route('/admin')
+def admin_page():
+    """管理页面"""
+    return send_from_directory('templates', 'admin.html')
+
+@app.route('/api/logs/stats')
+def admin_stats():
+    """统计数据 API"""
+    return admin_api.get_stats()
+
+@app.route('/api/logs/webhooks')
+def admin_webhooks():
+    """Webhook 日志 API"""
+    return admin_api.get_webhook_logs()
+
+@app.route('/api/logs/completions')
+def admin_completions():
+    """完成日志 API"""
+    return admin_api.get_completion_logs()
+
+@app.route('/api/logs/tasks')
+def admin_tasks():
+    """任务日志 API"""
+    return admin_api.get_task_logs()
+
+# ============================================================
 # 启动服务器
 # ============================================================
 
