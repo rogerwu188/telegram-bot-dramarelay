@@ -973,6 +973,109 @@ def get_main_menu_keyboard(user_lang: str) -> InlineKeyboardMarkup:
 # 命令处理函数
 # ============================================================
 
+async def check_invitation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """检查邀请系统数据的临时命令"""
+    user_id = update.effective_user.id
+    
+    # 仅允许管理员使用（您的user_id）
+    if user_id != 5156570084:
+        await update.message.reply_text("❌ 此命令仅供管理员使用")
+        return
+    
+    await update.message.reply_text("🔍 正在查询数据库...")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        inviter_id = 5156570084
+        invitee_id = 8550836392
+        
+        result_text = "📊 **邀请系统数据检查**\n\n"
+        
+        # 1. 检查邀请关系
+        result_text += "**【1. 邀请关系】**\n"
+        cur.execute("""
+            SELECT * FROM user_invitations 
+            WHERE inviter_id = %s AND invitee_id = %s
+        """, (inviter_id, invitee_id))
+        invitation = cur.fetchone()
+        
+        if invitation:
+            result_text += f"✅ 邀请关系已记录\n"
+            result_text += f"   • 首次任务完成: {invitation['first_task_completed']}\n"
+            result_text += f"   • 首次任务完成时间: {invitation['first_task_completed_at']}\n"
+            result_text += f"   • 累计推荐奖励: {invitation['total_referral_rewards']}\n"
+            result_text += f"   • 创建时间: {invitation['created_at']}\n"
+        else:
+            result_text += "❌ 未找到邀请关系记录\n"
+        
+        # 2. 检查被邀请人的任务
+        result_text += "\n**【2. 被邀请人任务】**\n"
+        cur.execute("""
+            SELECT ut.*, dt.title
+            FROM user_tasks ut
+            JOIN drama_tasks dt ON ut.task_id = dt.task_id
+            WHERE ut.user_id = %s AND ut.status = 'submitted'
+            ORDER BY ut.submitted_at DESC
+            LIMIT 5
+        """, (invitee_id,))
+        tasks = cur.fetchall()
+        
+        if tasks:
+            result_text += f"✅ 完成了 {len(tasks)} 个任务\n"
+            for i, task in enumerate(tasks, 1):
+                result_text += f"   {i}. {task['title']} ({task['node_power_earned']} X2C)\n"
+                result_text += f"      提交时间: {task['submitted_at']}\n"
+        else:
+            result_text += "❌ 没有完成任何任务\n"
+        
+        # 3. 检查推荐奖励记录
+        result_text += "\n**【3. 推荐奖励记录】**\n"
+        cur.execute("""
+            SELECT * FROM referral_rewards 
+            WHERE inviter_id = %s AND invitee_id = %s
+            ORDER BY created_at DESC
+        """, (inviter_id, invitee_id))
+        rewards = cur.fetchall()
+        
+        if rewards:
+            result_text += f"✅ 找到 {len(rewards)} 条奖励记录\n"
+            for i, reward in enumerate(rewards, 1):
+                result_text += f"   {i}. 任务{reward['task_id']}: {reward['referral_reward']} X2C\n"
+        else:
+            result_text += "❌ 没有推荐奖励记录\n"
+        
+        # 4. 问题分析
+        result_text += "\n**【4. 问题分析】**\n"
+        if invitation and tasks and not rewards:
+            result_text += "⚠️ **发现问题**：\n"
+            result_text += "   • 邀请关系已记录\n"
+            result_text += "   • 被邀请人完成了任务\n"
+            result_text += "   • 但没有推荐奖励记录\n\n"
+            
+            if tasks[0]['submitted_at'] and invitation['created_at']:
+                if tasks[0]['submitted_at'] < invitation['created_at']:
+                    result_text += "❌ **原因**：任务完成时间早于邀请时间\n"
+                else:
+                    result_text += "❌ **原因**：process_referral_reward() 执行失败\n"
+        elif invitation and not invitation['first_task_completed'] and tasks:
+            result_text += "⚠️ **发现问题**：\n"
+            result_text += "   • 邀请关系已记录\n"
+            result_text += "   • 被邀请人完成了任务\n"
+            result_text += "   • 但 first_task_completed 未标记\n"
+        else:
+            result_text += "✅ 数据正常\n"
+        
+        cur.close()
+        conn.close()
+        
+        await update.message.reply_text(result_text, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"❌ 检查邀请数据失败: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ 查询失败: {str(e)}")
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理 /start 命令"""
     user = update.effective_user
@@ -2542,6 +2645,7 @@ def main():
     
     # 命令处理器
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("check_invitation", check_invitation_command))
     
     # 回调查询处理器
     application.add_handler(CallbackQueryHandler(get_tasks_callback, pattern='^get_tasks$'))
