@@ -1388,7 +1388,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     cur = conn.cursor()
     logger.info(f"📊 Querying task info for user_id={user_id}, task_id={task_id}")
     cur.execute("""
-        SELECT dt.title, dt.node_power_reward, dt.description, dt.keywords
+        SELECT dt.*
         FROM user_tasks ut
         JOIN drama_tasks dt ON ut.task_id = dt.task_id
         WHERE ut.user_id = %s AND ut.task_id = %s
@@ -1410,13 +1410,11 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     
     # 显示提交界面（包含完整的描述和标签）
     title = task.get('title', '')
-    description = task.get('description', '')
-    keywords_raw = task.get('keywords', '') or ''
+    # 兼容不同的字段名：description 或 task_template
+    description = task.get('description') or task.get('task_template', '') or ''
+    # 兼容不同的字段名：keywords 或 keywords_template
+    keywords_raw = task.get('keywords') or task.get('keywords_template', '') or ''
     reward = task.get('node_power_reward', 0)
-    
-    # 确保 description 不为 None
-    if description is None:
-        description = ''
     
     # 清理 keywords：完全删除包含“视频链接：”的行
     keywords_lines = keywords_raw.split('\n') if keywords_raw else []
