@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """
 自动翻译模块
-使用 Gemini API (通过 OpenAI 兼容接口) 将中文内容翻译成英文
+使用 Gemini API 将中文内容翻译成英文
 """
 
 import os
 import logging
-import requests
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
-# 使用 OpenAI 兼容的 Gemini API
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+# 配置 Gemini API
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyBpzsVO-MM1Ur_KzNtnwcFHA4nYKClYqw8')
+genai.configure(api_key=GEMINI_API_KEY)
+
+# 创建模型实例
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
 def translate_to_english(text, context="drama task"):
     """
@@ -31,42 +34,32 @@ def translate_to_english(text, context="drama task"):
     try:
         logger.info(f"🌐 Translating text: {text[:50]}...")
         
-        # 使用 OpenAI 兼容接口
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {OPENAI_API_KEY}'
-        }
+        # 构建翻译提示
+        prompt = f"""Translate the following Chinese text to English. 
+Context: {context}
+Keep the translation natural, concise, and professional.
+Only return the translated text, no explanations.
+
+Chinese text:
+{text}
+
+English translation:"""
         
-        payload = {
-            "model": "gemini-2.5-flash",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": f"You are a professional translator. Translate Chinese text to English. Context: {context}. Keep the translation natural and concise."
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ],
-            "temperature": 0.3,
-            "max_tokens": 500
-        }
-        
-        response = requests.post(
-            f"{OPENAI_BASE_URL}/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=15
+        # 调用 Gemini API
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.3,
+                max_output_tokens=500,
+            )
         )
         
-        if response.status_code == 200:
-            result = response.json()
-            translated = result['choices'][0]['message']['content'].strip()
+        if response and response.text:
+            translated = response.text.strip()
             logger.info(f"✅ Translation successful: {translated[:50]}...")
             return translated
         else:
-            logger.error(f"❌ API error: {response.status_code} - {response.text}")
+            logger.error(f"❌ API returned empty response")
             return text
     
     except Exception as e:
