@@ -1591,9 +1591,10 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     cur.execute("SELECT title, description, node_power_reward FROM drama_tasks WHERE task_id = %s", (task_id,))
     task = cur.fetchone()
     cur.close()
-    conn.close()
+    # 不在这里关闭连接，后面还需要使用
     
     if not task:
+        conn.close()  # 关闭数据库连接
         if task_card_message_id and task_card_chat_id:
             await context.bot.edit_message_text(
                 chat_id=task_card_chat_id,
