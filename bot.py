@@ -1388,7 +1388,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     cur = conn.cursor()
     logger.info(f"📊 Querying task info for user_id={user_id}, task_id={task_id}")
     cur.execute("""
-        SELECT dt.title, dt.node_power_reward, dt.video_title, dt.task_template, dt.keywords_template
+        SELECT dt.title, dt.node_power_reward, dt.description, dt.keywords
         FROM user_tasks ut
         JOIN drama_tasks dt ON ut.task_id = dt.task_id
         WHERE ut.user_id = %s AND ut.task_id = %s
@@ -1409,57 +1409,99 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         return ConversationHandler.END
     
     # 显示提交界面（包含完整的描述和标签）
-    video_title = task.get('video_title', '')
-    task_template = task.get('task_template', '')
-    keywords_template = task.get('keywords_template', '')
+    title = task.get('title', '')
+    description = task.get('description', '')
+    keywords_raw = task.get('keywords', '')
+    reward = task.get('node_power_reward', 0)
+    
+    # 清理 keywords：完全删除包含“视频链接：”的行
+    keywords_lines = keywords_raw.split('\n')
+    cleaned_keywords = []
+    for line in keywords_lines:
+        # 跳过包含“视频链接：”的行
+        if '视频链接：' not in line and line.strip():
+            # 如果行中包含"keywords_template="，提取后面的内容
+            if 'keywords_template=' in line:
+                cleaned_keywords.append(line.split('keywords_template=')[1])
+            # 如果行中包含“上传关键词描述：”，提取后面的内容
+            elif '上传关键词描述：' in line:
+                cleaned_keywords.append(line.split('上传关键词描述：')[1])
+            else:
+                cleaned_keywords.append(line)
+    keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
+    
+    # 格式化关键词为 #tag 格式
+    keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
+    hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
+    
+    # 提取剧情关键词（从 keywords_list 中取第一个）
+    plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+    
+    # 提取剧名（从 title 中提取《》中的内容）
+    import re
+    drama_name_match = re.search(r'《(.+?)》', title)
+    drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
+    drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
     
     # 构建消息
     message_parts = []
     
     if user_lang == 'zh':
-        message_parts.append(f"📤 <b>提交任务</b>")
-        message_parts.append(f"🎬 {task['title']}")
-        message_parts.append(f"💰 完成可获得：{task['node_power_reward']} X2C")
+        message_parts.append("📤 <b>提交任务</b>")
+        message_parts.append(f"🎬 {title}")
+        message_parts.append(f"💰 完成可获得：{reward} X2C")
         message_parts.append("")
-        
-        # 添加 TikTok 描述
-        if video_title:
-            message_parts.append("📹 <b>TikTok 视频描述（请完整复制以下内容）：</b>")
-            message_parts.append(video_title)
-            message_parts.append("")
-        
-        if task_template:
-            message_parts.append(task_template)
-            message_parts.append("")
-        
-        if keywords_template:
-            message_parts.append(keywords_template)
-            message_parts.append("")
-        
-        message_parts.append("─" * 30)
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【YouTube 上传内容】")
+        message_parts.append("")
+        message_parts.append(f"▶️ 视频文件名称：")
+        message_parts.append(f"{plot_keyword} · {drama_name_with_brackets}")
+        message_parts.append("")
+        message_parts.append(f"▶️ 复制到 YouTube Title栏：")
+        message_parts.append(f"{plot_keyword} | {drama_name}")
+        message_parts.append("")
+        message_parts.append(f"▶️ 复制到 YouTube Description栏：")
+        message_parts.append(description)
+        message_parts.append("")
+        message_parts.append("（YouTube 不需要填写标签，保持空白即可）")
+        message_parts.append("")
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【TikTok 上传内容】")
+        message_parts.append("")
+        message_parts.append("▶️ TikTok 视频描述（请完整复制以下内容）：")
+        message_parts.append(description)
+        message_parts.append("")
+        message_parts.append(hashtags)
+        message_parts.append("")
+        message_parts.append("━" * 30)
         message_parts.append("")
         message_parts.append("📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）")
     else:
-        message_parts.append(f"📤 <b>Submit Task</b>")
-        message_parts.append(f"🎬 {task['title']}")
-        message_parts.append(f"💰 Reward: {task['node_power_reward']} X2C")
+        message_parts.append("📤 <b>Submit Task</b>")
+        message_parts.append(f"🎬 {title}")
+        message_parts.append(f"💰 Reward: {reward} X2C")
         message_parts.append("")
-        
-        # 添加 TikTok 描述
-        if video_title:
-            message_parts.append("📹 <b>TikTok Video Description (Please copy the content below):</b>")
-            message_parts.append(video_title)
-            message_parts.append("")
-        
-        if task_template:
-            message_parts.append(task_template)
-            message_parts.append("")
-        
-        if keywords_template:
-            message_parts.append(keywords_template)
-            message_parts.append("")
-        
-        message_parts.append("─" * 30)
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【YouTube Upload Content】")
+        message_parts.append("")
+        message_parts.append("▶ Video Title (copy directly):")
+        message_parts.append(title)
+        message_parts.append("")
+        message_parts.append("▶ Video Description (copy directly):")
+        message_parts.append(description)
+        message_parts.append("")
+        message_parts.append("(YouTube does not require tags, leave blank)")
+        message_parts.append("")
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【TikTok Upload Content】")
+        message_parts.append("")
+        message_parts.append("▶ TikTok Description (Please copy the content below):")
+        message_parts.append(description)
+        message_parts.append("")
+        message_parts.append("▶ TikTok Hashtags:")
+        message_parts.append(hashtags)
+        message_parts.append("")
+        message_parts.append("━" * 30)
         message_parts.append("")
         message_parts.append("📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)")
     
@@ -1468,7 +1510,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     keyboard = [[
         InlineKeyboardButton(
             "« 返回" if user_lang == 'zh' else "« Back",
-            callback_data='submit_link'
+            callback_data='back_to_menu'
         )
     ]]
     
@@ -1561,7 +1603,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if task_card_message_id and task_card_chat_id:
             retry_button = InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
             ]])
             
             await context.bot.edit_message_text(
@@ -1581,7 +1623,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # 显示限制错误
         if task_card_message_id and task_card_chat_id:
             retry_button = InlineKeyboardMarkup([[
-                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
             ]])
             
             await context.bot.edit_message_text(
@@ -1717,7 +1759,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         retry_button = InlineKeyboardMarkup([[
             InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
         ]])
         
         logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
@@ -1756,7 +1798,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         retry_button = InlineKeyboardMarkup([[
             InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='submit_link')
+            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
         ]])
         
         logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
