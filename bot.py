@@ -1519,69 +1519,11 @@ to receive 🎉 {reward} X2C"""
             logger.info(f"✅ Download link sent for large video file, task claimed: {claim_result}")
             return
         
-        # 文件小于50MB,正常下载并发送
-        logger.info(f"✅ File size OK, downloading video...")
+        # 不下载视频，直接发送链接
+        logger.info(f"✅ Sending video link instead of downloading...")
         try:
-            response = requests.get(video_url, stream=True, timeout=60)
-            response.raise_for_status()
-            
-            # 保存到临时文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        tmp_file.write(chunk)
-                tmp_file_path = tmp_file.name
-            
-            logger.info(f"✅ Video downloaded successfully, file size: {os.path.getsize(tmp_file_path)} bytes")
-            
-            # 发送视频
-            with open(tmp_file_path, 'rb') as video_file:
-                # 构建多行模版格式
-                logger.info(f"📝 Task data for caption: title={task.get('title')}, description={task.get('description')}, keywords_template={task.get('keywords_template')}")
-                
-                # 确保每个字段都有值，并且格式正确
-                title = task.get('title', '')
-                description = task.get('description', '')
-                keywords_raw = task.get('keywords_template', '')
-                reward = task.get('node_power_reward', 0)
-                
-                # 清理 keywords_template：完全删除包含"视频链接："的行
-                keywords_lines = keywords_raw.split('\n')
-                cleaned_keywords = []
-                for line in keywords_lines:
-                    # 跳过包含"视频链接："的行
-                    if '视频链接：' not in line and line.strip():
-                        # 如果行中包含"keywords_template="，提取后面的内容
-                        if 'keywords_template=' in line:
-                            cleaned_keywords.append(line.split('keywords_template=')[1])
-                        # 如果行中包含"上传关键词描述："，提取后面的内容
-                        elif '上传关键词描述：' in line:
-                            cleaned_keywords.append(line.split('上传关键词描述：')[1])
-                        else:
-                            cleaned_keywords.append(line)
-                keywords = '\n'.join(cleaned_keywords) if cleaned_keywords else keywords_raw
-                
-                # 生成合法的文件名（去掉特殊字符）
-                safe_filename = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '·', '《', '》')).strip()
-                if not safe_filename:
-                    safe_filename = f"video_{task_id}"
-                filename = f"{safe_filename}.mp4"
-                
-                video_msg = await context.bot.send_video(
-                    chat_id=query.message.chat_id,
-                    video=video_file,
-                    filename=filename,
-                    supports_streaming=True
-                )
-                
-                # 保存视频消息 ID 以便后续删除
-                if 'task_video_messages' not in context.user_data:
-                    context.user_data['task_video_messages'] = {}
-                context.user_data['task_video_messages'][task_id] = video_msg.message_id
-                logger.info(f"📹 保存视频消息 ID: task_id={task_id}, message_id={video_msg.message_id}")
-            
-            # 删除临时文件
-            os.unlink(tmp_file_path)
+            # 准备任务信息（从上面已经定义的变量中获取）
+            # title, description, keywords_raw, reward 已经在上面定义过了
             
             # 发送最终提示消息（新消息，在视频之后）
             # 格式化关键词为 #tag 格式
@@ -1598,7 +1540,9 @@ to receive 🎉 {reward} X2C"""
             drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
             
             if user_lang == 'zh':
-                final_msg = f"""📥 视频已下载，请选择任意平台发布内容，即可获得对应奖励：
+                final_msg = f"""🔗 视频链接：{video_url}
+
+📥 视频已下载，请选择任意平台发布内容，即可获得对应奖励：
 
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube 上传内容】
