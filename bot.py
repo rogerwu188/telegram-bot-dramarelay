@@ -26,22 +26,63 @@ from auto_migrate import auto_migrate
 from link_verifier import LinkVerifier
 from anti_fraud import check_all_limits, update_last_submit_time, get_user_submit_stats
 from retry_submit_handler import retry_submit_callback
+from translator import translate_task_content
 
 # ============================================================
 # 配置和日志
 # ============================================================
 
 # 多语言辅助函数
-def get_task_title(task, user_lang):
+def get_task_title(task, user_lang, auto_translate=True):
     """根据用户语言获取任务标题"""
-    if user_lang == 'en' and task.get('title_en'):
-        return task['title_en']
+    if user_lang == 'en':
+        if task.get('title_en'):
+            return task['title_en']
+        elif auto_translate and task.get('title'):
+            # 自动翻译并缓存
+            from translator import translate_to_english
+            title_en = translate_to_english(task['title'], context="drama title")
+            # 更新数据库缓存
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE drama_tasks SET title_en = %s WHERE task_id = %s",
+                    (title_en, task['task_id'])
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+                logger.info(f"✅ Cached translation for task {task['task_id']}")
+            except Exception as e:
+                logger.error(f"❌ Failed to cache translation: {e}")
+            return title_en
     return task['title']
 
-def get_task_description(task, user_lang):
+def get_task_description(task, user_lang, auto_translate=True):
     """根据用户语言获取任务描述"""
-    if user_lang == 'en' and task.get('description_en'):
-        return task['description_en']
+    if user_lang == 'en':
+        if task.get('description_en'):
+            return task['description_en']
+        elif auto_translate and task.get('description'):
+            # 自动翻译并缓存
+            from translator import translate_to_english
+            description_en = translate_to_english(task['description'], context="drama description")
+            # 更新数据库缓存
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE drama_tasks SET description_en = %s WHERE task_id = %s",
+                    (description_en, task['task_id'])
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+                logger.info(f"✅ Cached translation for task {task['task_id']}")
+            except Exception as e:
+                logger.error(f"❌ Failed to cache translation: {e}")
+            return description_en
     return task.get('description', '')
 
 logging.basicConfig(
@@ -1281,8 +1322,8 @@ async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # 显示任务列表
     keyboard = []
     for task in available_tasks:
-        # 根据用户语言选择标题
-        title = task.get('title_en') if user_lang == 'en' and task.get('title_en') else task['title']
+        # 根据用户语言选择标题（自动翻译）
+        title = get_task_title(task, user_lang)
         button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
     
@@ -1308,9 +1349,9 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("任务不存在" if user_lang == 'zh' else "Task not found")
         return
     
-    # 显示任务详情，根据用户语言选择内容
-    title = task.get('title_en') if user_lang == 'en' and task.get('title_en') else task['title']
-    description = task.get('description_en') if user_lang == 'en' and task.get('description_en') else task.get('description')
+    # 显示任务详情，根据用户语言选择内容（自动翻译）
+    title = get_task_title(task, user_lang)
+    description = get_task_description(task, user_lang)
     
     message = get_message(user_lang, 'task_details',
         title=title,
