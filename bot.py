@@ -1362,7 +1362,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.warning(f"⚠️ Failed to delete task details message: {e}")
     
     # 如果任务有视频链接，下载并发送视频
-    video_url = task.get('video_file_id')
+    video_url = task.get('video_url')
     logger.info(f"🎥 video_url from task: {video_url}")
     if video_url and (video_url.startswith('http://') or video_url.startswith('https://')):
         logger.info(f"✅ Starting video processing from: {video_url}")
