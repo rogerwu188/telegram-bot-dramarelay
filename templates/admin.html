@@ -880,7 +880,7 @@
         }
         
         // 复制 JSON
-        function copyJSON() {
+        function copyJSON(event) {
             const jsonViewer = document.getElementById('json-viewer');
             const text = jsonViewer.textContent;
             navigator.clipboard.writeText(text).then(() => {
@@ -915,7 +915,7 @@
                 <pre id="json-viewer" class="json-viewer"></pre>
             </div>
             <div class="modal-footer">
-                <button class="btn-copy" onclick="copyJSON()">📋 复制 JSON</button>
+                <button class="btn-copy" onclick="copyJSON(event)">📋 复制 JSON</button>
             </div>
         </div>
     </div>
