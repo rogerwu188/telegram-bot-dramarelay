@@ -225,7 +225,7 @@ def get_webhook_logs():
             platform = webhook.get('platform_requirements', '').lower()
             stats_data = {
                 'project_id': webhook.get('project_id'),
-                'task_id': webhook.get('external_task_id'),
+                'task_id': webhook.get('external_task_id') or webhook.get('task_id'),
                 'duration': webhook.get('duration', 30),
                 'account_count': 1
             }
