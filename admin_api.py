@@ -72,7 +72,7 @@ def get_task_logs():
                 t.created_at,
                 COUNT(DISTINCT ut.user_id) as assigned_users,
                 COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
-                MAX(ut.completed_at) as last_completed_at
+                MAX(ut.submitted_at) as last_completed_at
             FROM drama_tasks t
             LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
             WHERE t.created_at >= NOW() - INTERVAL '%s hours'
@@ -152,16 +152,16 @@ def get_completion_logs():
                 t.platform_requirements,
                 t.node_power_reward,
                 ut.status,
-                ut.assigned_at,
-                ut.completed_at,
+                ut.created_at as assigned_at,
+                ut.submitted_at as completed_at,
                 ut.submission_link,
-                EXTRACT(EPOCH FROM (ut.completed_at - ut.assigned_at)) as duration_seconds
+                EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
             FROM user_tasks ut
             JOIN drama_tasks t ON ut.task_id = t.task_id
             LEFT JOIN users u ON ut.user_id = u.user_id
             WHERE ut.status = 'completed'
-                AND ut.completed_at >= NOW() - INTERVAL '%s hours'
-            ORDER BY ut.completed_at DESC
+                AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
+            ORDER BY ut.submitted_at DESC
             LIMIT %s
         """, (hours, limit))
         
