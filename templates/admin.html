@@ -521,6 +521,7 @@
                                 <th>分发数</th>
                                 <th>完成数</th>
                                 <th>创建时间</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="tasks-body"></tbody>
@@ -738,6 +739,7 @@
                         <td>${item.assigned_users}</td>
                         <td>${item.completed_users}</td>
                         <td class="timestamp">${formatTime(item.created_at)}</td>
+                        <td><button class="btn-view" onclick='showTaskData(${JSON.stringify(item.original_request).replace(/'/g, "&apos;")})'>📝 查看数据</button></td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -781,8 +783,20 @@
         // 显示回调数据弹窗
         function showCallbackData(payload) {
             const modal = document.getElementById('callback-modal');
+            const modalTitle = modal.querySelector('.modal-header h3');
             const jsonViewer = document.getElementById('json-viewer');
+            modalTitle.textContent = '📤 Webhook 回调数据';
             jsonViewer.textContent = JSON.stringify(payload, null, 2);
+            modal.classList.add('show');
+        }
+        
+        // 显示任务原始数据弹窗
+        function showTaskData(data) {
+            const modal = document.getElementById('callback-modal');
+            const modalTitle = modal.querySelector('.modal-header h3');
+            const jsonViewer = document.getElementById('json-viewer');
+            modalTitle.textContent = '📝 任务原始数据 (X2C 平台下发)';
+            jsonViewer.textContent = JSON.stringify(data, null, 2);
             modal.classList.add('show');
         }
         

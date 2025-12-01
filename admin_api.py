@@ -56,8 +56,18 @@ def get_task_logs():
                 t.external_task_id,
                 t.project_id,
                 t.title,
+                t.description,
                 t.platform_requirements,
                 t.node_power_reward,
+                t.duration,
+                t.video_file_id,
+                t.video_url,
+                t.thumbnail_url,
+                t.task_template,
+                t.keywords_template,
+                t.video_title,
+                t.callback_url,
+                t.callback_secret,
                 t.status as task_status,
                 t.created_at,
                 COUNT(DISTINCT ut.user_id) as assigned_users,
@@ -73,12 +83,33 @@ def get_task_logs():
         
         tasks = cur.fetchall()
         
-        # 转换日期格式
+        # 转换日期格式并生成原始请求数据
         for task in tasks:
             if task['created_at']:
                 task['created_at'] = task['created_at'].isoformat()
             if task['last_completed_at']:
                 task['last_completed_at'] = task['last_completed_at'].isoformat()
+            
+            # 生成原始请求数据（模拟 X2C 平台下发的数据）
+            task['original_request'] = {
+                'project_id': task.get('project_id'),
+                'task_id': task.get('external_task_id'),
+                'title': task.get('title'),
+                'description': task.get('description'),
+                'video_url': task.get('video_url') or task.get('video_file_id'),
+                'thumbnail_url': task.get('thumbnail_url'),
+                'duration': task.get('duration'),
+                'node_power_reward': task.get('node_power_reward'),
+                'platform_requirements': task.get('platform_requirements'),
+                'status': task.get('task_status'),
+                'callback_url': task.get('callback_url'),
+                'callback_secret': task.get('callback_secret') if task.get('callback_secret') else None,
+                'task_template': task.get('task_template'),
+                'keywords_template': task.get('keywords_template'),
+                'video_title': task.get('video_title')
+            }
+            # 移除 None 值
+            task['original_request'] = {k: v for k, v in task['original_request'].items() if v is not None}
         
         cur.close()
         conn.close()
