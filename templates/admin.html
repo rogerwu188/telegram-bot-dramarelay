@@ -136,6 +136,55 @@
             gap: 10px;
         }
         
+        /* Tab 样式 */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: none;
+        }
+        
+        .tab-btn {
+            padding: 15px 30px;
+            background: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+            border-radius: 0;
+            border-right: 1px solid #ccc;
+        }
+        
+        .tab-btn:first-child {
+            border-top-left-radius: 0;
+        }
+        
+        .tab-btn:last-child {
+            border-right: none;
+            border-top-right-radius: 0;
+        }
+        
+        .tab-btn:hover {
+            background: #d0d0d0;
+            color: #333;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
         .section-content {
             padding: 20px;
         }
@@ -441,32 +490,67 @@
             <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
         </div>
         
-        <!-- Webhook 回调日志 -->
+        <!-- 任务日志 Tab 页 -->
         <div class="section">
             <div class="section-header">
-                <h2>📤 Webhook 回调日志</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('webhooks')">📤 Webhook 回调日志</button>
+                    <button class="tab-btn" onclick="switchTab('tasks')">📥 任务接收日志</button>
+                </div>
             </div>
-            <div class="section-content">
-                <div id="webhooks-loading" class="loading">加载中...</div>
-                <div id="webhooks-error" class="error" style="display: none;"></div>
-                <div id="webhooks-empty" class="empty" style="display: none;">暂无回调记录</div>
-                <div id="webhooks-table" style="display: none;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>任务ID</th>
-                                <th>任务标题</th>
-                                <th>Project ID</th>
-                                <th>完成数</th>
-                                <th>回调状态</th>
-                                <th>重试次数</th>
-                                <th>最后尝试</th>
-                                <th>回调URL</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="webhooks-body"></tbody>
-                    </table>
+            
+            <!-- Webhook 回调日志 Tab -->
+            <div id="tab-webhooks" class="tab-content active">
+                <div class="section-content">
+                    <div id="webhooks-loading" class="loading">加载中...</div>
+                    <div id="webhooks-error" class="error" style="display: none;"></div>
+                    <div id="webhooks-empty" class="empty" style="display: none;">暂无回调记录</div>
+                    <div id="webhooks-table" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>任务ID</th>
+                                    <th>任务标题</th>
+                                    <th>Project ID</th>
+                                    <th>完成数</th>
+                                    <th>回调状态</th>
+                                    <th>重试次数</th>
+                                    <th>最后尝试</th>
+                                    <th>回调URL</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webhooks-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 任务接收日志 Tab -->
+            <div id="tab-tasks" class="tab-content">
+                <div class="section-content">
+                    <div id="tasks-loading" class="loading">加载中...</div>
+                    <div id="tasks-error" class="error" style="display: none;"></div>
+                    <div id="tasks-empty" class="empty" style="display: none;">暂无任务记录</div>
+                    <div id="tasks-table" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>任务ID</th>
+                                    <th>External ID</th>
+                                    <th>Project ID</th>
+                                    <th>标题</th>
+                                    <th>平台</th>
+                                    <th>奖励</th>
+                                    <th>分发数</th>
+                                    <th>完成数</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -498,37 +582,7 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 任务接收日志 -->
-        <div class="section">
-            <div class="section-header">
-                <h2>📥 任务接收日志</h2>
-            </div>
-            <div class="section-content">
-                <div id="tasks-loading" class="loading">加载中...</div>
-                <div id="tasks-error" class="error" style="display: none;"></div>
-                <div id="tasks-empty" class="empty" style="display: none;">暂无任务记录</div>
-                <div id="tasks-table" style="display: none;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>任务ID</th>
-                                <th>External ID</th>
-                                <th>Project ID</th>
-                                <th>标题</th>
-                                <th>平台</th>
-                                <th>奖励</th>
-                                <th>分发数</th>
-                                <th>完成数</th>
-                                <th>创建时间</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tasks-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+
     </div>
     
     <script>
@@ -771,6 +825,25 @@
                 alert('已启动自动刷新 (每 30 秒)');
                 refreshData();
             }
+        }
+        
+        // Tab 切换函数
+        function switchTab(tabName) {
+            // 隐藏所有 tab 内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有按钮的 active 状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的 tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // 激活对应按钮
+            event.target.classList.add('active');
         }
         
         // 监听控制变化
