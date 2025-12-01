@@ -180,19 +180,39 @@ def get_webhook_logs():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询有回调配置的任务
+        # 查询有回调配置的任务和最近的回调数据
         cur.execute("""
             SELECT 
                 t.task_id,
                 t.external_task_id,
                 t.project_id,
                 t.title,
+                t.duration,
+                t.platform_requirements,
                 t.callback_url,
                 t.callback_status,
                 t.callback_retry_count,
                 t.callback_last_attempt,
                 t.created_at,
-                COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
+                COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count,
+                (
+                    SELECT json_agg(json_build_object(
+                        'user_id', ts.user_id,
+                        'yt_view_count', ts.yt_view_count,
+                        'yt_like_count', ts.yt_like_count,
+                        'yt_comment_count', ts.yt_comment_count,
+                        'yt_share_count', ts.yt_share_count,
+                        'tt_view_count', ts.tt_view_count,
+                        'tt_like_count', ts.tt_like_count,
+                        'tt_comment_count', ts.tt_comment_count,
+                        'tt_share_count', ts.tt_share_count,
+                        'submitted_at', ts.submitted_at
+                    ))
+                    FROM task_stats ts
+                    WHERE ts.task_id = t.task_id
+                    ORDER BY ts.submitted_at DESC
+                    LIMIT 10
+                ) as callback_data_samples
             FROM drama_tasks t
             LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
             WHERE t.callback_url IS NOT NULL
@@ -224,6 +244,46 @@ def get_webhook_logs():
             else:
                 webhook['status_label'] = '⏳ 待回调'
                 webhook['status_class'] = 'secondary'
+            
+            # 生成回调数据示例
+            platform = webhook.get('platform_requirements', '').lower()
+            stats_data = {
+                'project_id': webhook.get('project_id'),
+                'task_id': webhook.get('external_task_id'),
+                'duration': webhook.get('duration', 30),
+                'account_count': 1
+            }
+            
+            # 如果有实际的统计数据，使用实际数据
+            if webhook.get('callback_data_samples'):
+                samples = webhook['callback_data_samples']
+                if samples and len(samples) > 0:
+                    sample = samples[0]  # 使用最近的一条
+                    if 'youtube' in platform or 'yt' in platform:
+                        if sample.get('yt_view_count'):
+                            stats_data['yt_view_count'] = sample['yt_view_count']
+                        if sample.get('yt_like_count'):
+                            stats_data['yt_like_count'] = sample['yt_like_count']
+                        if sample.get('yt_comment_count'):
+                            stats_data['yt_comment_count'] = sample['yt_comment_count']
+                        if sample.get('yt_share_count'):
+                            stats_data['yt_share_count'] = sample['yt_share_count']
+                        stats_data['yt_account_count'] = 1
+                    elif 'tiktok' in platform or 'tt' in platform:
+                        if sample.get('tt_view_count'):
+                            stats_data['tt_view_count'] = sample['tt_view_count']
+                        if sample.get('tt_like_count'):
+                            stats_data['tt_like_count'] = sample['tt_like_count']
+                        if sample.get('tt_comment_count'):
+                            stats_data['tt_comment_count'] = sample['tt_comment_count']
+                        if sample.get('tt_share_count'):
+                            stats_data['tt_share_count'] = sample['tt_share_count']
+                        stats_data['tt_account_count'] = 1
+            
+            webhook['callback_payload'] = {
+                'site_name': 'DramaRelayBot',
+                'stats': [stats_data]
+            }
         
         cur.close()
         conn.close()
