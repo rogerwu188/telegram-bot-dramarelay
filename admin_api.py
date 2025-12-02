@@ -72,7 +72,7 @@ def get_task_logs():
                     t.status as task_status,
                     t.created_at,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     MAX(ut.submitted_at) as last_completed_at
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
@@ -103,7 +103,7 @@ def get_task_logs():
                     t.status as task_status,
                     t.created_at,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     MAX(ut.submitted_at) as last_completed_at
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
@@ -191,7 +191,7 @@ def get_completion_logs():
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
                 LEFT JOIN users u ON ut.user_id = u.user_id
-                WHERE ut.status = 'completed'
+                WHERE ut.status = 'submitted'
                     AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
                 ORDER BY ut.submitted_at DESC
                 LIMIT %s
@@ -216,7 +216,7 @@ def get_completion_logs():
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
                 LEFT JOIN users u ON ut.user_id = u.user_id
-                WHERE ut.status = 'completed'
+                WHERE ut.status = 'submitted'
                 ORDER BY ut.submitted_at DESC
                 LIMIT %s
             """, (limit,))
@@ -276,7 +276,7 @@ def get_webhook_logs():
                     t.callback_retry_count,
                     t.callback_last_attempt,
                     t.created_at,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
                 WHERE t.callback_url IS NOT NULL
@@ -299,7 +299,7 @@ def get_webhook_logs():
                     t.callback_retry_count,
                     t.callback_last_attempt,
                     t.created_at,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
                 WHERE t.callback_url IS NOT NULL
@@ -388,7 +388,7 @@ def get_stats():
                 SELECT 
                     COUNT(DISTINCT t.task_id) as total_tasks,
                     COUNT(DISTINCT ut.user_id) as total_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     COUNT(DISTINCT CASE WHEN t.callback_status = 'success' THEN t.task_id END) as successful_callbacks,
                     COUNT(DISTINCT CASE WHEN t.callback_status = 'failed' THEN t.task_id END) as failed_callbacks
                 FROM drama_tasks t
@@ -401,7 +401,7 @@ def get_stats():
                 SELECT 
                     COUNT(DISTINCT t.task_id) as total_tasks,
                     COUNT(DISTINCT ut.user_id) as total_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     COUNT(DISTINCT CASE WHEN t.callback_status = 'success' THEN t.task_id END) as successful_callbacks,
                     COUNT(DISTINCT CASE WHEN t.callback_status = 'failed' THEN t.task_id END) as failed_callbacks
                 FROM drama_tasks t
