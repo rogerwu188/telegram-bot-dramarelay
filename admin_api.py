@@ -50,36 +50,67 @@ def get_task_logs():
         cur = conn.cursor()
         
         # 查询最近的任务活动
-        cur.execute("""
-            SELECT 
-                t.task_id,
-                t.external_task_id,
-                t.project_id,
-                t.title,
-                t.description,
-                t.platform_requirements,
-                t.node_power_reward,
-                t.duration,
-                t.video_file_id,
-                t.video_url,
-                t.thumbnail_url,
-                t.task_template,
-                t.keywords_template,
-                t.video_title,
-                t.callback_url,
-                t.callback_secret,
-                t.status as task_status,
-                t.created_at,
-                COUNT(DISTINCT ut.user_id) as assigned_users,
-                COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
-                MAX(ut.submitted_at) as last_completed_at
-            FROM drama_tasks t
-            LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
-            WHERE t.created_at >= NOW() - INTERVAL '%s hours'
-            GROUP BY t.task_id
-            ORDER BY t.created_at DESC
-            LIMIT %s
-        """, (hours, limit))
+        if hours > 0:
+            cur.execute("""
+                SELECT 
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.description,
+                    t.platform_requirements,
+                    t.node_power_reward,
+                    t.duration,
+                    t.video_file_id,
+                    t.video_url,
+                    t.thumbnail_url,
+                    t.task_template,
+                    t.keywords_template,
+                    t.video_title,
+                    t.callback_url,
+                    t.callback_secret,
+                    t.status as task_status,
+                    t.created_at,
+                    COUNT(DISTINCT ut.user_id) as assigned_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    MAX(ut.submitted_at) as last_completed_at
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+                WHERE t.created_at >= NOW() - INTERVAL '%s hours'
+                GROUP BY t.task_id
+                ORDER BY t.created_at DESC
+                LIMIT %s
+            """, (hours, limit))
+        else:
+            cur.execute("""
+                SELECT 
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.description,
+                    t.platform_requirements,
+                    t.node_power_reward,
+                    t.duration,
+                    t.video_file_id,
+                    t.video_url,
+                    t.thumbnail_url,
+                    t.task_template,
+                    t.keywords_template,
+                    t.video_title,
+                    t.callback_url,
+                    t.callback_secret,
+                    t.status as task_status,
+                    t.created_at,
+                    COUNT(DISTINCT ut.user_id) as assigned_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    MAX(ut.submitted_at) as last_completed_at
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+                GROUP BY t.task_id
+                ORDER BY t.created_at DESC
+                LIMIT %s
+            """, (limit,))
         
         tasks = cur.fetchall()
         
@@ -140,30 +171,55 @@ def get_completion_logs():
         cur = conn.cursor()
         
         # 查询最近完成的任务
-        cur.execute("""
-            SELECT 
-                ut.user_id,
-                u.username,
-                u.first_name,
-                t.task_id,
-                t.external_task_id,
-                t.project_id,
-                t.title,
-                t.platform_requirements,
-                t.node_power_reward,
-                ut.status,
-                ut.created_at as assigned_at,
-                ut.submitted_at as completed_at,
-                ut.submission_link,
-                EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
-            FROM user_tasks ut
-            JOIN drama_tasks t ON ut.task_id = t.task_id
-            LEFT JOIN users u ON ut.user_id = u.user_id
-            WHERE ut.status = 'completed'
-                AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
-            ORDER BY ut.submitted_at DESC
-            LIMIT %s
-        """, (hours, limit))
+        if hours > 0:
+            cur.execute("""
+                SELECT 
+                    ut.user_id,
+                    u.username,
+                    u.first_name,
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.platform_requirements,
+                    t.node_power_reward,
+                    ut.status,
+                    ut.created_at as assigned_at,
+                    ut.submitted_at as completed_at,
+                    ut.submission_link,
+                    EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
+                FROM user_tasks ut
+                JOIN drama_tasks t ON ut.task_id = t.task_id
+                LEFT JOIN users u ON ut.user_id = u.user_id
+                WHERE ut.status = 'completed'
+                    AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
+                ORDER BY ut.submitted_at DESC
+                LIMIT %s
+            """, (hours, limit))
+        else:
+            cur.execute("""
+                SELECT 
+                    ut.user_id,
+                    u.username,
+                    u.first_name,
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.platform_requirements,
+                    t.node_power_reward,
+                    ut.status,
+                    ut.created_at as assigned_at,
+                    ut.submitted_at as completed_at,
+                    ut.submission_link,
+                    EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
+                FROM user_tasks ut
+                JOIN drama_tasks t ON ut.task_id = t.task_id
+                LEFT JOIN users u ON ut.user_id = u.user_id
+                WHERE ut.status = 'completed'
+                ORDER BY ut.submitted_at DESC
+                LIMIT %s
+            """, (limit,))
         
         completions = cur.fetchall()
         
@@ -206,28 +262,51 @@ def get_webhook_logs():
         cur = conn.cursor()
         
         # 查询有回调配置的任务
-        cur.execute("""
-            SELECT 
-                t.task_id,
-                t.external_task_id,
-                t.project_id,
-                t.title,
-                t.duration,
-                t.platform_requirements,
-                t.callback_url,
-                t.callback_status,
-                t.callback_retry_count,
-                t.callback_last_attempt,
-                t.created_at,
-                COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
-            FROM drama_tasks t
-            LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
-            WHERE t.callback_url IS NOT NULL
-                AND t.created_at >= NOW() - INTERVAL '%s hours'
-            GROUP BY t.task_id
-            ORDER BY t.callback_last_attempt DESC NULLS LAST, t.created_at DESC
-            LIMIT %s
-        """, (hours, limit))
+        if hours > 0:
+            cur.execute("""
+                SELECT 
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.duration,
+                    t.platform_requirements,
+                    t.callback_url,
+                    t.callback_status,
+                    t.callback_retry_count,
+                    t.callback_last_attempt,
+                    t.created_at,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+                WHERE t.callback_url IS NOT NULL
+                    AND t.created_at >= NOW() - INTERVAL '%s hours'
+                GROUP BY t.task_id
+                ORDER BY t.callback_last_attempt DESC NULLS LAST, t.created_at DESC
+                LIMIT %s
+            """, (hours, limit))
+        else:
+            cur.execute("""
+                SELECT 
+                    t.task_id,
+                    t.external_task_id,
+                    t.project_id,
+                    t.title,
+                    t.duration,
+                    t.platform_requirements,
+                    t.callback_url,
+                    t.callback_status,
+                    t.callback_retry_count,
+                    t.callback_last_attempt,
+                    t.created_at,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_count
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+                WHERE t.callback_url IS NOT NULL
+                GROUP BY t.task_id
+                ORDER BY t.callback_last_attempt DESC NULLS LAST, t.created_at DESC
+                LIMIT %s
+            """, (limit,))
         
         webhooks = cur.fetchall()
         
@@ -303,18 +382,31 @@ def get_stats():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 任务统计
-        cur.execute("""
-            SELECT 
-                COUNT(DISTINCT t.task_id) as total_tasks,
-                COUNT(DISTINCT ut.user_id) as total_users,
-                COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
-                COUNT(DISTINCT CASE WHEN t.callback_status = 'success' THEN t.task_id END) as successful_callbacks,
-                COUNT(DISTINCT CASE WHEN t.callback_status = 'failed' THEN t.task_id END) as failed_callbacks
-            FROM drama_tasks t
-            LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
-            WHERE t.created_at >= NOW() - INTERVAL '%s hours'
-        """, (hours,))
+        # 任务统计 - 如果 hours 为 0 或负数，则查询所有数据
+        if hours > 0:
+            cur.execute("""
+                SELECT 
+                    COUNT(DISTINCT t.task_id) as total_tasks,
+                    COUNT(DISTINCT ut.user_id) as total_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN t.callback_status = 'success' THEN t.task_id END) as successful_callbacks,
+                    COUNT(DISTINCT CASE WHEN t.callback_status = 'failed' THEN t.task_id END) as failed_callbacks
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+                WHERE t.created_at >= NOW() - INTERVAL '%s hours'
+            """, (hours,))
+        else:
+            # 查询所有数据（不限时间）
+            cur.execute("""
+                SELECT 
+                    COUNT(DISTINCT t.task_id) as total_tasks,
+                    COUNT(DISTINCT ut.user_id) as total_users,
+                    COUNT(DISTINCT CASE WHEN ut.status = 'completed' THEN ut.user_id END) as completed_users,
+                    COUNT(DISTINCT CASE WHEN t.callback_status = 'success' THEN t.task_id END) as successful_callbacks,
+                    COUNT(DISTINCT CASE WHEN t.callback_status = 'failed' THEN t.task_id END) as failed_callbacks
+                FROM drama_tasks t
+                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+            """)
         
         stats = cur.fetchone()
         
