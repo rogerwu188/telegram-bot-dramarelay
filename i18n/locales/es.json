@@ -1,0 +1,63 @@
+{
+  "welcome": "🎬 Nodo de Tráfico X2C Conectado\nBienvenido de nuevo, Nodo @{username}.\nEsta es la primera red de distribución de dramas descentralizada Post-to-Earn del mundo.\n\n📊 Panel del Nodo:\n• Estado de Hashrate: 🔴 Inactivo\n• Precio Global del Token: $0.002 / x2c 📈\n• Dificultad de Minería: 🔥 Fácil (TikTok/Reels/Shorts)\n\n⛏️ ¿Cómo minar x2c?\n1️⃣ Obtener Materiales: Reclamar clips de dramas virales\n2️⃣ Contribuir Hashrate: Subir a redes sociales (0 seguidores OK)\n3️⃣ Enviar Prueba: Publicar enlace, ¡más tráfico = más x2c!\n\n💰 Ganancias Esperadas:\nLos videos virales pueden minar más de 10,000 x2c\n\n👇 Haz clic en los comandos a continuación para activar el nodo y comenzar a minar:",
+  "menu": {
+    "get_tasks": "⛏️ Obtener Materiales de Minería",
+    "submit_link": "🔗 Enviar Prueba de Trabajo",
+    "my_power": "📊 Mi Hashrate",
+    "ranking": "⚡ Tabla Global de Hashrate",
+    "airdrop": "👥 Invitar Amigos (+10%)",
+    "bind_wallet": "📤 Retiro de Billetera",
+    "tutorial": "📚 Guía de Minería de Nodos",
+    "language": "🌐 Idioma / Language"
+  },
+  "task": {
+    "no_available": "No hay tareas disponibles en este momento. Por favor, inténtalo de nuevo más tarde.",
+    "details": "📋 Detalles de la Tarea\n\n🎬 Título: {title}\n📝 Descripción: {description}\n⏱ Duración: {duration}s\n💰 Recompensa: {reward} X2C\n📱 Plataformas: {platforms}\n\n⬇️ Haz clic en el botón de abajo para reclamar la tarea. El video se descargará automáticamente en el chat.",
+    "claimed": "✅ ¡Tarea reclamada con éxito!\n\nDescargando video... Después de que se complete la descarga, súbelo a la plataforma que elijas y regresa para enviar el enlace.",
+    "already_claimed": "⚠️ Ya has reclamado esta tarea.",
+    "select_to_submit": "Por favor, selecciona la tarea a enviar:",
+    "no_in_progress": "No tienes tareas en progreso.\n\n¡Por favor, reclama una tarea primero!",
+    "not_found": "Tarea no encontrada"
+  },
+  "submit": {
+    "select_platform": "Por favor, selecciona la plataforma a la que subiste:",
+    "enter_link": "Por favor, ingresa tu enlace de carga:",
+    "success": "✅ ¡Enlace enviado con éxito!\n\n¡Ganaste {reward} X2C!\n\nPoder Total: {total_power}",
+    "invalid_link": "❌ Formato de enlace inválido. Por favor, inténtalo de nuevo."
+  },
+  "stats": {
+    "my_power": "📊 Mis Estadísticas de X2C\n\n💰 X2C Total: {total_power}\n✅ Tareas Completadas: {completed_tasks}\n🔄 En Progreso: {in_progress_tasks}\n📈 Ranking de Esta Semana: #{rank}",
+    "ranking": "🏆 Ranking Global\n\n{ranking_list}\n\nTu Ranking: #{your_rank}\nTu Poder: {your_power} X2C"
+  },
+  "airdrop": {
+    "status": "🎁 Estado del Airdrop\n\n📅 Ronda Actual: Ronda {round}\n✅ Elegibilidad: {eligible}\n💰 Airdrop Estimado: {estimated} X2C\n⏰ Próxima Instantánea: {next_snapshot}\n\nRequisito Mínimo: 100 X2C"
+  },
+  "withdraw": {
+    "prompt": "💰 Retiro de Billetera X2C\n\nPor favor, ingresa tu dirección SOL (compatible con Phantom, OKX, Bybit, etc.):\n\n📌 Pega tu dirección SOL (comienza con 4 o tiene 44 caracteres de longitud)\n⚠️ La dirección no se puede cambiar una vez enviada. Por favor, confirma cuidadosamente.",
+    "amount_prompt": "📥 Recibimos tu dirección de retiro:\n\n`{address}`\n\nAhora por favor ingresa la cantidad de X2C que deseas retirar:\n\n💡 Saldo disponible: {balance} X2C",
+    "confirm": "📤 Confirmación de Retiro\n\nEstás retirando:\n\n🔹 Cantidad: {amount} X2C\n🔹 Dirección: {address}\n\n¿Confirmar solicitud de retiro?",
+    "processing": "⏳ Procesando tu solicitud de retiro…\n\nTransfiriendo {amount} X2C a:\n\n`{address}`\n\nPor favor espera, esto puede tomar de 5 a 20 segundos.",
+    "success": "✅ ¡Retiro Exitoso!\n\nTus {amount} X2C han sido enviados a:\n\n📥 Dirección: `{address}`\n🔗 Hash de Transacción (Tx Hash):\n{tx_hash}\n\nVer detalles de la transacción en Solscan:\nhttps://solscan.io/tx/{tx_hash}\n\n📘 Tu retiro ha sido registrado. Contacta al administrador si tienes preguntas.",
+    "failed": "❌ Retiro Fallido\n\nRazón: {error}\n\n💡 Por favor confirma que el formato de la dirección es correcto, o inténtalo de nuevo más tarde.",
+    "invalid_address": "❌ Formato de dirección SOL inválido. Por favor, inténtalo de nuevo.",
+    "invalid_amount": "❌ Cantidad de retiro inválida. Por favor, ingresa un número positivo.",
+    "insufficient_balance": "❌ Saldo insuficiente. Tu saldo disponible es {balance} X2C.",
+    "confirm_button": "✅ Confirmar Retiro",
+    "cancel_button": "❌ Cancelar y Volver al Menú"
+  },
+  "tutorial": "📚 X2C · Manual de Minería (Guía Oficial)\n\n1️⃣ Reclamar Tareas\n\nVe a \"🎬 Obtener Tareas de Drama\" y selecciona el contenido de drama oficial que deseas distribuir.\n\n2️⃣ Descargar Materiales\n\nDespués de hacer clic en \"Confirmar Reclamo\", puedes descargar los materiales de video para esta tarea.\n\n3️⃣ Publicar en Plataformas\n\nPublica los materiales en plataformas de video como TikTok / YouTube, y asegúrate de que el video sea accesible públicamente.\n\n4️⃣ Enviar Enlace de Contenido\n\nEn \"🔗 Enviar Enlace\", selecciona la tarea, completa la plataforma de publicación y el enlace correspondiente para la verificación automática del sistema.\n\n5️⃣ Obtener Recompensas de Poder de Cómputo\n\nDespués de que pase la verificación del contenido, el sistema distribuirá inmediatamente el X2C correspondiente (poder de cómputo) a tu cuenta.\n\n6️⃣ Unirse al Airdrop Mensual\n\nLos usuarios que acumulen más de 100 X2C pueden calificar automáticamente para el airdrop mensual de X2C.\n\n───\n\n💡 Instrucciones de Uso\n• Cada tarea solo se puede enviar una vez\n• Los enlaces enviados deben ser reales, válidos y publicados por ti mismo\n• Se recomienda distribuir en múltiples plataformas para obtener mayores recompensas de poder de cómputo\n• Por favor, sigue las reglas de publicación de cada plataforma y evita contenido que viole las normas",
+  "invite": {
+    "message": "👥 Recompensas por Invitar Amigos\n\nCuando tu amigo invitado complete su primera tarea:\n\n🔸 Obtienes: 10% de bonificación de poder permanente de cada tarea que completen\n🔸 Ellos no pierden ninguna recompensa (bonificación de la plataforma)\n🔸 También obtienes un bono de +5 X2C cuando completen su primera tarea\n\n📈 Más invitaciones = Más canales de ingresos pasivos\n🔥 Invita más, gana más\n\n🔗 Tu enlace de invitación:\n{invite_link}\n\n📊 Estadísticas de Invitación:\n• Total de invitaciones: {invited_count}\n• Invitaciones activas: {active_count}\n• Recompensas totales por referidos: {total_rewards} X2C",
+    "copy_link": "📋 Copiar Enlace de Invitación",
+    "share_link": "📤 Compartir con Amigos"
+  },
+  "common": {
+    "back_to_menu": "« Volver al Menú",
+    "cancel": "Cancelar",
+    "admin_only": "❌ Este comando es solo para administradores"
+  },
+  "language": {
+    "select": "🌐 Por favor selecciona el idioma / Please select language:",
+    "changed": "✅ Idioma cambiado a: {language}"
+  }
+}

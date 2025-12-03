@@ -27,6 +27,7 @@ from link_verifier import LinkVerifier
 from anti_fraud import check_all_limits, update_last_submit_time, get_user_submit_stats
 from retry_submit_handler import retry_submit_callback
 from translator import translate_task_content
+from i18n import t, get_user_language as get_user_lang_i18n, set_user_language as set_user_lang_i18n, SUPPORTED_LANGUAGES
 
 # ============================================================
 # 配置和日志
@@ -718,7 +719,32 @@ When your invited friend completes their first task:
 }
 
 def get_message(user_lang: str, key: str, **kwargs) -> str:
-    """获取本地化消息"""
+    """获取本地化消息 - 兼容旧的 MESSAGES 字典和新的 i18n 系统"""
+    # 尝试使用新的 i18n 系统
+    try:
+        # 将旧的 key 转换为新的 key 格式
+        if key.startswith('menu_'):
+            new_key = f"menu.{key[5:]}"
+        elif key in ['welcome', 'tutorial']:
+            new_key = key
+        elif key.startswith('task_'):
+            new_key = f"task.{key[5:]}"
+        elif key.startswith('withdraw_'):
+            new_key = f"withdraw.{key[9:]}"
+        elif key.startswith('invite_'):
+            new_key = f"invite.{key[7:]}"
+        elif key in ['back_to_menu', 'cancel']:
+            new_key = f"common.{key}"
+        else:
+            new_key = key
+        
+        result = t(new_key, user_lang, **kwargs)
+        if result != new_key:  # 如果找到了翻译
+            return result
+    except:
+        pass
+    
+    # 回退到旧的 MESSAGES 字典
     lang = user_lang if user_lang in MESSAGES else 'zh'
     message = MESSAGES[lang].get(key, MESSAGES['zh'].get(key, ''))
     return message.format(**kwargs) if kwargs else message
@@ -760,7 +786,15 @@ def get_user_language(user_id: int) -> str:
     cur.close()
     conn.close()
     
-    return result['language'] if result else 'zh'
+    if result and result['language']:
+        lang = result['language']
+        # 兼容旧的语言代码
+        if lang == 'zh':
+            return 'zh-CN'
+        elif lang in SUPPORTED_LANGUAGES:
+            return lang
+    
+    return 'zh-CN'  # 默认返回简体中文
 
 def set_user_language(user_id: int, language: str):
     """设置用户语言"""
@@ -1016,20 +1050,20 @@ def get_main_menu_keyboard(user_lang: str) -> InlineKeyboardMarkup:
     """获取主菜单键盘"""
     keyboard = [
         [
-            InlineKeyboardButton(get_message(user_lang, 'menu_get_tasks'), callback_data='get_tasks'),
-            InlineKeyboardButton(get_message(user_lang, 'menu_submit_link'), callback_data='submit_link'),
+            InlineKeyboardButton(t('menu.get_tasks', user_lang), callback_data='get_tasks'),
+            InlineKeyboardButton(t('menu.submit_link', user_lang), callback_data='submit_link'),
         ],
         [
-            InlineKeyboardButton(get_message(user_lang, 'menu_my_power'), callback_data='my_power'),
-            InlineKeyboardButton(get_message(user_lang, 'menu_ranking'), callback_data='ranking'),
+            InlineKeyboardButton(t('menu.my_power', user_lang), callback_data='my_power'),
+            InlineKeyboardButton(t('menu.ranking', user_lang), callback_data='ranking'),
         ],
         [
-            InlineKeyboardButton(get_message(user_lang, 'menu_airdrop'), callback_data='invite_friends'),
-            InlineKeyboardButton(get_message(user_lang, 'menu_bind_wallet'), callback_data='bind_wallet'),
+            InlineKeyboardButton(t('menu.airdrop', user_lang), callback_data='invite_friends'),
+            InlineKeyboardButton(t('menu.bind_wallet', user_lang), callback_data='bind_wallet'),
         ],
         [
-            InlineKeyboardButton(get_message(user_lang, 'menu_tutorial'), callback_data='tutorial'),
-            InlineKeyboardButton(get_message(user_lang, 'menu_language'), callback_data='language'),
+            InlineKeyboardButton(t('menu.tutorial', user_lang), callback_data='tutorial'),
+            InlineKeyboardButton(t('menu.language', user_lang), callback_data='language'),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -2695,14 +2729,19 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
+    # 支持 6 种语言
     keyboard = [
-        [InlineKeyboardButton("中文", callback_data="set_lang_zh")],
-        [InlineKeyboardButton("English", callback_data="set_lang_en")],
-        [InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')]
+        [InlineKeyboardButton("🇨🇳 简体中文", callback_data="set_lang_zh-CN")],
+        [InlineKeyboardButton("🇹🇼 繁體中文", callback_data="set_lang_zh-TW")],
+        [InlineKeyboardButton("🇺🇸 English", callback_data="set_lang_en")],
+        [InlineKeyboardButton("🇯🇵 日本語", callback_data="set_lang_ja")],
+        [InlineKeyboardButton("🇰🇷 한국어", callback_data="set_lang_ko")],
+        [InlineKeyboardButton("🇪🇸 Español", callback_data="set_lang_es")],
+        [InlineKeyboardButton(t('common.back_to_menu', user_lang), callback_data='back_to_menu')]
     ]
     
     await query.edit_message_text(
-        "选择语言 / Select Language:",
+        t('language.select', user_lang),
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -2714,8 +2753,14 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = query.from_user.id
     logger.info(f"Language callback triggered: user_id={user_id}, callback_data={query.data}")
     
-    new_lang = query.data.split('_')[2]
+    # 支持新的语言代码格式 (zh-CN, zh-TW, en, ja, ko, es)
+    new_lang = query.data.replace('set_lang_', '')
     logger.info(f"Switching language to: {new_lang}")
+    
+    # 验证语言代码
+    if new_lang not in SUPPORTED_LANGUAGES:
+        logger.warning(f"Unsupported language: {new_lang}")
+        new_lang = 'zh-CN'  # 默认使用简体中文
     
     set_user_language(user_id, new_lang)
     
@@ -2723,9 +2768,8 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     user = query.from_user
     
     # 格式化欢迎消息，替换用户名
-    welcome_message = get_message(new_lang, 'welcome').format(
-        username=user.username or user.first_name or f"User{user.id}"
-    )
+    username = user.username or user.first_name or f"User{user.id}"
+    welcome_message = t('welcome', new_lang, username=username)
     keyboard = get_main_menu_keyboard(new_lang)
     
     # 直接编辑消息，而不是删除后发送新消息

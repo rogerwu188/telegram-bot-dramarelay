@@ -1,0 +1,63 @@
+{
+  "welcome": "🎬 X2C 트래픽 노드 연결됨\n다시 오신 것을 환영합니다, 노드 @{username}.\n세계 최초의 Post-to-Earn 분산형 드라마 배포 네트워크입니다.\n\n📊 노드 대시보드:\n• 해시레이트 상태: 🔴 유휴\n• 글로벌 토큰 가격: $0.002 / x2c 📈\n• 채굴 난이도: 🔥 쉬움 (TikTok/Reels/Shorts)\n\n⛏️ x2c를 채굴하는 방법은?\n1️⃣ 자료 받기: 바이럴 드라마 클립 받기\n2️⃣ 해시레이트 기여: 소셜 미디어에 업로드 (팔로워 0명도 가능)\n3️⃣ 증명 제출: 링크 게시, 트래픽이 많을수록 x2c도 많아집니다!\n\n💰 예상 수익:\n바이럴 비디오는 10,000+ x2c를 채굴할 수 있습니다\n\n👇 노드를 활성화하고 채굴을 시작하려면 아래 명령을 클릭하세요:",
+  "menu": {
+    "get_tasks": "⛏️ 채굴 자료 받기",
+    "submit_link": "🔗 작업 증명 제출",
+    "my_power": "📊 내 해시레이트",
+    "ranking": "⚡ 글로벌 해시레이트 보드",
+    "airdrop": "👥 친구 초대 (+10%)",
+    "bind_wallet": "📤 지갑 출금",
+    "tutorial": "📚 노드 채굴 가이드",
+    "language": "🌐 언어 / Language"
+  },
+  "task": {
+    "no_available": "현재 사용 가능한 작업이 없습니다. 나중에 다시 시도해 주세요.",
+    "details": "📋 작업 세부정보\n\n🎬 제목: {title}\n📝 설명: {description}\n⏱ 길이: {duration}초\n💰 보상: {reward} X2C\n📱 플랫폼: {platforms}\n\n⬇️ 작업을 받으려면 아래 버튼을 클릭하세요. 비디오가 자동으로 채팅에 다운로드됩니다.",
+    "claimed": "✅ 작업을 성공적으로 받았습니다!\n\n비디오 다운로드 중... 다운로드가 완료되면 선택한 플랫폼에 업로드하고 링크를 제출하러 돌아오세요.",
+    "already_claimed": "⚠️ 이미 이 작업을 받았습니다.",
+    "select_to_submit": "제출할 작업을 선택하세요:",
+    "no_in_progress": "진행 중인 작업이 없습니다.\n\n먼저 작업을 받으세요!",
+    "not_found": "작업을 찾을 수 없습니다"
+  },
+  "submit": {
+    "select_platform": "업로드한 플랫폼을 선택하세요:",
+    "enter_link": "업로드 링크를 입력하세요:",
+    "success": "✅ 링크가 성공적으로 제출되었습니다!\n\n{reward} X2C를 획득했습니다!\n\n총 파워: {total_power}",
+    "invalid_link": "❌ 잘못된 링크 형식입니다. 다시 시도해 주세요."
+  },
+  "stats": {
+    "my_power": "📊 내 X2C 통계\n\n💰 총 X2C: {total_power}\n✅ 완료된 작업: {completed_tasks}\n🔄 진행 중: {in_progress_tasks}\n📈 이번 주 순위: #{rank}",
+    "ranking": "🏆 글로벌 순위\n\n{ranking_list}\n\n내 순위: #{your_rank}\n내 파워: {your_power} X2C"
+  },
+  "airdrop": {
+    "status": "🎁 에어드롭 상태\n\n📅 현재 라운드: {round}라운드\n✅ 자격: {eligible}\n💰 예상 에어드롭: {estimated} X2C\n⏰ 다음 스냅샷: {next_snapshot}\n\n최소 요구사항: 100 X2C"
+  },
+  "withdraw": {
+    "prompt": "💰 X2C 지갑 출금\n\nSOL 주소를 입력하세요 (Phantom, OKX, Bybit 등 지원):\n\n📌 SOL 주소를 붙여넣으세요 (4로 시작하거나 44자 길이)\n⚠️ 주소는 제출 후 변경할 수 없습니다. 신중하게 확인하세요.",
+    "amount_prompt": "📥 출금 주소를 받았습니다:\n\n`{address}`\n\n이제 출금할 X2C 금액을 입력하세요:\n\n💡 사용 가능한 잔액: {balance} X2C",
+    "confirm": "📤 출금 확인\n\n출금 중:\n\n🔹 금액: {amount} X2C\n🔹 주소: {address}\n\n출금 요청을 확인하시겠습니까?",
+    "processing": "⏳ 출금 요청을 처리하는 중…\n\n{amount} X2C를 다음 주소로 전송 중:\n\n`{address}`\n\n잠시만 기다려 주세요, 5-20초가 소요될 수 있습니다.",
+    "success": "✅ 출금 성공!\n\n{amount} X2C가 다음 주소로 전송되었습니다:\n\n📥 주소: `{address}`\n🔗 거래 해시 (Tx Hash):\n{tx_hash}\n\nSolscan에서 거래 세부정보 보기:\nhttps://solscan.io/tx/{tx_hash}\n\n📘 출금이 기록되었습니다. 질문이 있으시면 관리자에게 문의하세요.",
+    "failed": "❌ 출금 실패\n\n이유: {error}\n\n💡 주소 형식이 올바른지 확인하거나 나중에 다시 시도하세요.",
+    "invalid_address": "❌ 잘못된 SOL 주소 형식입니다. 다시 시도해 주세요.",
+    "invalid_amount": "❌ 잘못된 출금 금액입니다. 양수를 입력하세요.",
+    "insufficient_balance": "❌ 잔액이 부족합니다. 사용 가능한 잔액은 {balance} X2C입니다.",
+    "confirm_button": "✅ 출금 확인",
+    "cancel_button": "❌ 취소하고 메뉴로 돌아가기"
+  },
+  "tutorial": "📚 X2C · 채굴 매뉴얼 (공식 가이드)\n\n1️⃣ 작업 받기\n\n\"🎬 드라마 작업 받기\"로 이동하여 배포하려는 공식 드라마 콘텐츠를 선택하세요.\n\n2️⃣ 자료 다운로드\n\n\"확인 받기\"를 클릭한 후 이 작업의 비디오 자료를 다운로드할 수 있습니다.\n\n3️⃣ 플랫폼에 게시\n\nTikTok / YouTube와 같은 비디오 플랫폼에 자료를 게시하고 비디오가 공개적으로 액세스 가능한지 확인하세요.\n\n4️⃣ 콘텐츠 링크 제출\n\n\"🔗 링크 제출\"에서 작업을 선택하고 게시 플랫폼과 해당 링크를 입력하여 자동 시스템 검증을 받으세요.\n\n5️⃣ 컴퓨팅 파워 보상 받기\n\n콘텐츠 검증이 통과되면 시스템이 즉시 해당 X2C (컴퓨팅 파워)를 계정에 배포합니다.\n\n6️⃣ 월간 에어드롭 참여\n\n100+ X2C를 축적한 사용자는 자동으로 월간 X2C 에어드롭 자격을 얻을 수 있습니다.\n\n───\n\n💡 사용 지침\n• 각 작업은 한 번만 제출할 수 있습니다\n• 제출된 링크는 실제이고 유효하며 본인이 게시한 것이어야 합니다\n• 더 높은 컴퓨팅 파워 보상을 위해 여러 플랫폼에 배포하는 것이 좋습니다\n• 각 플랫폼의 게시 규칙을 따르고 위반 콘텐츠를 피하세요",
+  "invite": {
+    "message": "👥 친구 초대 보상\n\n초대한 친구가 첫 번째 작업을 완료하면:\n\n🔸 받는 것: 친구가 완료하는 모든 작업에서 10% 영구 파워 보너스\n🔸 친구는 보상을 잃지 않습니다 (플랫폼 보너스)\n🔸 친구가 첫 번째 작업을 완료하면 +5 X2C 보너스도 받습니다\n\n📈 더 많은 초대 = 더 많은 수동 소득 채널\n🔥 더 많이 초대할수록 더 많이 벌 수 있습니다\n\n🔗 초대 링크:\n{invite_link}\n\n📊 초대 통계:\n• 총 초대: {invited_count}\n• 활성 초대: {active_count}\n• 총 추천 보상: {total_rewards} X2C",
+    "copy_link": "📋 초대 링크 복사",
+    "share_link": "📤 친구에게 공유"
+  },
+  "common": {
+    "back_to_menu": "« 메뉴로 돌아가기",
+    "cancel": "취소",
+    "admin_only": "❌ 이 명령은 관리자 전용입니다"
+  },
+  "language": {
+    "select": "🌐 언어를 선택하세요 / Please select language:",
+    "changed": "✅ 언어가 다음으로 변경되었습니다: {language}"
+  }
+}

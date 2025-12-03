@@ -1,0 +1,63 @@
+{
+  "welcome": "🎬 X2C 流量節點已連線\n歡迎回來，節點 @{username}。\n這是全球首個「發文即賺」（Post-to-Earn）的去中心化戲劇發行網路。\n\n📊 節點儀表板：\n• 算力狀態：🔴 閒置中\n• 全球代幣價格：$0.002 / x2c 📈\n• 挖礦難度：🔥 簡單 (TikTok/Reels/Shorts)\n\n⛏️ 如何挖取 x2c？\n1️⃣ 取得素材：領取爆紅戲劇片段\n2️⃣ 貢獻算力：上傳至社群媒體 (0 粉絲也沒問題)\n3️⃣ 提交證明：發布連結，越多流量 = 越多 x2c！\n\n💰 預期收益：\n爆紅影片可挖取 10,000+ x2c\n\n👇 點擊下方指令以啟動節點並開始挖礦：",
+  "menu": {
+    "get_tasks": "⛏️ 取得採礦材料",
+    "submit_link": "🔗 提交工作證明",
+    "my_power": "📊 我的算力",
+    "ranking": "⚡ 全球算力板",
+    "airdrop": "👥 邀請朋友 (+10%)",
+    "bind_wallet": "📤 錢包提領",
+    "tutorial": "📚 節點挖礦指南",
+    "language": "🌐 語言 / 語言"
+  },
+  "task": {
+    "no_available": "目前沒有可用的任務。請稍後再試。",
+    "details": "📋 任務詳情\n\n🎬 標題: {title}\n📝 描述: {description}\n⏱ 時長: {duration}s\n💰 獎勵: {reward} X2C\n📱 平台: {platforms}\n\n⬇️ 點擊下方按鈕領取任務。影片將會自動下載到聊天室中。",
+    "claimed": "✅ 任務認領成功！\n\n正在下載影片中... 下載完成後，請將其上傳到您選擇的平台，然後回來提交連結。",
+    "already_claimed": "⚠️ 您已領取此任務。",
+    "select_to_submit": "請選擇要提交的任務：",
+    "no_in_progress": "您目前沒有任何進行中的任務。\n\n請先領取一個任務！",
+    "not_found": "找不到任務"
+  },
+  "submit": {
+    "select_platform": "請選擇您上傳的平台：",
+    "enter_link": "請輸入您的上傳連結：",
+    "success": "✅ 連結已成功送出！\n\n您獲得了 {reward} X2C！\n\n總電力：{total_power}",
+    "invalid_link": "❌ 無效的連結格式。請再試一次。"
+  },
+  "stats": {
+    "my_power": "📊 我的 X2C 統計\n\n💰 X2C 總數：{total_power}\n✅ 已完成任務：{completed_tasks}\n🔄 進行中：{in_progress_tasks}\n📈 本週排名：#{rank}",
+    "ranking": "🏆 全球排名\n\n{ranking_list}\n\n您的排名: #{your_rank}\n您的戰力: {your_power} X2C"
+  },
+  "airdrop": {
+    "status": "🎁 空投狀態\n\n📅 目前輪次：第 {round} 輪\n✅ 資格：{eligible}\n💰 預計空投：{estimated} X2C\n⏰ 下一次快照：{next_snapshot}\n\n最低要求：100 X2C"
+  },
+  "withdraw": {
+    "prompt": "💰 X2C 錢包提領\n\n請輸入您的 SOL 地址（支援 Phantom、OKX、Bybit 等）：\n\n📌 貼上您的 SOL 地址（開頭為 4 或 44 個字元長度）\n⚠️ 地址一旦提交後即無法更改。請仔細確認。",
+    "amount_prompt": "📥 已收到您的提領地址：\n\n`{address}`\n\n現在請輸入您想提領的 X2C 數量：\n\n💡 可用餘額：{balance} X2C",
+    "confirm": "📤 提領確認\n\n您正在提領：\n\n🔹 金額: {amount} X2C\n🔹 地址: {address}\n\n確認提領請求？",
+    "processing": "⏳ 正在處理您的提領請求…\n\n正在將 {amount} X2C 轉帳至：\n\n`{address}`\n\n請稍候，這可能需要 5–20 秒。",
+    "success": "✅ 提領成功！\n\n您的 {amount} X2C 已發送至：\n\n📥 地址：`{address}`\n🔗 交易雜湊（Tx Hash）：\n{tx_hash}\n\n在 Solscan 上查看交易詳情：\nhttps://solscan.io/tx/{tx_hash}\n\n📘 您的提領已記錄。如有疑問，請聯繫管理員。",
+    "failed": "❌ 提領失敗\n\n原因：{error}\n\n💡 請確認地址格式是否正確，或稍後再試。",
+    "invalid_address": "❌ 無效的 SOL 地址格式。請再試一次。",
+    "invalid_amount": "❌ 無效的提款金額。請輸入一個正數。",
+    "insufficient_balance": "❌ 餘額不足。您目前的可用餘額為 {balance} X2C。",
+    "confirm_button": "✅ 確認提領",
+    "cancel_button": "❌ 取消並返回選單"
+  },
+  "tutorial": "📚 X2C · 挖礦手冊（官方指南）\n\n1️⃣ 領取任務\n\n前往「🎬 領取戲劇任務」並選擇您想發布的官方戲劇內容。\n\n2️⃣ 下載素材\n\n點擊「確認領取」後，您可以下載此任務的影片素材。\n\n3️⃣ 發布至平台\n\n將素材發布到 TikTok / YouTube 等影片平台，並確保影片是公開可見的。\n\n4️⃣ 提交內容連結\n\n在「🔗 提交連結」中，選擇任務，填寫發布平台和對應的連結，以進行系統自動驗證。\n\n5️⃣ 獲得算力獎勵\n\n內容驗證通過後，系統將立即向您的帳戶發放對應的 X2C（算力）。\n\n6️⃣ 參與每月空投\n\n累積 100+ X2C 的用戶可自動獲得每月 X2C 空投的資格。\n\n───\n\n💡 使用說明\n• 每個任務只能提交一次\n• 提交的連結必須真實、有效，且由您本人發布\n• 建議發布到多個平台以獲得更高的算力獎勵\n• 請遵守各平台的發布規則，避免內容違規",
+  "invite": {
+    "message": "👥 邀請朋友獎勵\n\n當你邀請的朋友完成他們的第一個任務時：\n\n🔸 你將獲得：他們完成的每個任務的 10% 永久算力加成\n🔸 他們不會損失任何獎勵（平台獎勵）\n🔸 當他們完成第一個任務時，你還會獲得 +5 X2C 獎勵\n\n📈 更多邀請 = 更多被動收入管道\n🔥 邀請越多，賺得越多\n\n🔗 你的邀請連結：\n{invite_link}\n\n📊 邀請統計：\n• 總邀請數：{invited_count}\n• 活躍邀請數：{active_count}\n• 總推薦獎勵：{total_rewards} X2C",
+    "copy_link": "複製邀請連結",
+    "share_link": "📤 分享給朋友"
+  },
+  "common": {
+    "back_to_menu": "« 返回選單",
+    "cancel": "取消",
+    "admin_only": "❌ 此指令僅限管理員使用"
+  },
+  "language": {
+    "select": "🌐 請選擇語言 / 請選擇語言:",
+    "changed": "✅ 語言已變更為：{language}"
+  }
+}

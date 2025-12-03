@@ -1,0 +1,63 @@
+{
+  "welcome": "🎬 X2C 流量节点 (Traffic Node) 已连接\n欢迎回来，节点 @{username}。\n这里是全球首个 Post-to-Earn 去中心化短剧分发网络。\n\n📊 节点面板 (Dashboard):\n• 算力状态： 🔴 Idle (空闲)\n• 全网币价： $0.002 / x2c 📈\n• 挖矿难度： 🔥 简单 (TikTok/Reels/Shorts)\n\n⛏️ 如何产出 x2c？\n1️⃣ 获取原料： 领取爆款短剧切片\n2️⃣ 贡献算力： 上传至社媒平台 (0粉可用)\n3️⃣ 提交凭证： 回填链接，流量越大 = x2c 越多！\n\n💰 预期收益：\n单条视频爆款可挖 10,000+ x2c\n\n👇 点击下方指令，激活节点开始挖矿：",
+  "menu": {
+    "get_tasks": "⛏️ 领取挖矿原料",
+    "submit_link": "🔗 提交工作凭证",
+    "my_power": "📊 我的算力",
+    "ranking": "⚡ 全网算力榜",
+    "airdrop": "👥 邀请好友 (+10%)",
+    "bind_wallet": "📤 钱包提现",
+    "tutorial": "📚 节点挖矿手册",
+    "language": "🌐 语言 / Language"
+  },
+  "task": {
+    "no_available": "暂无可用任务，请稍后再试。",
+    "details": "📋 任务详情\n\n🎬 标题：{title}\n📝 描述：{description}\n⏱ 时长：{duration}秒\n💰 奖励：{reward} X2C\n📱 平台：{platforms}\n\n⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。",
+    "claimed": "✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。",
+    "already_claimed": "⚠️ 你已经领取过这个任务了。",
+    "select_to_submit": "请选择要提交的任务：",
+    "no_in_progress": "你当前没有进行中的任务。\n\n请先领取任务！",
+    "not_found": "任务不存在"
+  },
+  "submit": {
+    "select_platform": "请选择你上传的平台：",
+    "enter_link": "请输入你上传的链接：",
+    "success": "✅ 链接提交成功！\n\n你获得了 {reward} X2C！\n\n总算力：{total_power}",
+    "invalid_link": "❌ 链接格式不正确，请重新输入。"
+  },
+  "stats": {
+    "my_power": "📊 我的算力统计\n\n💰 总 X2C：{total_power}\n✅ 已完成任务：{completed_tasks}\n🔄 进行中任务：{in_progress_tasks}\n📈 本周排名：#{rank}",
+    "ranking": "🏆 全球排行榜\n\n{ranking_list}\n\n你的排名：#{your_rank}\n你的算力：{your_power} X2C"
+  },
+  "airdrop": {
+    "status": "🎁 空投状态\n\n📅 当前轮次：第 {round} 轮\n✅ 空投资格：{eligible}\n💰 预计空投：{estimated} X2C\n⏰ 下次快照：{next_snapshot}\n\n最低要求：100 X2C"
+  },
+  "withdraw": {
+    "prompt": "💰 X2C 钱包提现\n\n请输入你要提取的 SOL 地址（支持 Phantom、OKX、Bybit 等钱包）：\n\n📌 请直接粘贴你的 SOL 地址（以 4 开头或长度 44 字符）\n⚠️ 地址一旦提交无法撤回，请务必确认正确无误。",
+    "amount_prompt": "📥 已收到你的提现地址：\n\n`{address}`\n\n现在请输入你要提取的 X2C 数量：\n\n💡 可提现余额：{balance} X2C",
+    "confirm": "📤 提现确认\n\n你正在提现：\n\n🔹 数量：{amount} X2C\n🔹 地址：{address}\n\n是否确认提交提现请求？",
+    "processing": "⏳ 正在处理你的提现请求…\n\n我们正在将 {amount} X2C 转账至：\n\n`{address}`\n\n请稍候，大约需要 5–20 秒。",
+    "success": "✅ 提现成功！\n\n你的 {amount} X2C 已成功发送到：\n\n📥 地址： `{address}`\n🔗 交易哈希（Tx Hash）：\n{tx_hash}\n\n你可在 Solscan 查看交易详情：\nhttps://solscan.io/tx/{tx_hash}\n\n📘 你的提现已登记完毕，如有疑问可随时联系管理员。",
+    "failed": "❌ 提现失败\n\n原因：{error}\n\n💡 请确认地址格式正确，或稍后重试。",
+    "invalid_address": "❌ SOL 地址格式不正确，请重新输入。",
+    "invalid_amount": "❌ 提现数量不正确，请输入正整数。",
+    "insufficient_balance": "❌ 余额不足，你的可用余额为 {balance} X2C。",
+    "confirm_button": "✅ 确认提现",
+    "cancel_button": "❌ 取消并返回主菜单"
+  },
+  "tutorial": "📚 X2C · 挖矿手册（官方指南）\n\n1️⃣ 领取任务\n\n进入「🎬 领取短剧任务」，选择你希望分发的官方短剧内容。\n\n2️⃣ 下载素材\n\n点击「确认领取」后，即可下载本次任务的视频素材。\n\n3️⃣ 发布到平台\n\n将素材发布至 TikTok / YouTube 等视频平台，并确保视频可公开访问。\n\n4️⃣ 提交内容链接\n\n在「🔗 提交链接」中选择任务，填写发布平台及对应链接，用于系统自动验证。\n\n5️⃣ 获得算力奖励\n\n内容验证通过后，系统将立即发放对应的 X2C（算力）到你的账户。\n\n6️⃣ 参与月度空投\n\n累计达到 100+ X2C 的用户，可自动获得当月 X2C 月度空投的参与资格。\n\n───\n\n💡 使用说明\n• 每条任务 限提交一次\n• 提交链接须真实有效且为本人发布\n• 建议分发到 多个平台，可获得更高算力收益\n• 请遵守各平台发布规范，避免违规内容",
+  "invite": {
+    "message": "👥 邀请好友奖励机制\n\n你邀请的好友完成首次任务验证后：\n\n🔸 你将获得：对方每次任务奖励的「10% 永久算力加成」\n🔸 对方不会损失任何奖励（平台额外发放）\n🔸 好友首次任务完成，你还可额外领取 +5 X2C 新人奖励\n\n📈 多邀好友 = 多条长期算力通道\n🔥 邀得越多，挖得越快\n\n🔗 你的邀请链接：\n{invite_link}\n\n📊 邀请统计：\n• 已邀请人数：{invited_count} 人\n• 有效邀请：{active_count} 人\n• 累计推荐奖励：{total_rewards} X2C",
+    "copy_link": "📋 复制邀请链接",
+    "share_link": "📤 分享给好友"
+  },
+  "common": {
+    "back_to_menu": "« 返回主菜单",
+    "cancel": "取消",
+    "admin_only": "❌ 此命令仅供管理员使用"
+  },
+  "language": {
+    "select": "🌐 请选择语言 / Please select language:",
+    "changed": "✅ 语言已切换为：{language}"
+  }
+}
