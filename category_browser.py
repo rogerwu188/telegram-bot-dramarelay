@@ -71,11 +71,44 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     categories = get_all_categories(user_lang)
     category_buttons = []
     
+    # 查询每个分类的可领取任务数量
+    conn = get_db_connection()
+    cur = conn.cursor()
+    category_counts = {}
+    
+    for cat_code in categories.keys():
+        if cat_code == 'latest':
+            # latest 分类显示所有类型的任务数
+            cur.execute("""
+                SELECT COUNT(*) as count FROM drama_tasks
+                WHERE status = 'active' AND task_id NOT IN (
+                    SELECT task_id FROM user_tasks WHERE user_id = %s
+                )
+            """, (user_id,))
+        else:
+            # 其他分类只统计该分类的任务
+            cur.execute("""
+                SELECT COUNT(*) as count FROM drama_tasks
+                WHERE status = 'active' AND category = %s AND task_id NOT IN (
+                    SELECT task_id FROM user_tasks WHERE user_id = %s
+                )
+            """, (cat_code, user_id))
+        
+        result = cur.fetchone()
+        category_counts[cat_code] = result['count'] if result else 0
+    
+    cur.close()
+    conn.close()
+    
     # 每行显示 3 个分类按钮
     row = []
     for cat_code, cat_name in list(categories.items())[:12]:  # 只显示前 12 个分类
-        # 当前分类用 ✓ 标记
-        button_text = f"✓ {cat_name}" if cat_code == category else cat_name
+        # 当前分类用 ✓ 标记，并显示任务数量
+        count = category_counts.get(cat_code, 0)
+        if cat_code == category:
+            button_text = f"✓ {cat_name} ({count})"
+        else:
+            button_text = f"{cat_name} ({count})"
         row.append(InlineKeyboardButton(button_text, callback_data=f"category_{cat_code}"))
         
         if len(row) == 3:
