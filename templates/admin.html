@@ -541,6 +541,7 @@
                                     <th>External ID</th>
                                     <th>Project ID</th>
                                     <th>标题</th>
+                                    <th>剧集类型</th>
                                     <th>平台</th>
                                     <th>奖励</th>
                                     <th>分发数</th>
@@ -791,6 +792,7 @@
                         <td>${item.external_task_id || '-'}</td>
                         <td><small>${truncate(item.project_id, 20)}</small></td>
                         <td>${truncate(item.title, 30)}</td>
+                        <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td>${item.assigned_users}</td>
