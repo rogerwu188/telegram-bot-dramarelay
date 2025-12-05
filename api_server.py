@@ -238,14 +238,22 @@ def create_task():
         # 支持 video_url 和 video_file_id 两种参数名
         video_url = data.get('video_file_id') or data.get('video_url')
         
+        # 处理剧集分类
+        category = data.get('category')
+        if not category or category == 'latest':
+            # 如果没有传入分类或传入的是 latest，使用 AI 自动分类
+            from category_classifier import classify_drama_by_ai
+            category = classify_drama_by_ai(data.get('title'), data.get('description', ''))
+            logger.info(f"🤖 AI 自动分类: {data.get('title')} → {category}")
+        
         cur.execute("""
             INSERT INTO drama_tasks (
                 project_id, external_task_id, title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
                 video_url, task_template, keywords_template, video_title,
-                callback_url, callback_secret, title_en, description_en
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING task_id, project_id, external_task_id, title, created_at
+                callback_url, callback_secret, title_en, description_en, category
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING task_id, project_id, external_task_id, title, category, created_at
         """, (
             data.get('project_id'),
             data.get('task_id'),  # X2C平台提供的task_id，存储到external_task_id
@@ -264,7 +272,8 @@ def create_task():
             data.get('callback_url'),
             data.get('callback_secret'),
             data.get('title_en'),
-            data.get('description_en')
+            data.get('description_en'),
+            category
         ))
         
         new_task = cur.fetchone()

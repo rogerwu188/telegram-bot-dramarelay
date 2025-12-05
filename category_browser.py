@@ -34,12 +34,22 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     cur = conn.cursor()
     
     # 查询该分类的活跃任务
-    cur.execute("""
-        SELECT * FROM drama_tasks
-        WHERE status = 'active' AND category = %s
-        ORDER BY created_at DESC
-        LIMIT 10
-    """, (category,))
+    if category == 'latest':
+        # latest 分类显示所有类型的最新任务
+        cur.execute("""
+            SELECT * FROM drama_tasks
+            WHERE status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+    else:
+        # 其他分类只显示该分类的任务
+        cur.execute("""
+            SELECT * FROM drama_tasks
+            WHERE status = 'active' AND category = %s
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (category,))
     tasks = cur.fetchall()
     
     # 获取用户已领取的任务ID

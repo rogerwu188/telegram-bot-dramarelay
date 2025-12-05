@@ -69,8 +69,8 @@ def classify_drama_by_keywords(title: str) -> str:
             if keyword in title:
                 return category
     
-    # 如果没有匹配到，返回 latest
-    return 'latest'
+    # 如果没有匹配到，返回默认分类（甲害小白花）
+    return 'sweet_romance'
 
 
 def classify_drama_by_ai(title: str, description: str = "") -> str:
@@ -100,7 +100,7 @@ def classify_drama_by_ai(title: str, description: str = "") -> str:
 {categories_text}
 
 请只返回分类代码（如 revenge、rebirth 等），不要返回其他内容。
-如果无法确定分类，请返回 latest。"""
+如果无法确定分类，请返回 sweet_romance。"""
 
         response = client.chat.completions.create(
             model="gemini-2.5-flash",
@@ -120,8 +120,8 @@ def classify_drama_by_ai(title: str, description: str = "") -> str:
         
         category = response.choices[0].message.content.strip().lower()
         
-        # 验证分类是否有效
-        if category in DRAMA_CATEGORIES:
+        # 验证分类是否有效（不能是 latest）
+        if category in DRAMA_CATEGORIES and category != 'latest':
             return category
         else:
             # 如果 AI 返回的分类无效，尝试关键词匹配
