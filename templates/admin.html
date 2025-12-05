@@ -734,7 +734,7 @@
                     row.innerHTML = `
                         <td>${item.display_name} <small>(${item.user_id})</small></td>
                         <td>${truncate(item.title, 30)}</td>
-                        <td><span class="badge">${item.category || 'latest'}</span></td>
+                        <td><span class="badge">${item.category ? (CATEGORY_NAMES_ZH[item.category] || item.category) : '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td class="timestamp">${formatTime(item.completed_at)}</td>
@@ -751,10 +751,32 @@
                 error.style.display = 'block';
             }
         }
+                // 分类中文映射
+        const CATEGORY_NAMES_ZH = {
+            'revenge': '霸道总裁/豪门虐恋',
+            'rebirth': '穿越重生/逆天改命',
+            'revenge_slap': '复仇爽文/打脸反杀',
+            'marriage': '婚恋错配/先婚后爱',
+            'sweet_romance': '甜宠小白花/治愈爱情',
+            'family': '家庭伦理/婆媳大战',
+            'detective': '破案刑侦/悬疑推理',
+            'medical': '医疗法庭/职场权谋',
+            'career_woman': '女强成长/职场逆袭',
+            'campus': '校园青春/青涩暗恋',
+            'horror': '恐怖灵异/民俗悬疑',
+            'scifi': '赛博/未来科幻',
+            'survival': '末日生存/丧尸灾难',
+            'costume': '宫斗宅斗/古装权谋',
+            'business': '商战博弈/资本智斗',
+            'rural': '乡村/人生治愈系',
+            'superpower': '超能力变异/英雄觉醒',
+            'triangle': '三角恋/修罗场',
+            'underdog': '小人物大机缘',
+            'dark': '反社会性人格/黑暗系'
+        };
         
-        // 加载任务日志
-        async function loadTasks() {
-            const loading = document.getElementById('tasks-loading');
+        // 加载任务接收日志
+        async function loadTasks() {            const loading = document.getElementById('tasks-loading');
             const error = document.getElementById('tasks-error');
             const empty = document.getElementById('tasks-empty');
             const table = document.getElementById('tasks-table');
@@ -792,7 +814,7 @@
                         <td>${item.external_task_id || '-'}</td>
                         <td><small>${truncate(item.project_id, 20)}</small></td>
                         <td>${truncate(item.title, 30)}</td>
-                        <td><span class="badge">${item.category || '-'}</span></td>
+                        <td><span class="badge">${item.category ? (CATEGORY_NAMES_ZH[item.category] || item.category) : '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td>${item.assigned_users}</td>
