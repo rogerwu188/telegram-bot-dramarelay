@@ -235,14 +235,20 @@ def create_task():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 处理剧集分类
+        from category_classifier import classify_drama_by_ai, DRAMA_CATEGORIES
+        
         # 支持 video_url 和 video_file_id 两种参数名
         video_url = data.get('video_file_id') or data.get('video_url')
         
-        # 处理剧集分类
         category = data.get('category')
-        if not category or category == 'latest':
-            # 如果没有传入分类或传入的是 latest，使用 AI 自动分类
-            from category_classifier import classify_drama_by_ai
+        
+        # 验证传入的分类是否有效
+        if category and category in DRAMA_CATEGORIES and category != 'latest':
+            # 有值且在分类模版库内，使用传入的分类
+            logger.info(f"✅ 使用传入的分类: {data.get('title')} → {category}")
+        else:
+            # 无值或不在模版库内，使用 AI 自动分类
             category = classify_drama_by_ai(data.get('title'), data.get('description', ''))
             logger.info(f"🤖 AI 自动分类: {data.get('title')} → {category}")
         
