@@ -28,6 +28,8 @@ from anti_fraud import check_all_limits, update_last_submit_time, get_user_submi
 from retry_submit_handler import retry_submit_callback
 from translator import translate_task_content
 from i18n import t, get_user_language as get_user_lang_i18n, set_user_language as set_user_lang_i18n, SUPPORTED_LANGUAGES
+from category_browser import show_tasks_by_category, category_select_callback
+from category_classifier import classify_drama_by_ai
 
 # ============================================================
 # 配置和日志
@@ -1301,72 +1303,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message, reply_markup=keyboard)
 
 async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理领取任务按钮"""
+    """处理领取任务按钮 - 默认显示 latest 分类"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    logger.info(f"📝 get_tasks_callback triggered! user_id={user_id}")
-    
-    tasks = get_active_tasks()
-    
-    if not tasks:
-        await query.edit_message_text(
-            get_message(user_lang, 'no_tasks_available'),
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
-            ]])
-        )
-        return
-    
-    # 获取用户已领取的任务ID列表
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT task_id FROM user_tasks
-        WHERE user_id = %s
-    """, (user_id,))
-    claimed_task_ids = {row['task_id'] for row in cur.fetchall()}
-    cur.close()
-    conn.close()
-    logger.info(f"📋 用户 {user_id} 已领取的任务ID: {claimed_task_ids}")
-    
-    # 过滤掉已领取的任务
-    available_tasks = [task for task in tasks if task['task_id'] not in claimed_task_ids]
-    logger.info(f"🎯 可领取的任务数量: {len(available_tasks)}/{len(tasks)}")
-    
-    if not available_tasks:
-        msg_text = (
-            "你今天的所有任务已完成！\n"
-            "邀请好友加入即可继续获得额外奖励与算力加成。"
-        ) if user_lang == 'zh' else (
-            "You have completed all tasks for today!\n"
-            "Invite friends to join and earn extra rewards and power bonuses."
-        )
-        await query.edit_message_text(
-            msg_text,
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
-            ]])
-        )
-        return
-    
-    # 显示任务列表
-    keyboard = []
-    for task in available_tasks:
-        # 根据用户语言选择标题（自动翻译）
-        title = get_task_title(task, user_lang)
-        button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
-    
-    keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
-    
-    await query.edit_message_text(
-        "📋 选择你想要领取的任务：" if user_lang == 'zh' else "📋 Select a task to claim:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    # 默认显示 latest 分类
+    await show_tasks_by_category(update, context, 'latest')
 
 async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理任务详情"""
@@ -2834,6 +2779,7 @@ def main():
     application.add_handler(CallbackQueryHandler(tutorial_callback, pattern='^tutorial$'))
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
+    application.add_handler(CallbackQueryHandler(category_select_callback, pattern='^category_'))
     # back_to_menu 由 ConversationHandler 的 fallback 处理，不需要全局 handler
     
     # 对话处理器 - 提交链接
