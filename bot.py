@@ -1635,7 +1635,9 @@ to receive 🎉 {reward} X2C"""
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
             else:
-                final_msg = f"""📤 Please follow the instructions below to upload the video and complete the task:
+                final_msg = f"""🔗 Video Link: {video_url}
+
+📥 Please download the video and upload to any platform to receive rewards:
 
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube Upload Content】
