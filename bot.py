@@ -1509,22 +1509,30 @@ Please click the link below to download:
 ━━━━━━━━━━━━━━━━━━
 🎬【YouTube Upload Content】
 
-▶ Video Title:
+▶ Video Title (copy directly):
+```
 {title}
+```
 
-▶ Video Description:
+▶ Video Description (paste in YouTube description):
+```
 {description}
+```
 
 (YouTube does not require tags, leave blank)
 
 ━━━━━━━━━━━━━━━━━━
 🎬【TikTok Upload Content】
 
-▶ TikTok Description:
+▶ TikTok Description (copy completely):
+```
 {description}
+```
 
-▶ TikTok Hashtags:
+▶ TikTok Hashtags (paste below description):
+```
 {hashtags}
+```
 
 ━━━━━━━━━━━━━━━━━━
 💰【Reward】
@@ -1643,10 +1651,14 @@ to receive 🎉 {reward} X2C"""
 🎬【YouTube Upload Content】
 
 ▶ Video Title (copy directly):
+```
 {title}
+```
 
 ▶ Video Description (paste in YouTube description):
+```
 {description}
+```
 
 (YouTube does not require tags, leave blank)
 
@@ -1654,10 +1666,14 @@ to receive 🎉 {reward} X2C"""
 🎬【TikTok Upload Content】
 
 ▶ TikTok Description (copy completely):
+```
 {description}
+```
 
 ▶ TikTok Hashtags (paste below description):
+```
 {hashtags}
+```
 
 ━━━━━━━━━━━━━━━━━━
 💰【Reward】
@@ -1854,21 +1870,29 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("🎬【YouTube Upload Content】")
         message_parts.append("")
         message_parts.append("▶ Video Title (copy directly):")
+        message_parts.append("```")
         message_parts.append(title)
+        message_parts.append("```")
         message_parts.append("")
-        message_parts.append("▶ Video Description (copy directly):")
+        message_parts.append("▶ Video Description (paste in YouTube description):")
+        message_parts.append("```")
         message_parts.append(description)
+        message_parts.append("```")
         message_parts.append("")
         message_parts.append("(YouTube does not require tags, leave blank)")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("🎬【TikTok Upload Content】")
         message_parts.append("")
-        message_parts.append("▶ TikTok Description (Please copy the content below):")
+        message_parts.append("▶ TikTok Description (copy completely):")
+        message_parts.append("```")
         message_parts.append(description)
+        message_parts.append("```")
         message_parts.append("")
-        message_parts.append("▶ TikTok Hashtags:")
+        message_parts.append("▶ TikTok Hashtags (paste below description):")
+        message_parts.append("```")
         message_parts.append(hashtags)
+        message_parts.append("```")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("")
