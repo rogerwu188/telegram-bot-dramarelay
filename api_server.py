@@ -833,6 +833,21 @@ def admin_tasks():
     """任务日志 API"""
     return admin_api.get_task_logs()
 
+@app.route('/api/config/api-key')
+def admin_api_key():
+    """获取 API Key"""
+    return admin_api.get_api_key()
+
+@app.route('/api/tasks/<int:task_id>/fix-status', methods=['POST'])
+def fix_task_status(task_id):
+    """修复任务状态"""
+    return admin_api.fix_task_status(task_id)
+
+@app.route('/api/tasks/fix-all-approved', methods=['POST'])
+def fix_all_approved():
+    """批量修复 approved 状态的任务"""
+    return admin_api.fix_all_approved_tasks()
+
 # ============================================================
 # 启动服务器
 # ============================================================
