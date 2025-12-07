@@ -252,6 +252,17 @@ def create_task():
             category = classify_drama_by_ai(data.get('title'), data.get('description', ''))
             logger.info(f"🤖 AI 自动分类: {data.get('title')} → {category}")
         
+        # 处理任务状态：将 'approved' 映射为 'active'
+        # X2C 平台可能传入 'approved' 状态，但 Bot 只识别 'active' 状态
+        raw_status = data.get('status', 'active')
+        if raw_status in ['approved', 'active', None]:
+            task_status = 'active'
+        else:
+            task_status = raw_status
+        
+        if raw_status == 'approved':
+            logger.info(f"⚠️ 状态映射: {data.get('title')} - 'approved' → 'active'")
+        
         cur.execute("""
             INSERT INTO drama_tasks (
                 project_id, external_task_id, title, description, video_file_id, thumbnail_url,
@@ -270,7 +281,7 @@ def create_task():
             data.get('duration', 15),
             data.get('node_power_reward', 10),
             data.get('platform_requirements', 'TikTok,YouTube,Instagram'),
-            data.get('status', 'active'),
+            task_status,
             data.get('video_url'),
             data.get('task_template'),
             data.get('keywords_template'),
