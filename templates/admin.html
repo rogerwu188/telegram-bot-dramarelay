@@ -467,6 +467,31 @@
             </div>
         </div>
         
+        <!-- API Key 配置 -->
+        <div class="controls" style="margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
+            <div style="flex: 1;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404;">
+                    🔑 API Key （供外部系统调用）
+                </label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="api-key-display" readonly 
+                           style="flex: 1; padding: 10px; border: 2px solid #ffc107; border-radius: 5px; font-family: monospace; font-size: 14px; background: white;"
+                           value="Loading...">
+                    <button onclick="toggleApiKeyVisibility()" 
+                            style="padding: 10px 20px; background: #ffc107; color: #856404; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        👁️ 显示/隐藏
+                    </button>
+                    <button onclick="copyApiKey()" 
+                            style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        📋 复制
+                    </button>
+                </div>
+                <small style="color: #856404; display: block; margin-top: 5px;">
+                    ⚠️ 请妥善保管 API Key，不要分享给未经授权的人员
+                </small>
+            </div>
+        </div>
+        
         <!-- 控制面板 -->
         <div class="controls">
             <label for="time-range">时间范围:</label>
@@ -878,7 +903,10 @@
         document.getElementById('limit').addEventListener('change', refreshData);
         
         // 页面加载时初始化
-        window.addEventListener('load', refreshData);
+        window.addEventListener('load', () => {
+            refreshData();
+            loadApiKey();
+        });
         
         // 显示回调数据弹窗
         function showCallbackData(payload) {
@@ -911,6 +939,61 @@
             const jsonViewer = document.getElementById('json-viewer');
             const text = jsonViewer.textContent;
             navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ 已复制';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                alert('复制失败：' + err.message);
+            });
+        }
+        
+        // API Key 功能
+        let apiKeyValue = '';
+        let apiKeyVisible = false;
+        
+        // 加载 API Key
+        async function loadApiKey() {
+            try {
+                const response = await fetch('/api/config/api-key');
+                const result = await response.json();
+                
+                if (result.success) {
+                    apiKeyValue = result.api_key;
+                    document.getElementById('api-key-display').value = '•'.repeat(apiKeyValue.length);
+                } else {
+                    document.getElementById('api-key-display').value = '加载失败';
+                }
+            } catch (error) {
+                console.error('加载 API Key 失败:', error);
+                document.getElementById('api-key-display').value = '加载失败';
+            }
+        }
+        
+        // 切换 API Key 显示/隐藏
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('api-key-display');
+            apiKeyVisible = !apiKeyVisible;
+            
+            if (apiKeyVisible) {
+                input.type = 'text';
+                input.value = apiKeyValue;
+            } else {
+                input.type = 'password';
+                input.value = '•'.repeat(apiKeyValue.length);
+            }
+        }
+        
+        // 复制 API Key
+        function copyApiKey() {
+            if (!apiKeyValue) {
+                alert('⚠️ API Key 尚未加载');
+                return;
+            }
+            
+            navigator.clipboard.writeText(apiKeyValue).then(() => {
                 const btn = event.target;
                 const originalText = btn.textContent;
                 btn.textContent = '✅ 已复制';

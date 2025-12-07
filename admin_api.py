@@ -428,6 +428,32 @@ def get_stats():
             'error': str(e)
         }), 500
 
+@app.route('/api/config/api-key', methods=['GET'])
+def get_api_key():
+    """
+    获取 API Key
+    用于外部系统集成
+    """
+    try:
+        api_key = os.getenv('API_KEY', '')
+        
+        if not api_key:
+            return jsonify({
+                'success': False,
+                'error': 'API Key 未配置'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'api_key': api_key
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
