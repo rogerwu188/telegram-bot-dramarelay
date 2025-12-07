@@ -454,6 +454,133 @@ def get_api_key():
             'error': str(e)
         }), 500
 
+@app.route('/api/tasks/<int:task_id>/fix-status', methods=['POST'])
+def fix_task_status(task_id):
+    """
+    修复任务状态：将 'approved' 改为 'active'
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询任务当前状态
+        cur.execute("""
+            SELECT task_id, title, status
+            FROM drama_tasks
+            WHERE task_id = %s
+        """, (task_id,))
+        
+        task = cur.fetchone()
+        
+        if not task:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'任务 {task_id} 不存在'
+            }), 404
+        
+        old_status = task['status']
+        
+        if old_status == 'active':
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': f'任务 {task_id} 状态已经是 active，无需修复',
+                'task_id': task_id,
+                'title': task['title'],
+                'old_status': old_status,
+                'new_status': 'active'
+            })
+        
+        # 更新任务状态为 'active'
+        cur.execute("""
+            UPDATE drama_tasks
+            SET status = 'active'
+            WHERE task_id = %s
+            RETURNING task_id, title, status
+        """, (task_id,))
+        
+        updated_task = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'任务 {task_id} 状态已修复',
+            'task_id': updated_task['task_id'],
+            'title': updated_task['title'],
+            'old_status': old_status,
+            'new_status': updated_task['status']
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/tasks/fix-all-approved', methods=['POST'])
+def fix_all_approved_tasks():
+    """
+    批量修复所有 'approved' 状态的任务为 'active'
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询所有 approved 状态的任务
+        cur.execute("""
+            SELECT task_id, title, status
+            FROM drama_tasks
+            WHERE status = 'approved'
+            ORDER BY created_at DESC
+        """)
+        
+        tasks = cur.fetchall()
+        
+        if not tasks:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': '没有找到 approved 状态的任务',
+                'count': 0,
+                'tasks': []
+            })
+        
+        # 批量更新为 active 状态
+        cur.execute("""
+            UPDATE drama_tasks
+            SET status = 'active'
+            WHERE status = 'approved'
+            RETURNING task_id, title, status
+        """)
+        
+        updated_tasks = cur.fetchall()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'已修复 {len(updated_tasks)} 个任务',
+            'count': len(updated_tasks),
+            'tasks': [{
+                'task_id': task['task_id'],
+                'title': task['title'],
+                'new_status': task['status']
+            } for task in updated_tasks]
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
