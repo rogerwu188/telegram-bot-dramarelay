@@ -35,7 +35,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     
     # 查询该分类的活跃任务
     if category == 'latest':
-        # latest 分类显示所有类型的最新任务
+        # latest 分类显示所有类型的最新任务（包括 category 为 NULL 的任务）
         cur.execute("""
             SELECT * FROM drama_tasks
             WHERE status = 'active'
@@ -44,6 +44,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         """)
     else:
         # 其他分类只显示该分类的任务
+        # 注意：如果 category 为 NULL，则不会匹配任何分类
         cur.execute("""
             SELECT * FROM drama_tasks
             WHERE status = 'active' AND category = %s
