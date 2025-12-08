@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_TYPE, category: str = 'latest'):
+async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_TYPE, category: str = 'latest', page: int = 1):
     """
     按分类显示任务列表
     
@@ -20,6 +20,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         update: Telegram Update 对象
         context: Context 对象
         category: 分类代码（默认 latest）
+        page: 页码（默认 1）
     """
     from bot import get_db_connection, get_user_language, get_task_title, get_message
     
@@ -27,9 +28,13 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    logger.info(f"📋 [v2.1] show_tasks_by_category: user_id={user_id}, category={category}")
+    # 分页参数
+    page_size = 10  # 每页显示 10 个任务
+    offset = (page - 1) * page_size
     
-    # 获取该分类的任务（最多 10 条）
+    logger.info(f"📋 [v2.2] show_tasks_by_category: user_id={user_id}, category={category}, page={page}")
+    
+    # 获取该分类的任务
     conn = get_db_connection()
     cur = conn.cursor()
     
@@ -42,8 +47,8 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
             ORDER BY created_at DESC
-            LIMIT 10
-        """, (user_id,))
+            LIMIT %s OFFSET %s
+        """, (user_id, page_size, offset))
     else:
         # 其他分类只显示该分类的任务
         cur.execute("""
@@ -52,8 +57,8 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
             ORDER BY created_at DESC
-            LIMIT 10
-        """, (category, user_id))
+            LIMIT %s OFFSET %s
+        """, (category, user_id, page_size, offset))
     
     available_tasks = cur.fetchall()
     
@@ -127,6 +132,28 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
             button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
         
+        # 添加分页按钮
+        pagination_row = []
+        total_count = category_counts.get(category, 0)
+        total_pages = (total_count + page_size - 1) // page_size  # 向上取整
+        
+        if page > 1:
+            # 上一页按钮
+            prev_text = "⬅️ 上一页" if user_lang.startswith('zh') else "⬅️ Previous"
+            pagination_row.append(InlineKeyboardButton(prev_text, callback_data=f"page_{category}_{page-1}"))
+        
+        # 页码显示
+        page_info = f"{page}/{total_pages}" if total_pages > 0 else "1/1"
+        pagination_row.append(InlineKeyboardButton(f"📊 {page_info}", callback_data="noop"))
+        
+        if page < total_pages:
+            # 下一页按钮
+            next_text = "下一页 ➡️" if user_lang.startswith('zh') else "Next ➡️"
+            pagination_row.append(InlineKeyboardButton(next_text, callback_data=f"page_{category}_{page+1}"))
+        
+        if pagination_row:
+            keyboard.append(pagination_row)
+        
         # 添加分隔线
         keyboard.append([InlineKeyboardButton("━━━━━ 切换分类 ━━━━━", callback_data="noop")])
     else:
@@ -164,5 +191,22 @@ async def category_select_callback(update: Update, context: ContextTypes.DEFAULT
     # 提取分类代码
     category = query.data.split('_')[1]
     
-    # 显示该分类的任务
-    await show_tasks_by_category(update, context, category)
+    # 显示该分类的任务（默认第 1 页）
+    await show_tasks_by_category(update, context, category, page=1)
+
+
+async def pagination_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    处理分页回调
+    """
+    query = update.callback_query
+    await query.answer()
+    
+    # 提取分类代码和页码
+    # callback_data 格式: page_{category}_{page}
+    parts = query.data.split('_')
+    category = parts[1]
+    page = int(parts[2])
+    
+    # 显示指定页的任务
+    await show_tasks_by_category(update, context, category, page=page)

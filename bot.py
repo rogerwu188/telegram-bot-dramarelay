@@ -28,7 +28,7 @@ from anti_fraud import check_all_limits, update_last_submit_time, get_user_submi
 from retry_submit_handler import retry_submit_callback
 from translator import translate_task_content
 from i18n import t, get_user_language as get_user_lang_i18n, set_user_language as set_user_lang_i18n, SUPPORTED_LANGUAGES
-from category_browser import show_tasks_by_category, category_select_callback
+from category_browser import show_tasks_by_category, category_select_callback, pagination_callback
 from category_classifier import classify_drama_by_ai
 
 # ============================================================
@@ -2806,6 +2806,7 @@ def main():
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
     application.add_handler(CallbackQueryHandler(category_select_callback, pattern='^category_'))
+    application.add_handler(CallbackQueryHandler(pagination_callback, pattern='^page_'))
     # back_to_menu 由 ConversationHandler 的 fallback 处理，不需要全局 handler
     
     # 对话处理器 - 提交链接
