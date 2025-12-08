@@ -27,7 +27,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    logger.info(f"📂 show_tasks_by_category: user_id={user_id}, category={category}")
+    logger.info(f"📋 [v2.1] show_tasks_by_category: user_id={user_id}, category={category}")
     
     # 获取该分类的任务（最多 10 条）
     conn = get_db_connection()
@@ -61,6 +61,10 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     conn.close()
     
     logger.info(f"📊 分类 {category}: 可领取 {len(available_tasks)}")
+    if len(available_tasks) == 0:
+        logger.warning(f"⚠️ 分类 {category} 查询结果为空！user_id={user_id}")
+    else:
+        logger.info(f"✅ 分类 {category} 查询到任务: {[t['task_id'] for t in available_tasks[:3]]}")
     
     # 构建分类切换按钮
     categories = get_all_categories(user_lang)
