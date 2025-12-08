@@ -33,40 +33,34 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 查询该分类的活跃任务
+    # 查询该分类的活跃任务（直接在 SQL 中过滤已领取的任务）
     if category == 'latest':
         # latest 分类显示所有类型的最新任务（包括 category 为 NULL 的任务）
         cur.execute("""
             SELECT * FROM drama_tasks
-            WHERE status = 'active'
+            WHERE status = 'active' AND task_id NOT IN (
+                SELECT task_id FROM user_tasks WHERE user_id = %s
+            )
             ORDER BY created_at DESC
             LIMIT 10
-        """)
+        """, (user_id,))
     else:
         # 其他分类只显示该分类的任务
-        # 注意：如果 category 为 NULL，则不会匹配任何分类
         cur.execute("""
             SELECT * FROM drama_tasks
-            WHERE status = 'active' AND category = %s
+            WHERE status = 'active' AND category = %s AND task_id NOT IN (
+                SELECT task_id FROM user_tasks WHERE user_id = %s
+            )
             ORDER BY created_at DESC
             LIMIT 10
-        """, (category,))
-    tasks = cur.fetchall()
+        """, (category, user_id))
     
-    # 获取用户已领取的任务ID
-    cur.execute("""
-        SELECT task_id FROM user_tasks
-        WHERE user_id = %s
-    """, (user_id,))
-    claimed_task_ids = {row['task_id'] for row in cur.fetchall()}
+    available_tasks = cur.fetchall()
     
     cur.close()
     conn.close()
     
-    # 过滤掉已领取的任务
-    available_tasks = [task for task in tasks if task['task_id'] not in claimed_task_ids]
-    
-    logger.info(f"📊 分类 {category}: 总任务 {len(tasks)}, 可领取 {len(available_tasks)}")
+    logger.info(f"📊 分类 {category}: 可领取 {len(available_tasks)}")
     
     # 构建分类切换按钮
     categories = get_all_categories(user_lang)
