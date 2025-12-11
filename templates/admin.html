@@ -517,9 +517,31 @@
             <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
                 📡 启动分发数据回传
             </button>
-            <button onclick="triggerBroadcast()" style="background: #17a2b8;">
+            <button onclick="triggerBroadcast()" style="background: #17a2b8;" id="trigger-btn">
                 🚀 立即回传一次
             </button>
+        </div>
+        
+        <!-- 进度条和倒计时显示区域 -->
+        <div id="progress-area" style="margin: 15px 0; display: none;">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span id="progress-text" style="font-weight: 500;">正在回传数据...</span>
+                    <span id="progress-percent" style="font-weight: bold; color: #007bff;">0%</span>
+                </div>
+                <div style="background: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden;">
+                    <div id="progress-bar" style="background: linear-gradient(90deg, #007bff, #0056b3); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 定时回传倒计时显示 -->
+        <div id="countdown-area" style="margin: 15px 0; display: none;">
+            <div style="background: #e7f3ff; padding: 12px 20px; border-radius: 8px; border: 1px solid #b3d9ff; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">⏰</span>
+                <span style="font-weight: 500; color: #0056b3;">下次自动回传倒计时：</span>
+                <span id="countdown-timer" style="font-weight: bold; font-size: 18px; color: #007bff;">3:00</span>
+            </div>
         </div>
         
         <!-- 任务日志 Tab 页 -->
@@ -1031,6 +1053,11 @@
                 if (result.success && result.data) {
                     broadcasterRunning = result.data.running;
                     updateBroadcasterButton();
+                    
+                    // 如果服务正在运行，启动倒计时
+                    if (broadcasterRunning) {
+                        startCountdown();
+                    }
                 }
             } catch (error) {
                 console.error('检查分发服务状态失败:', error);
@@ -1049,6 +1076,47 @@
             }
         }
         
+        // 倒计时相关变量
+        let countdownInterval = null;
+        let countdownSeconds = 180; // 3分钟 = 180秒
+        
+        // 启动倒计时
+        function startCountdown() {
+            const countdownArea = document.getElementById('countdown-area');
+            const countdownTimer = document.getElementById('countdown-timer');
+            
+            countdownArea.style.display = 'block';
+            countdownSeconds = 180;
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            countdownInterval = setInterval(() => {
+                countdownSeconds--;
+                
+                if (countdownSeconds <= 0) {
+                    countdownSeconds = 180; // 重置为3分钟
+                }
+                
+                const minutes = Math.floor(countdownSeconds / 60);
+                const seconds = countdownSeconds % 60;
+                countdownTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        // 停止倒计时
+        function stopCountdown() {
+            const countdownArea = document.getElementById('countdown-area');
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            
+            countdownArea.style.display = 'none';
+        }
+        
         // 切换分发服务
         async function toggleBroadcaster() {
             const btn = document.getElementById('broadcaster-btn');
@@ -1062,6 +1130,14 @@
                 if (result.success) {
                     broadcasterRunning = !broadcasterRunning;
                     updateBroadcasterButton();
+                    
+                    // 启动或停止倒计时
+                    if (broadcasterRunning) {
+                        startCountdown();
+                    } else {
+                        stopCountdown();
+                    }
+                    
                     alert('✅ ' + result.message);
                 } else {
                     alert('⚠️ ' + result.message);
@@ -1080,12 +1156,41 @@
             }
             
             const btn = event.target;
+            const progressArea = document.getElementById('progress-area');
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercent = document.getElementById('progress-percent');
+            const progressText = document.getElementById('progress-text');
+            
             btn.disabled = true;
             btn.textContent = '⏳ 回传中...';
+            progressArea.style.display = 'block';
+            
+            // 模拟进度条（因为后端是一次性返回结果）
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                if (progress >= 90) {
+                    clearInterval(progressInterval);
+                }
+                progressBar.style.width = progress + '%';
+                progressPercent.textContent = progress + '%';
+            }, 100);
             
             try {
                 const response = await fetch('/api/broadcaster/trigger', { method: 'POST' });
                 const result = await response.json();
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressText.textContent = '回传完成！';
+                
+                setTimeout(() => {
+                    progressArea.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    progressPercent.textContent = '0%';
+                    progressText.textContent = '正在回传数据...';
+                }, 2000);
                 
                 if (result.success && result.data) {
                     const data = result.data;
@@ -1099,6 +1204,9 @@
                     alert('❌ 回传失败: ' + (result.error || '未知错误'));
                 }
             } catch (error) {
+                clearInterval(progressInterval);
+                progressArea.style.display = 'none';
+                progressBar.style.width = '0%';
                 alert('❌ 回传失败: ' + error.message);
             } finally {
                 btn.disabled = false;
