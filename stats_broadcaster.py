@@ -151,6 +151,17 @@ async def broadcast_task_stats(task):
         
         if not stats:
             logger.warning(f"⚠️ 任务 {task_id} 无法获取视频数据，使用默认值")
+            # 记录视频抓取失败的错误日志
+            log_broadcaster_error(
+                task_id=task_id,
+                task_title=task.get('title', ''),
+                project_id=task.get('project_id', ''),
+                video_url=video_url,
+                platform=platform,
+                error_type='VIDEO_FETCH_FAILED',
+                error_message=f'无法从{platform}平台获取视频统计数据',
+                callback_url=callback_url
+            )
             stats = {}
         
         # 构建回传数据
