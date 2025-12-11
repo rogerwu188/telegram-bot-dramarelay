@@ -25,6 +25,50 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 broadcaster_running = False
 broadcaster_task = None
 
+def log_webhook_success(task_id, task_title, project_id, callback_url, payload):
+    """
+    记录成功的webhook日志
+    """
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        from urllib.parse import urlparse
+        import os
+        import json
+        
+        database_url = os.environ.get('DATABASE_URL')
+        if not database_url:
+            logger.error("❌ DATABASE_URL 未设置")
+            return
+        
+        # 解析数据库URL
+        result = urlparse(database_url)
+        conn = psycopg2.connect(
+            database=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port
+        )
+        cur = conn.cursor()
+        
+        # 记录到webhook_logs表
+        cur.execute("""
+            INSERT INTO webhook_logs 
+            (task_id, task_title, project_id, callback_url, callback_status, payload)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (task_id, task_title, project_id, callback_url, 'success', json.dumps(payload, ensure_ascii=False)))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"✅ 记录webhook成功日志: 任务 {task_id}")
+    except Exception as e:
+        logger.error(f"❌ 记录webhook成功日志失败: {e}")
+        import traceback
+        traceback.print_exc()
+
 def log_broadcaster_error(task_id, task_title, project_id, video_url, platform, error_type, error_message, callback_url):
     """
     记录回传错误日志
@@ -217,6 +261,14 @@ async def broadcast_task_stats(task):
         
         if success:
             logger.info(f"✅ 任务 {task_id} 数据回传成功")
+            # 记录成功日志
+            log_webhook_success(
+                task_id=task_id,
+                task_title=task.get('title', ''),
+                project_id=task.get('project_id', ''),
+                callback_url=callback_url,
+                payload=payload
+            )
             return True
         else:
             logger.error(f"❌ 任务 {task_id} 数据回传失败: {error}")

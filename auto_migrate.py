@@ -221,6 +221,49 @@ def auto_migrate():
         else:
             logger.info("✅ broadcaster_error_logs table already exists")
         
+        # 检查 webhook_logs 表是否存在
+        logger.info("\n📝 Checking webhook_logs table...")
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'webhook_logs'
+            )
+        """)
+        
+        webhook_logs_table_exists = cur.fetchone()['exists']
+        
+        if not webhook_logs_table_exists:
+            logger.info("📝 Creating webhook_logs table...")
+            try:
+                cur.execute("""
+                    CREATE TABLE webhook_logs (
+                        id SERIAL PRIMARY KEY,
+                        task_id INTEGER,
+                        task_title VARCHAR(500),
+                        project_id VARCHAR(100),
+                        callback_url TEXT,
+                        callback_status VARCHAR(50) DEFAULT 'success',
+                        payload JSONB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # 创建索引
+                cur.execute("""
+                    CREATE INDEX idx_webhook_logs_task_id ON webhook_logs(task_id);
+                    CREATE INDEX idx_webhook_logs_created_at ON webhook_logs(created_at);
+                    CREATE INDEX idx_webhook_logs_callback_status ON webhook_logs(callback_status);
+                    CREATE INDEX idx_webhook_logs_project_id ON webhook_logs(project_id);
+                """)
+                
+                conn.commit()
+                logger.info("✅ webhook_logs table created successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to create webhook_logs table: {e}")
+                conn.rollback()
+        else:
+            logger.info("✅ webhook_logs table already exists")
+        
         cur.close()
         conn.close()
         logger.info("\n✅ All migrations completed successfully")
