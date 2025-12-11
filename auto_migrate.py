@@ -177,6 +177,50 @@ def auto_migrate():
         else:
             logger.info("✅ task_daily_stats table already exists")
         
+        # 创建 broadcaster_error_logs 表
+        logger.info("\n📝 Checking broadcaster_error_logs table...")
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'broadcaster_error_logs'
+            )
+        """)
+        
+        error_logs_table_exists = cur.fetchone()['exists']
+        
+        if not error_logs_table_exists:
+            logger.info("📝 Creating broadcaster_error_logs table...")
+            try:
+                cur.execute("""
+                    CREATE TABLE broadcaster_error_logs (
+                        id SERIAL PRIMARY KEY,
+                        task_id INTEGER,
+                        task_title VARCHAR(500),
+                        project_id VARCHAR(100),
+                        video_url TEXT,
+                        platform VARCHAR(50),
+                        error_type VARCHAR(100),
+                        error_message TEXT,
+                        callback_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # 创建索引
+                cur.execute("""
+                    CREATE INDEX idx_broadcaster_error_logs_task_id ON broadcaster_error_logs(task_id);
+                    CREATE INDEX idx_broadcaster_error_logs_created_at ON broadcaster_error_logs(created_at);
+                    CREATE INDEX idx_broadcaster_error_logs_error_type ON broadcaster_error_logs(error_type);
+                """)
+                
+                conn.commit()
+                logger.info("✅ broadcaster_error_logs table created successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to create broadcaster_error_logs table: {e}")
+                conn.rollback()
+        else:
+            logger.info("✅ broadcaster_error_logs table already exists")
+        
         cur.close()
         conn.close()
         logger.info("\n✅ All migrations completed successfully")
