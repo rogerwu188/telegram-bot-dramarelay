@@ -364,10 +364,10 @@ def get_webhook_logs():
                     cur2.execute("""
                         SELECT 
                             user_id,
-                            video_url,
+                            submission_link as video_url,
                             submitted_at
                         FROM user_tasks
-                        WHERE task_id = %s AND status = 'submitted' AND video_url IS NOT NULL
+                        WHERE task_id = %s AND status = 'submitted' AND submission_link IS NOT NULL
                         ORDER BY submitted_at ASC
                     """, (task_id,))
                     
