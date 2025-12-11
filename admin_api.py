@@ -411,6 +411,7 @@ def get_webhook_logs():
                     t.callback_retry_count,
                     t.callback_last_attempt,
                     t.created_at,
+                    t.video_url,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
@@ -434,6 +435,7 @@ def get_webhook_logs():
                     t.callback_retry_count,
                     t.callback_last_attempt,
                     t.created_at,
+                    t.video_url,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
