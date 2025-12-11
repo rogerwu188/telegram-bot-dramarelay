@@ -798,7 +798,10 @@
                         <td>${item.callback_retry_count || 0}</td>
                         <td class="timestamp">${formatTime(item.callback_last_attempt)}</td>
                         <td><a href="${item.callback_url}" target="_blank" class="link">${truncate(item.callback_url, 40)}</a></td>
-                        <td><button class="btn-view" onclick='showCallbackData(${JSON.stringify(item.callback_payload).replace(/'/g, "&apos;")})'>👁️ 查看数据</button></td>
+                         <td>
+                            <button class="btn-view" onclick='showCallbackData(${JSON.stringify(item.callback_payload).replace(/'/g, "&apos;")}'>👁️ 查看数据</button>
+                            ${item.user_submissions && item.user_submissions.length > 0 ? `<button class="btn-view" onclick='showUserSubmissions(${JSON.stringify(item.user_submissions).replace(/'/g, "&apos;")})'>👥 用户链接(${item.user_submissions.length})</button>` : ''}
+                        </td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -1067,6 +1070,26 @@
             const jsonViewer = document.getElementById('json-viewer');
             modalTitle.textContent = '📤 Webhook 回调数据';
             jsonViewer.textContent = JSON.stringify(payload, null, 2);
+            modal.classList.add('show');
+        }
+        
+        // 显示用户分发链接弹窗
+        function showUserSubmissions(submissions) {
+            const modal = document.getElementById('callback-modal');
+            const modalTitle = modal.querySelector('.modal-header h3');
+            const jsonViewer = document.getElementById('json-viewer');
+            modalTitle.textContent = '👥 用户分发链接 (' + submissions.length + ' 个用户)';
+            
+            // 格式化显示
+            let content = '';
+            submissions.forEach((sub, index) => {
+                content += `用户 ${index + 1}:\n`;
+                content += `  User ID: ${sub.user_id}\n`;
+                content += `  视频链接: ${sub.video_url}\n`;
+                content += `  提交时间: ${sub.submitted_at || 'N/A'}\n\n`;
+            });
+            
+            jsonViewer.textContent = content;
             modal.classList.add('show');
         }
         

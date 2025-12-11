@@ -356,6 +356,33 @@ def get_webhook_logs():
                     webhook['view_count'] = stats[0].get('view_count', 0)
                 else:
                     webhook['view_count'] = 0
+                
+                # 查询用户分发链接
+                task_id = webhook.get('task_id')
+                if task_id:
+                    cur2 = conn.cursor()
+                    cur2.execute("""
+                        SELECT 
+                            user_id,
+                            video_url,
+                            submitted_at
+                        FROM user_tasks
+                        WHERE task_id = %s AND status = 'submitted' AND video_url IS NOT NULL
+                        ORDER BY submitted_at ASC
+                    """, (task_id,))
+                    
+                    user_submissions = cur2.fetchall()
+                    webhook['user_submissions'] = [
+                        {
+                            'user_id': str(sub['user_id']),
+                            'video_url': sub['video_url'],
+                            'submitted_at': sub['submitted_at'].isoformat() if sub['submitted_at'] else None
+                        }
+                        for sub in user_submissions
+                    ]
+                    cur2.close()
+                else:
+                    webhook['user_submissions'] = []
             
             cur.close()
             conn.close()
