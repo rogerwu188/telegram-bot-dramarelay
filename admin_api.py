@@ -782,29 +782,35 @@ def delete_tasks():
                 'error': 'No tasks found with the provided IDs'
             }), 404
         
-        # 1. 删除错误日志
+        # 1. 删除推荐奖励记录（外键约束）
+        cur.execute("""
+            DELETE FROM referral_rewards WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        referral_rewards_deleted = cur.rowcount
+        
+        # 2. 删除错误日志
         cur.execute("""
             DELETE FROM broadcaster_error_logs WHERE task_id IN %s
         """, (tuple(task_ids),))
         error_logs_deleted = cur.rowcount
         
-        # 2. 删除每日统计
+        # 3. 删除每日统计
         cur.execute("""
             DELETE FROM task_daily_stats WHERE task_id IN %s
         """, (tuple(task_ids),))
         daily_stats_deleted = cur.rowcount
         
-        # 3. 删除完成记录（注意：完成记录存储在 user_tasks 表中）
+        # 4. 删除完成记录（注意：完成记录存储在 user_tasks 表中）
         # 不需要单独删除，因为 user_tasks 就是完成记录
         completions_deleted = 0  # 不存在单独的 task_completions 表
         
-        # 4. 删除用户任务关联
+        # 5. 删除用户任务关联
         cur.execute("""
             DELETE FROM user_tasks WHERE task_id IN %s
         """, (tuple(task_ids),))
         user_tasks_deleted = cur.rowcount
         
-        # 5. 删除任务本身
+        # 6. 删除任务本身
         cur.execute("""
             DELETE FROM drama_tasks WHERE task_id IN %s
         """, (tuple(task_ids),))
@@ -821,6 +827,7 @@ def delete_tasks():
             'message': f'Successfully deleted {tasks_deleted} tasks and related data',
             'deleted': {
                 'tasks': tasks_deleted,
+                'referral_rewards': referral_rewards_deleted,
                 'error_logs': error_logs_deleted,
                 'daily_stats': daily_stats_deleted,
                 'completions': completions_deleted,
