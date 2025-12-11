@@ -176,6 +176,12 @@ async def broadcast_task_stats(task):
         view_count = stats.get('views') or stats.get('view_count', 0)
         like_count = stats.get('likes') or stats.get('like_count', 0)
         
+        # 添加总播放量和总点赞数（X2C Pool要求）
+        if view_count > 0:
+            stats_data['view_count'] = view_count
+        if like_count > 0:
+            stats_data['like_count'] = like_count
+        
         # 根据平台填充字段（抖音计入yt_*）
         if platform == 'youtube' or platform == 'douyin':
             if view_count > 0:
@@ -192,9 +198,10 @@ async def broadcast_task_stats(task):
             if view_count > 0 or like_count > 0:
                 stats_data['tt_account_count'] = 0  # 分发数据不统计账号
         
-        # 构建payload
+        # 构建payload（符合X2C Pool批量更新格式）
         payload = {
             'site_name': 'DramaRelayBot',
+            'production_source': 'ai_factory',  # X2C Pool要求的字段
             'stats': [stats_data]
         }
         
