@@ -345,6 +345,15 @@ def get_webhook_logs():
                 
                 # payload已经是JSONB格式
                 webhook['callback_payload'] = webhook.get('payload', {})
+                
+                # 从 payload 中提取 view_count
+                payload = webhook.get('payload', {})
+                stats = payload.get('stats', [])
+                if stats and len(stats) > 0:
+                    # 获取第一个 stats 的 view_count（每个 webhook 只包含一个任务）
+                    webhook['view_count'] = stats[0].get('view_count', 0)
+                else:
+                    webhook['view_count'] = 0
             
             cur.close()
             conn.close()
