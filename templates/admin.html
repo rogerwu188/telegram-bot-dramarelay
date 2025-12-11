@@ -543,10 +543,32 @@
         
         <!-- 定时回传倒计时显示 -->
         <div id="countdown-area" style="margin: 15px 0; display: none;">
-            <div style="background: #e7f3ff; padding: 12px 20px; border-radius: 8px; border: 1px solid #b3d9ff; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">⏰</span>
-                <span style="font-weight: 500; color: #0056b3;">下次自动回传倒计时：</span>
-                <span id="countdown-timer" style="font-weight: bold; font-size: 18px; color: #007bff;">3:00</span>
+            <div style="background: #e7f3ff; padding: 15px 20px; border-radius: 8px; border: 1px solid #b3d9ff;">
+                <!-- 倒计时 -->
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <span style="font-size: 20px;">⏰</span>
+                    <span style="font-weight: 500; color: #0056b3;">下次自动回传倒计时：</span>
+                    <span id="countdown-timer" style="font-weight: bold; font-size: 18px; color: #007bff;">3:00</span>
+                </div>
+                <!-- 回传统计 -->
+                <div id="broadcast-stats" style="display: none; padding-top: 10px; border-top: 1px solid #b3d9ff;">
+                    <div style="display: flex; gap: 30px; font-size: 14px;">
+                        <div>
+                            <span style="color: #666;">上次回传任务数：</span>
+                            <span id="last-broadcast-tasks" style="font-weight: bold; color: #28a745;">0</span>
+                        </div>
+                        <div>
+                            <span style="color: #666;">总播放量：</span>
+                            <span id="last-broadcast-views" style="font-weight: bold; color: #007bff;">0</span>
+                        </div>
+                        <div>
+                            <span style="color: #666;">成功/失败：</span>
+                            <span id="last-broadcast-success" style="font-weight: bold; color: #28a745;">0</span>
+                            <span style="color: #999;">/</span>
+                            <span id="last-broadcast-failed" style="font-weight: bold; color: #dc3545;">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1188,11 +1210,13 @@
                 clearInterval(countdownInterval);
             }
             
-            countdownInterval = setInterval(() => {
+            countdownInterval = setInterval(async () => {
                 countdownSeconds--;
                 
                 if (countdownSeconds <= 0) {
                     countdownSeconds = 180; // 重置为3分钟
+                    // 回传完成后，获取最新的回传统计
+                    await updateBroadcastStats();
                 }
                 
                 const minutes = Math.floor(countdownSeconds / 60);
@@ -1211,6 +1235,32 @@
             }
             
             countdownArea.style.display = 'none';
+        }
+        
+        // 更新回传统计数据
+        async function updateBroadcastStats() {
+            try {
+                const response = await fetch('/api/broadcaster/last_stats');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    const statsArea = document.getElementById('broadcast-stats');
+                    const tasksSpan = document.getElementById('last-broadcast-tasks');
+                    const viewsSpan = document.getElementById('last-broadcast-views');
+                    const successSpan = document.getElementById('last-broadcast-success');
+                    const failedSpan = document.getElementById('last-broadcast-failed');
+                    
+                    tasksSpan.textContent = data.total || 0;
+                    viewsSpan.textContent = (data.total_views || 0).toLocaleString();
+                    successSpan.textContent = data.success_count || 0;
+                    failedSpan.textContent = data.failed_count || 0;
+                    
+                    statsArea.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('获取回传统计失败:', error);
+            }
         }
         
         // 切换分发服务
@@ -1296,8 +1346,14 @@
                     message += `总任务数: ${data.total}\n`;
                     message += `成功: ${data.success_count}\n`;
                     message += `失败: ${data.failed_count}\n`;
+                    if (data.total_views !== undefined) {
+                        message += `总播放量: ${data.total_views.toLocaleString()}\n`;
+                    }
                     message += `时间: ${data.timestamp}`;
                     alert(message);
+                    
+                    // 更新统计显示
+                    await updateBroadcastStats();
                 } else {
                     alert('❌ 回传失败: ' + (result.error || '未知错误'));
                 }

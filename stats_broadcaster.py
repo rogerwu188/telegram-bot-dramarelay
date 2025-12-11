@@ -279,8 +279,23 @@ async def broadcast_all_tasks():
         # 逐个回传
         success_count = 0
         failed_count = 0
+        total_views = 0  # 统计总播放量
         
         for task in tasks:
+            # 先获取视频统计数据
+            video_url = task['video_url']
+            platform = 'youtube'
+            if 'tiktok.com' in video_url or 'vm.tiktok.com' in video_url:
+                platform = 'tiktok'
+            elif 'douyin.com' in video_url or 'v.douyin.com' in video_url:
+                platform = 'douyin'
+            
+            stats = await fetch_task_stats(task['task_id'], video_url, platform)
+            if stats:
+                views = stats.get('views', 0) or stats.get('view_count', 0)
+                total_views += views
+            
+            # 回传数据
             success = await broadcast_task_stats(task)
             if success:
                 success_count += 1
@@ -290,13 +305,14 @@ async def broadcast_all_tasks():
             # 每个任务之间间隔1秒，避免请求过快
             await asyncio.sleep(1)
         
-        logger.info(f"✅ 回传完成: 成功 {success_count}, 失败 {failed_count}")
+        logger.info(f"✅ 回传完成: 成功 {success_count}, 失败 {failed_count}, 总播放量 {total_views}")
         
         return {
             'success': True,
             'total': len(tasks),
             'success_count': success_count,
             'failed_count': failed_count,
+            'total_views': total_views,  # 添加总播放量字段
             'timestamp': datetime.now().isoformat()
         }
         
