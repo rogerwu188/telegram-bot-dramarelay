@@ -735,6 +735,110 @@ def trigger_broadcaster_api():
             'error': str(e)
         }), 500
 
+@app.route('/api/admin/delete_tasks', methods=['POST'])
+def delete_tasks():
+    """
+    删除指定的任务及相关数据
+    需要API Key验证
+    """
+    try:
+        # 验证API Key
+        api_key = request.args.get('api_key') or request.headers.get('X-API-Key')
+        if api_key != 'x2c_admin_secret_key_2024':
+            return jsonify({
+                'success': False,
+                'error': 'Unauthorized: Invalid API key'
+            }), 401
+        
+        # 获取要删除的任务ID
+        data = request.get_json()
+        if not data or 'task_ids' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing task_ids in request body'
+            }), 400
+        
+        task_ids = data.get('task_ids', [])
+        if not task_ids or not isinstance(task_ids, list):
+            return jsonify({
+                'success': False,
+                'error': 'task_ids must be a non-empty list'
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询要删除的任务信息（用于日志）
+        cur.execute("""
+            SELECT task_id, title FROM drama_tasks WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        tasks_to_delete = cur.fetchall()
+        
+        if not tasks_to_delete:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'No tasks found with the provided IDs'
+            }), 404
+        
+        # 1. 删除错误日志
+        cur.execute("""
+            DELETE FROM broadcaster_error_logs WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        error_logs_deleted = cur.rowcount
+        
+        # 2. 删除每日统计
+        cur.execute("""
+            DELETE FROM task_daily_stats WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        daily_stats_deleted = cur.rowcount
+        
+        # 3. 删除完成记录
+        cur.execute("""
+            DELETE FROM task_completions WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        completions_deleted = cur.rowcount
+        
+        # 4. 删除用户任务关联
+        cur.execute("""
+            DELETE FROM user_tasks WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        user_tasks_deleted = cur.rowcount
+        
+        # 5. 删除任务本身
+        cur.execute("""
+            DELETE FROM drama_tasks WHERE task_id IN %s
+        """, (tuple(task_ids),))
+        tasks_deleted = cur.rowcount
+        
+        # 提交事务
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully deleted {tasks_deleted} tasks and related data',
+            'deleted': {
+                'tasks': tasks_deleted,
+                'error_logs': error_logs_deleted,
+                'daily_stats': daily_stats_deleted,
+                'completions': completions_deleted,
+                'user_tasks': user_tasks_deleted
+            },
+            'deleted_tasks': [dict(task) for task in tasks_to_delete]
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
