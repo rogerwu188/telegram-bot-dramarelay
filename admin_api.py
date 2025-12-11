@@ -286,9 +286,18 @@ def get_webhook_logs():
                         wl.callback_url,
                         wl.callback_status,
                         wl.payload,
-                        wl.created_at
+                        wl.created_at,
+                        t.external_task_id,
+                        t.callback_retry_count,
+                        t.callback_last_attempt,
+                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                     FROM webhook_logs wl
+                    LEFT JOIN drama_tasks t ON wl.task_id = t.task_id
+                    LEFT JOIN user_tasks ut ON wl.task_id = ut.task_id
                     WHERE wl.created_at >= NOW() - INTERVAL '%s hours'
+                    GROUP BY wl.id, wl.task_id, wl.task_title, wl.project_id, wl.callback_url, 
+                             wl.callback_status, wl.payload, wl.created_at, t.external_task_id,
+                             t.callback_retry_count, t.callback_last_attempt
                     ORDER BY wl.created_at DESC
                     LIMIT %s
                 """, (hours, limit))
@@ -302,8 +311,17 @@ def get_webhook_logs():
                         wl.callback_url,
                         wl.callback_status,
                         wl.payload,
-                        wl.created_at
+                        wl.created_at,
+                        t.external_task_id,
+                        t.callback_retry_count,
+                        t.callback_last_attempt,
+                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
                     FROM webhook_logs wl
+                    LEFT JOIN drama_tasks t ON wl.task_id = t.task_id
+                    LEFT JOIN user_tasks ut ON wl.task_id = ut.task_id
+                    GROUP BY wl.id, wl.task_id, wl.task_title, wl.project_id, wl.callback_url, 
+                             wl.callback_status, wl.payload, wl.created_at, t.external_task_id,
+                             t.callback_retry_count, t.callback_last_attempt
                     ORDER BY wl.created_at DESC
                     LIMIT %s
                 """, (limit,))
@@ -314,6 +332,8 @@ def get_webhook_logs():
             for webhook in webhooks:
                 if webhook['created_at']:
                     webhook['created_at'] = webhook['created_at'].isoformat()
+                if webhook.get('callback_last_attempt'):
+                    webhook['callback_last_attempt'] = webhook['callback_last_attempt'].isoformat()
                 
                 # 添加状态标签
                 if webhook['callback_status'] == 'success':
