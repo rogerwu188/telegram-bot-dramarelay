@@ -581,6 +581,104 @@ def fix_all_approved_tasks():
             'error': str(e)
         }), 500
 
+@app.route('/api/broadcaster/start', methods=['POST'])
+def start_broadcaster_api():
+    """
+    启动分发数据回传服务
+    """
+    try:
+        from stats_broadcaster import start_broadcaster
+        success = start_broadcaster()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': '分发数据回传服务已启动，每3分钟自动回传一次'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '分发数据回传服务已在运行中'
+            })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/broadcaster/stop', methods=['POST'])
+def stop_broadcaster_api():
+    """
+    停止分发数据回传服务
+    """
+    try:
+        from stats_broadcaster import stop_broadcaster
+        success = stop_broadcaster()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': '分发数据回传服务已停止'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '分发数据回传服务未运行'
+            })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/broadcaster/status', methods=['GET'])
+def get_broadcaster_status_api():
+    """
+    获取分发数据回传服务状态
+    """
+    try:
+        from stats_broadcaster import get_broadcaster_status
+        status = get_broadcaster_status()
+        
+        return jsonify({
+            'success': True,
+            'data': status
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/broadcaster/trigger', methods=['POST'])
+def trigger_broadcaster_api():
+    """
+    手动触发一次分发数据回传
+    """
+    try:
+        from stats_broadcaster import broadcast_all_tasks
+        import asyncio
+        
+        # 运行异步任务
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(broadcast_all_tasks())
+        loop.close()
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)

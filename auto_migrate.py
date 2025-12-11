@@ -44,6 +44,7 @@ def auto_migrate():
             ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
             ('updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
             ('last_submission_time', 'TIMESTAMP'),  # 反刷量：最后提交时间
+            ('agent_node', 'VARCHAR(255)'),  # 代理节点标识
         ]
         
         # 逐个检查并添加 users 表缺失的字段
@@ -98,6 +99,83 @@ def auto_migrate():
                     conn.rollback()
             else:
                 logger.info(f"✅ Column '{column_name}' already exists")
+        
+        # 创建 task_daily_stats 表
+        logger.info("\n📝 Checking task_daily_stats table...")
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'task_daily_stats'
+            )
+        """)
+        
+        table_exists = cur.fetchone()['exists']
+        
+        if not table_exists:
+            logger.info("📝 Creating task_daily_stats table...")
+            try:
+                cur.execute("""
+                    CREATE TABLE task_daily_stats (
+                        id SERIAL PRIMARY KEY,
+                        task_id INTEGER NOT NULL REFERENCES drama_tasks(task_id) ON DELETE CASCADE,
+                        project_id VARCHAR(255),
+                        external_task_id INTEGER,
+                        stats_date DATE NOT NULL,
+                        
+                        -- 总体统计
+                        total_account_count INTEGER DEFAULT 0,
+                        total_completion_count INTEGER DEFAULT 0,
+                        
+                        -- YouTube 统计
+                        yt_account_count INTEGER DEFAULT 0,
+                        yt_view_count BIGINT DEFAULT 0,
+                        yt_like_count BIGINT DEFAULT 0,
+                        yt_comment_count BIGINT DEFAULT 0,
+                        
+                        -- TikTok 统计
+                        tt_account_count INTEGER DEFAULT 0,
+                        tt_view_count BIGINT DEFAULT 0,
+                        tt_like_count BIGINT DEFAULT 0,
+                        tt_comment_count BIGINT DEFAULT 0,
+                        
+                        -- 抖音 统计
+                        dy_account_count INTEGER DEFAULT 0,
+                        dy_view_count BIGINT DEFAULT 0,
+                        dy_like_count BIGINT DEFAULT 0,
+                        dy_comment_count BIGINT DEFAULT 0,
+                        dy_share_count BIGINT DEFAULT 0,
+                        dy_collect_count BIGINT DEFAULT 0,
+                        
+                        -- 回传状态
+                        webhook_sent BOOLEAN DEFAULT FALSE,
+                        webhook_sent_at TIMESTAMP,
+                        webhook_response TEXT,
+                        webhook_retry_count INTEGER DEFAULT 0,
+                        
+                        -- 时间戳
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        
+                        -- 唯一约束
+                        UNIQUE(task_id, stats_date)
+                    )
+                """)
+                
+                # 创建索引
+                cur.execute("""
+                    CREATE INDEX idx_task_daily_stats_task_id ON task_daily_stats(task_id);
+                    CREATE INDEX idx_task_daily_stats_project_id ON task_daily_stats(project_id);
+                    CREATE INDEX idx_task_daily_stats_date ON task_daily_stats(stats_date);
+                    CREATE INDEX idx_task_daily_stats_webhook_sent ON task_daily_stats(webhook_sent);
+                """)
+                
+                conn.commit()
+                logger.info("✅ task_daily_stats table created successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to create task_daily_stats table: {e}")
+                conn.rollback()
+        else:
+            logger.info("✅ task_daily_stats table already exists")
         
         cur.close()
         conn.close()

@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+分发数据回传服务
+每隔3分钟自动回传所有下发任务的播放量数据到X2C Pool
+"""
+
+import os
+import asyncio
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from urllib.parse import urlparse
+from datetime import datetime
+import logging
+import json
+from video_stats_fetcher import VideoStatsFetcher
+from webhook_notifier import send_webhook
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# 数据库连接配置
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+# 全局状态
+broadcaster_running = False
+broadcaster_task = None
+
+def get_db_connection():
+    """获取数据库连接"""
+    result = urlparse(DATABASE_URL)
+    return psycopg2.connect(
+        database=result.path[1:],
+        user=result.username,
+        password=result.password,
+        host=result.hostname,
+        port=result.port,
+        cursor_factory=RealDictCursor
+    )
+
+async def fetch_task_stats(task_id: int, video_url: str, platform: str):
+    """
+    获取任务的视频统计数据
+    
+    Args:
+        task_id: 任务ID
+        video_url: 视频链接
+        platform: 平台类型
+        
+    Returns:
+        dict: 视频统计数据
+    """
+    try:
+        fetcher = VideoStatsFetcher()
+        stats = await fetcher.fetch_video_stats(video_url, platform)
+        
+        if stats:
+            logger.info(f"✅ 任务 {task_id} 数据抓取成功: {stats}")
+            return stats
+        else:
+            logger.warning(f"⚠️ 任务 {task_id} 数据抓取失败")
+            return None
+            
+    except Exception as e:
+        logger.error(f"❌ 任务 {task_id} 数据抓取异常: {e}")
+        return None
+
+async def broadcast_task_stats(task):
+    """
+    回传单个任务的统计数据
+    
+    Args:
+        task: 任务信息字典
+        
+    Returns:
+        bool: 是否成功
+    """
+    try:
+        task_id = task['task_id']
+        external_task_id = task['external_task_id']
+        project_id = task['project_id']
+        callback_url = task['callback_url']
+        callback_secret = task['callback_secret']
+        video_url = task['video_url']
+        duration = task['duration']
+        
+        # 检查必要字段
+        if not callback_url:
+            logger.warning(f"⚠️ 任务 {task_id} 没有配置 callback_url，跳过")
+            return False
+        
+        if not video_url:
+            logger.warning(f"⚠️ 任务 {task_id} 没有视频链接，跳过")
+            return False
+        
+        # 判断平台类型
+        platform = 'youtube'  # 默认YouTube
+        if 'tiktok.com' in video_url or 'vm.tiktok.com' in video_url:
+            platform = 'tiktok'
+        elif 'douyin.com' in video_url or 'v.douyin.com' in video_url:
+            platform = 'douyin'
+        
+        # 抓取视频数据
+        stats = await fetch_task_stats(task_id, video_url, platform)
+        
+        if not stats:
+            logger.warning(f"⚠️ 任务 {task_id} 无法获取视频数据，使用默认值")
+            stats = {}
+        
+        # 构建回传数据
+        stats_data = {
+            'project_id': project_id,
+            'task_id': external_task_id,
+            'duration': duration,
+            'account_count': 0  # 分发数据回传不统计账号数
+        }
+        
+        # 提取数据
+        view_count = stats.get('views') or stats.get('view_count', 0)
+        like_count = stats.get('likes') or stats.get('like_count', 0)
+        
+        # 根据平台填充字段（抖音计入yt_*）
+        if platform == 'youtube' or platform == 'douyin':
+            if view_count > 0:
+                stats_data['yt_view_count'] = view_count
+            if like_count > 0:
+                stats_data['yt_like_count'] = like_count
+            if view_count > 0 or like_count > 0:
+                stats_data['yt_account_count'] = 0  # 分发数据不统计账号
+        elif platform == 'tiktok':
+            if view_count > 0:
+                stats_data['tt_view_count'] = view_count
+            if like_count > 0:
+                stats_data['tt_like_count'] = like_count
+            if view_count > 0 or like_count > 0:
+                stats_data['tt_account_count'] = 0  # 分发数据不统计账号
+        
+        # 构建payload
+        payload = {
+            'site_name': 'DramaRelayBot',
+            'stats': [stats_data]
+        }
+        
+        logger.info(f"📤 回传任务 {task_id} 数据: {json.dumps(payload, ensure_ascii=False)}")
+        
+        # 发送Webhook
+        success, error = await send_webhook(
+            callback_url,
+            payload,
+            callback_secret,
+            timeout=30
+        )
+        
+        if success:
+            logger.info(f"✅ 任务 {task_id} 数据回传成功")
+            return True
+        else:
+            logger.error(f"❌ 任务 {task_id} 数据回传失败: {error}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ 任务 {task_id} 回传异常: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+async def broadcast_all_tasks():
+    """
+    回传所有活跃任务的统计数据
+    
+    Returns:
+        dict: 回传结果统计
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询所有活跃且配置了callback_url的任务
+        cur.execute("""
+            SELECT 
+                task_id,
+                external_task_id,
+                project_id,
+                title,
+                video_url,
+                callback_url,
+                callback_secret,
+                duration
+            FROM drama_tasks
+            WHERE status = 'active'
+              AND callback_url IS NOT NULL
+              AND callback_url != ''
+            ORDER BY task_id
+        """)
+        
+        tasks = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not tasks:
+            logger.info("ℹ️ 没有需要回传的任务")
+            return {
+                'success': True,
+                'total': 0,
+                'success_count': 0,
+                'failed_count': 0
+            }
+        
+        logger.info(f"📊 开始回传 {len(tasks)} 个任务的数据")
+        
+        # 逐个回传
+        success_count = 0
+        failed_count = 0
+        
+        for task in tasks:
+            success = await broadcast_task_stats(task)
+            if success:
+                success_count += 1
+            else:
+                failed_count += 1
+            
+            # 每个任务之间间隔1秒，避免请求过快
+            await asyncio.sleep(1)
+        
+        logger.info(f"✅ 回传完成: 成功 {success_count}, 失败 {failed_count}")
+        
+        return {
+            'success': True,
+            'total': len(tasks),
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 回传任务失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+async def broadcaster_loop():
+    """
+    分发数据回传循环
+    每3分钟执行一次
+    """
+    global broadcaster_running
+    
+    logger.info("🚀 分发数据回传服务已启动")
+    
+    while broadcaster_running:
+        try:
+            logger.info("="*70)
+            logger.info(f"📡 开始新一轮数据回传 - {datetime.now()}")
+            logger.info("="*70)
+            
+            result = await broadcast_all_tasks()
+            
+            logger.info("="*70)
+            logger.info(f"📊 回传结果: {json.dumps(result, ensure_ascii=False)}")
+            logger.info("="*70)
+            
+            # 等待3分钟
+            logger.info("⏰ 等待3分钟后进行下一轮回传...")
+            await asyncio.sleep(180)  # 3分钟 = 180秒
+            
+        except Exception as e:
+            logger.error(f"❌ 回传循环异常: {e}")
+            import traceback
+            traceback.print_exc()
+            # 发生异常后等待30秒再重试
+            await asyncio.sleep(30)
+    
+    logger.info("🛑 分发数据回传服务已停止")
+
+def start_broadcaster():
+    """启动分发数据回传服务"""
+    global broadcaster_running, broadcaster_task
+    
+    if broadcaster_running:
+        logger.warning("⚠️ 分发数据回传服务已在运行中")
+        return False
+    
+    broadcaster_running = True
+    broadcaster_task = asyncio.create_task(broadcaster_loop())
+    logger.info("✅ 分发数据回传服务启动成功")
+    return True
+
+def stop_broadcaster():
+    """停止分发数据回传服务"""
+    global broadcaster_running, broadcaster_task
+    
+    if not broadcaster_running:
+        logger.warning("⚠️ 分发数据回传服务未运行")
+        return False
+    
+    broadcaster_running = False
+    if broadcaster_task:
+        broadcaster_task.cancel()
+    logger.info("✅ 分发数据回传服务停止成功")
+    return True
+
+def get_broadcaster_status():
+    """获取分发数据回传服务状态"""
+    return {
+        'running': broadcaster_running,
+        'timestamp': datetime.now().isoformat()
+    }
+
+# 如果直接运行此脚本，启动服务
+if __name__ == "__main__":
+    async def main():
+        start_broadcaster()
+        try:
+            # 保持运行
+            while broadcaster_running:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("收到中断信号，停止服务...")
+            stop_broadcaster()
+    
+    asyncio.run(main())

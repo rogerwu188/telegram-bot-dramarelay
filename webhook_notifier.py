@@ -210,7 +210,14 @@ async def send_task_completed_webhook(
                 if like_count > 0:
                     stats_data['tt_like_count'] = like_count
                 stats_data['tt_account_count'] = 1
-            # 其他平台可以类似扩展
+            elif 'douyin' in platform_lower or 'dy' in platform_lower:
+                # 抖音平台统计：计入YouTube总量，不单独回传dy_*字段
+                # 抖音数据只在本地展现，但播放量和点赞数计入yt_*总量
+                if view_count > 0:
+                    stats_data['yt_view_count'] = view_count
+                if like_count > 0:
+                    stats_data['yt_like_count'] = like_count
+                stats_data['yt_account_count'] = 1
         
         payload = {
             'site_name': 'DramaRelayBot',

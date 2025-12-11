@@ -36,6 +36,7 @@ class LinkVerifier:
         
         platform_patterns = {
             'tiktok': ['tiktok.com'],
+            'douyin': ['douyin.com', 'v.douyin.com'],
             'youtube': ['youtube.com', 'youtu.be'],
             'instagram': ['instagram.com'],
             'facebook': ['facebook.com', 'fb.com', 'fb.watch'],

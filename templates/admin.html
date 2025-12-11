@@ -514,6 +514,12 @@
             
             <button onclick="refreshData()">🔄 刷新数据</button>
             <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
+            <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
+                📡 启动分发数据回传
+            </button>
+            <button onclick="triggerBroadcast()" style="background: #17a2b8;">
+                🚀 立即回传一次
+            </button>
         </div>
         
         <!-- 任务日志 Tab 页 -->
@@ -1011,6 +1017,98 @@
             if (e.target === modal) {
                 closeModal();
             }
+        });
+        
+        // 分发数据回传功能
+        let broadcasterRunning = false;
+        
+        // 检查分发服务状态
+        async function checkBroadcasterStatus() {
+            try {
+                const response = await fetch('/api/broadcaster/status');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    broadcasterRunning = result.data.running;
+                    updateBroadcasterButton();
+                }
+            } catch (error) {
+                console.error('检查分发服务状态失败:', error);
+            }
+        }
+        
+        // 更新按钮状态
+        function updateBroadcasterButton() {
+            const btn = document.getElementById('broadcaster-btn');
+            if (broadcasterRunning) {
+                btn.textContent = '🛑 停止分发数据回传';
+                btn.style.background = '#dc3545';
+            } else {
+                btn.textContent = '📡 启动分发数据回传';
+                btn.style.background = '#28a745';
+            }
+        }
+        
+        // 切换分发服务
+        async function toggleBroadcaster() {
+            const btn = document.getElementById('broadcaster-btn');
+            btn.disabled = true;
+            
+            try {
+                const endpoint = broadcasterRunning ? '/api/broadcaster/stop' : '/api/broadcaster/start';
+                const response = await fetch(endpoint, { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    broadcasterRunning = !broadcasterRunning;
+                    updateBroadcasterButton();
+                    alert('✅ ' + result.message);
+                } else {
+                    alert('⚠️ ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 操作失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        // 立即触发一次回传
+        async function triggerBroadcast() {
+            if (!confirm('确认立即回传所有任务的播放量数据？')) {
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ 回传中...';
+            
+            try {
+                const response = await fetch('/api/broadcaster/trigger', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    let message = `✅ 回传完成\n\n`;
+                    message += `总任务数: ${data.total}\n`;
+                    message += `成功: ${data.success_count}\n`;
+                    message += `失败: ${data.failed_count}\n`;
+                    message += `时间: ${data.timestamp}`;
+                    alert(message);
+                } else {
+                    alert('❌ 回传失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('❌ 回传失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 立即回传一次';
+            }
+        }
+        
+        // 页面加载时检查状态
+        window.addEventListener('load', () => {
+            checkBroadcasterStatus();
         });
     </script>
     
