@@ -1236,7 +1236,9 @@
                     
                     alert('✅ ' + result.message);
                 } else {
-                    alert('⚠️ ' + result.message);
+                    // 错误信息可能在 message 或 error 字段中
+                    const errorMsg = result.message || result.error || '未知错误';
+                    alert('⚠️ ' + errorMsg);
                 }
             } catch (error) {
                 alert('❌ 操作失败: ' + error.message);

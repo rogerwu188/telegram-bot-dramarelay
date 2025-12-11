@@ -352,10 +352,36 @@ def start_broadcaster():
         logger.warning("⚠️ 分发数据回传服务已在运行中")
         return False
     
-    broadcaster_running = True
-    broadcaster_task = asyncio.create_task(broadcaster_loop())
-    logger.info("✅ 分发数据回传服务启动成功")
-    return True
+    try:
+        broadcaster_running = True
+        
+        # 检查是否有运行中的事件循环
+        try:
+            loop = asyncio.get_running_loop()
+            # 如果有运行中的循环，直接创建任务
+            broadcaster_task = loop.create_task(broadcaster_loop())
+        except RuntimeError:
+            # 没有运行中的循环，创建新的循环并在后台运行
+            import threading
+            
+            def run_broadcaster():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(broadcaster_loop())
+            
+            thread = threading.Thread(target=run_broadcaster, daemon=True)
+            thread.start()
+            broadcaster_task = thread
+        
+        logger.info("✅ 分发数据回传服务启动成功")
+        return True
+        
+    except Exception as e:
+        broadcaster_running = False
+        logger.error(f"❌ 启动分发数据回传服务失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def stop_broadcaster():
     """停止分发数据回传服务"""
