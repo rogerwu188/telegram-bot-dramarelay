@@ -240,6 +240,12 @@
             color: #383d41;
         }
         
+        .badge-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
         .link {
             color: #667eea;
             text-decoration: none;
@@ -550,6 +556,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('webhooks')">📤 Webhook 回调日志</button>
                     <button class="tab-btn" onclick="switchTab('tasks')">📥 任务接收日志</button>
+                    <button class="tab-btn" onclick="switchTab('errors')">❌ 回传错误日志</button>
                 </div>
             </div>
             
@@ -604,6 +611,33 @@
                                 </tr>
                             </thead>
                             <tbody id="tasks-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 回传错误日志 Tab -->
+            <div id="tab-errors" class="tab-content">
+                <div class="section-content">
+                    <div id="errors-loading" class="loading">加载中...</div>
+                    <div id="errors-error" class="error" style="display: none;"></div>
+                    <div id="errors-empty" class="empty" style="display: none;">暂无错误记录</div>
+                    <div id="errors-table" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>任务ID</th>
+                                    <th>任务标题</th>
+                                    <th>Project ID</th>
+                                    <th>视频链接</th>
+                                    <th>平台</th>
+                                    <th>错误类型</th>
+                                    <th>错误详情</th>
+                                    <th>回调URL</th>
+                                    <th>错误时间</th>
+                                </tr>
+                            </thead>
+                            <tbody id="errors-body"></tbody>
                         </table>
                     </div>
                 </div>
@@ -737,6 +771,63 @@
                         <td class="timestamp">${formatTime(item.callback_last_attempt)}</td>
                         <td><a href="${item.callback_url}" target="_blank" class="link">${truncate(item.callback_url, 40)}</a></td>
                         <td><button class="btn-view" onclick='showCallbackData(${JSON.stringify(item.callback_payload).replace(/'/g, "&apos;")})'>👁️ 查看数据</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                table.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                error.textContent = '加载失败: ' + err.message;
+                error.style.display = 'block';
+            }
+        }
+        
+        // 加载错误日志
+        async function loadErrorLogs() {
+            const loading = document.getElementById('errors-loading');
+            const error = document.getElementById('errors-error');
+            const empty = document.getElementById('errors-empty');
+            const table = document.getElementById('errors-table');
+            const tbody = document.getElementById('errors-body');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+            
+            try {
+                const hours = document.getElementById('time-range').value;
+                const limit = document.getElementById('limit').value;
+                const response = await fetch(`/api/logs/errors?hours=${hours}&limit=${limit}`);
+                const result = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (!result.success) {
+                    error.textContent = '加载失败: ' + result.error;
+                    error.style.display = 'block';
+                    return;
+                }
+                
+                if (result.count === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                result.data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.task_id || '-'}</td>
+                        <td>${truncate(item.task_title, 30)}</td>
+                        <td><small>${truncate(item.project_id, 20)}</small></td>
+                        <td><a href="${item.video_url}" target="_blank" class="link">${truncate(item.video_url, 30)}</a></td>
+                        <td><span class="badge">${item.platform}</span></td>
+                        <td><span class="badge badge-error">${item.error_type}</span></td>
+                        <td><small>${truncate(item.error_message, 50)}</small></td>
+                        <td><a href="${item.callback_url}" target="_blank" class="link">${truncate(item.callback_url, 30)}</a></td>
+                        <td class="timestamp">${formatTime(item.created_at)}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -924,6 +1015,11 @@
             
             // 激活对应按钮
             event.target.classList.add('active');
+            
+            // 如果切换到错误日志，加载数据
+            if (tabName === 'errors') {
+                loadErrorLogs();
+            }
         }
         
         // 监听控制变化

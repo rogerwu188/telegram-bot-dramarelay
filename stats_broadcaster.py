@@ -25,6 +25,47 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 broadcaster_running = False
 broadcaster_task = None
 
+def log_broadcaster_error(task_id, task_title, project_id, video_url, platform, error_type, error_message, callback_url):
+    """
+    记录回传错误日志
+    """
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        from urllib.parse import urlparse
+        import os
+        
+        database_url = os.environ.get('DATABASE_URL')
+        if not database_url:
+            logger.error("❌ DATABASE_URL 未设置")
+            return
+        
+        # 解析数据库URL
+        result = urlparse(database_url)
+        conn = psycopg2.connect(
+            database=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port
+        )
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO broadcaster_error_logs 
+            (task_id, task_title, project_id, video_url, platform, error_type, error_message, callback_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (task_id, task_title, project_id, video_url, platform, error_type, error_message, callback_url))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"📝 已记录任务 {task_id} 的错误日志")
+        
+    except Exception as e:
+        logger.error(f"❌ 记录错误日志失败: {e}")
+
 def get_db_connection():
     """获取数据库连接"""
     import psycopg2
@@ -161,12 +202,34 @@ async def broadcast_task_stats(task):
             return True
         else:
             logger.error(f"❌ 任务 {task_id} 数据回传失败: {error}")
+            # 记录错误日志
+            log_broadcaster_error(
+                task_id=task_id,
+                task_title=task.get('title', ''),
+                project_id=task.get('project_id', ''),
+                video_url=task.get('video_url', ''),
+                platform='unknown',
+                error_type='CALLBACK_FAILED',
+                error_message=str(error),
+                callback_url=callback_url
+            )
             return False
             
     except Exception as e:
         logger.error(f"❌ 任务 {task_id} 回传异常: {e}")
         import traceback
         traceback.print_exc()
+        # 记录错误日志
+        log_broadcaster_error(
+            task_id=task_id,
+            task_title=task.get('title', ''),
+            project_id=task.get('project_id', ''),
+            video_url=task.get('video_url', ''),
+            platform='unknown',
+            error_type='BROADCAST_ERROR',
+            error_message=str(e),
+            callback_url=task.get('callback_url', '')
+        )
         return False
 
 async def broadcast_all_tasks():

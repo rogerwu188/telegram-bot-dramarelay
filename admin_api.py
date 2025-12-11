@@ -653,6 +653,62 @@ def get_broadcaster_status_api():
             'error': str(e)
         }), 500
 
+@app.route('/api/logs/errors', methods=['GET'])
+def get_error_logs():
+    """
+    获取回传错误日志
+    """
+    try:
+        # 获取查询参数
+        limit = int(request.args.get('limit', 50))
+        hours = int(request.args.get('hours', 24))
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 计算时间范围
+        if hours > 0:
+            time_filter = f"WHERE created_at >= NOW() - INTERVAL '{hours} hours'"
+        else:
+            time_filter = ""
+        
+        # 查询错误日志
+        query = f"""
+            SELECT 
+                id,
+                task_id,
+                task_title,
+                project_id,
+                video_url,
+                platform,
+                error_type,
+                error_message,
+                callback_url,
+                created_at
+            FROM broadcaster_error_logs
+            {time_filter}
+            ORDER BY created_at DESC
+            LIMIT %s
+        """
+        
+        cur.execute(query, (limit,))
+        logs = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'count': len(logs),
+            'data': logs
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/broadcaster/trigger', methods=['POST'])
 def trigger_broadcaster_api():
     """

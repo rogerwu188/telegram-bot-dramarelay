@@ -833,6 +833,11 @@ def admin_tasks():
     """任务日志 API"""
     return admin_api.get_task_logs()
 
+@app.route('/api/logs/errors')
+def admin_errors():
+    """错误日志 API"""
+    return admin_api.get_error_logs()
+
 @app.route('/api/config/api-key')
 def admin_api_key():
     """获取 API Key"""
