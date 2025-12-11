@@ -597,6 +597,7 @@
                                     <th>Project ID</th>
                                     <th>完成数</th>
                                     <th>播放量</th>
+                                    <th>视频链接</th>
                                     <th>回调状态</th>
                                     <th>回调时间</th>
                                     <th>重试次数</th>
@@ -791,6 +792,7 @@
                         <td><small>${truncate(item.project_id, 20)}</small></td>
                         <td>${item.completed_count}</td>
                         <td>${item.view_count !== undefined ? item.view_count.toLocaleString() : '-'}</td>
+                        <td>${item.video_url ? `<a href="${item.video_url}" target="_blank" class="link">🎥 播放</a>` : '-'}</td>
                         <td><span class="badge ${item.status_class}">${item.status_label}</span></td>
                         <td class="timestamp">${formatTime(item.created_at || item.callback_last_attempt)}</td>
                         <td>${item.callback_retry_count || 0}</td>
