@@ -208,35 +208,6 @@ async def broadcast_task_stats(task):
             )
             stats = {}
         
-        # 查询用户提交的视频链接
-        user_submissions = []
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT 
-                    user_id,
-                    video_url,
-                    submitted_at
-                FROM user_tasks
-                WHERE task_id = %s AND status = 'submitted' AND video_url IS NOT NULL
-                ORDER BY submitted_at ASC
-            """, (task_id,))
-            
-            submissions = cur.fetchall()
-            for sub in submissions:
-                user_submissions.append({
-                    'user_id': str(sub['user_id']),
-                    'video_url': sub['video_url'],
-                    'submitted_at': sub['submitted_at'].isoformat() if sub['submitted_at'] else None
-                })
-            
-            cur.close()
-            conn.close()
-            logger.info(f"📊 任务 {task_id} 有 {len(user_submissions)} 个用户提交")
-        except Exception as e:
-            logger.error(f"⚠️ 查询用户提交失败: {e}")
-        
         # 构建回传数据
         stats_data = {
             'project_id': project_id,
@@ -244,10 +215,6 @@ async def broadcast_task_stats(task):
             'duration': duration,
             'account_count': 0  # 分发数据回传不统计账号数
         }
-        
-        # 添加用户分发链接
-        if user_submissions:
-            stats_data['user_submissions'] = user_submissions
         
         # 提取数据
         view_count = stats.get('views') or stats.get('view_count', 0)
