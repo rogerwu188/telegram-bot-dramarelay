@@ -879,6 +879,11 @@ def delete_tasks_route():
     """删除指定的任务及相关数据"""
     return admin_api.delete_tasks()
 
+@app.route('/api/admin/update_callback_url', methods=['POST'])
+def update_callback_url_route():
+    """批量更新callback_url"""
+    return admin_api.update_callback_url()
+
 # ============================================================
 # 启动服务器
 # ============================================================

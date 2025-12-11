@@ -844,6 +844,75 @@ def delete_tasks():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/admin/update_callback_url', methods=['POST'])
+def update_callback_url():
+    """
+    批量更新callback_url
+    """
+    try:
+        # 验证API Key
+        api_key = request.args.get('api_key')
+        if api_key != 'x2c_admin_secret_key_2024':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        # 获取请求参数
+        data = request.get_json()
+        old_url_pattern = data.get('old_url_pattern', '%rxkcgquecleofqhyfchx.supabase.co%')
+        new_url = data.get('new_url', 'https://eumfmgwxwjyagsvqloac.supabase.co/functions/v1/distribution-callback')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询需要更新的任务
+        cur.execute("""
+            SELECT task_id, title, callback_url
+            FROM drama_tasks
+            WHERE callback_url LIKE %s
+        """, (old_url_pattern,))
+        
+        tasks_to_update = cur.fetchall()
+        
+        if not tasks_to_update:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': 'No tasks found with the old callback URL',
+                'updated_count': 0
+            })
+        
+        # 执行更新
+        cur.execute("""
+            UPDATE drama_tasks
+            SET callback_url = %s
+            WHERE callback_url LIKE %s
+        """, (new_url, old_url_pattern))
+        
+        updated_count = cur.rowcount
+        
+        # 提交事务
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully updated {updated_count} tasks',
+            'updated_count': updated_count,
+            'old_url_pattern': old_url_pattern,
+            'new_url': new_url,
+            'updated_tasks': [dict(task) for task in tasks_to_update]
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
