@@ -874,6 +874,11 @@ def trigger_broadcaster():
     """手动触发一次分发数据回传"""
     return admin_api.trigger_broadcaster_api()
 
+@app.route('/api/admin/delete_tasks', methods=['POST'])
+def delete_tasks_route():
+    """删除指定的任务及相关数据"""
+    return admin_api.delete_tasks()
+
 # ============================================================
 # 启动服务器
 # ============================================================
