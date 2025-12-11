@@ -31,6 +31,19 @@ if __name__ == "__main__":
     print("=" * 60)
     sys.stdout.flush()
     
+    # 运行数据库迁移
+    print("💾 Running database migrations...")
+    sys.stdout.flush()
+    try:
+        from auto_migrate import auto_migrate
+        if auto_migrate():
+            print("✅ Database migrations completed successfully")
+        else:
+            print("⚠️  Warning: Database migrations failed")
+    except Exception as e:
+        print(f"⚠️  Warning: Failed to run database migrations: {e}")
+    sys.stdout.flush()
+    
     # 检查并安装 Playwright 浏览器
     print("🔍 Checking Playwright browsers...")
     sys.stdout.flush()
