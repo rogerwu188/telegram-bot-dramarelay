@@ -7,14 +7,9 @@
 
 import os
 import asyncio
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from urllib.parse import urlparse
-from datetime import datetime
 import logging
 import json
-from video_stats_fetcher import VideoStatsFetcher
-from webhook_notifier import send_webhook
+from datetime import datetime
 
 # 配置日志
 logging.basicConfig(
@@ -32,6 +27,10 @@ broadcaster_task = None
 
 def get_db_connection():
     """获取数据库连接"""
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    from urllib.parse import urlparse
+    
     result = urlparse(DATABASE_URL)
     return psycopg2.connect(
         database=result.path[1:],
@@ -55,6 +54,7 @@ async def fetch_task_stats(task_id: int, video_url: str, platform: str):
         dict: 视频统计数据
     """
     try:
+        from video_stats_fetcher import VideoStatsFetcher
         fetcher = VideoStatsFetcher()
         stats = await fetcher.fetch_video_stats(video_url, platform)
         
@@ -80,6 +80,7 @@ async def broadcast_task_stats(task):
         bool: 是否成功
     """
     try:
+        from webhook_notifier import send_webhook
         task_id = task['task_id']
         external_task_id = task['external_task_id']
         project_id = task['project_id']
