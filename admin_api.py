@@ -794,11 +794,9 @@ def delete_tasks():
         """, (tuple(task_ids),))
         daily_stats_deleted = cur.rowcount
         
-        # 3. 删除完成记录
-        cur.execute("""
-            DELETE FROM task_completions WHERE task_id IN %s
-        """, (tuple(task_ids),))
-        completions_deleted = cur.rowcount
+        # 3. 删除完成记录（注意：完成记录存储在 user_tasks 表中）
+        # 不需要单独删除，因为 user_tasks 就是完成记录
+        completions_deleted = 0  # 不存在单独的 task_completions 表
         
         # 4. 删除用户任务关联
         cur.execute("""
