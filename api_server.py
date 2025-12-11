@@ -848,6 +848,27 @@ def fix_all_approved():
     """批量修复 approved 状态的任务"""
     return admin_api.fix_all_approved_tasks()
 
+# 分发数据回传相关路由
+@app.route('/api/broadcaster/start', methods=['POST'])
+def start_broadcaster():
+    """启动分发数据回传服务"""
+    return admin_api.start_broadcaster_api()
+
+@app.route('/api/broadcaster/stop', methods=['POST'])
+def stop_broadcaster():
+    """停止分发数据回传服务"""
+    return admin_api.stop_broadcaster_api()
+
+@app.route('/api/broadcaster/status', methods=['GET'])
+def get_broadcaster_status():
+    """获取分发数据回传服务状态"""
+    return admin_api.get_broadcaster_status_api()
+
+@app.route('/api/broadcaster/trigger', methods=['POST'])
+def trigger_broadcaster():
+    """手动触发一次分发数据回传"""
+    return admin_api.trigger_broadcaster_api()
+
 # ============================================================
 # 启动服务器
 # ============================================================
