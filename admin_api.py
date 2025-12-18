@@ -200,6 +200,7 @@ def get_completion_logs():
                     ut.submission_link,
                     COALESCE(ut.view_count, 0) as view_count,
                     COALESCE(ut.like_count, 0) as like_count,
+                    ut.view_count_updated_at,
                     EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
@@ -228,6 +229,7 @@ def get_completion_logs():
                     ut.submission_link,
                     COALESCE(ut.view_count, 0) as view_count,
                     COALESCE(ut.like_count, 0) as like_count,
+                    ut.view_count_updated_at,
                     EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
@@ -245,6 +247,8 @@ def get_completion_logs():
                 completion['assigned_at'] = completion['assigned_at'].isoformat()
             if completion['completed_at']:
                 completion['completed_at'] = completion['completed_at'].isoformat()
+            if completion.get('view_count_updated_at'):
+                completion['view_count_updated_at'] = completion['view_count_updated_at'].isoformat()
             
             # 格式化用户名
             completion['display_name'] = completion.get('first_name') or completion.get('username') or f"User_{completion['user_id']}"

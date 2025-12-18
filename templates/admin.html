@@ -681,6 +681,7 @@
                                 <tr>
                                     <th>用户</th>
                                     <th>任务标题</th>
+                                    <th>抓取状态</th>
                                     <th>剧集类型</th>
                                     <th>平台</th>
                                     <th>奖励</th>
@@ -936,9 +937,24 @@
                     const row = document.createElement('tr');
                     const viewCount = item.view_count ? item.view_count.toLocaleString() : '-';
                     const likeCount = item.like_count ? item.like_count.toLocaleString() : '-';
+                    
+                    // 抓取状态显示
+                    let fetchStatusHtml = '';
+                    if (item.view_count_updated_at) {
+                        const updateTime = formatTime(item.view_count_updated_at);
+                        if (item.view_count_fetch_error) {
+                            fetchStatusHtml = `<span class="badge badge-danger" title="${item.view_count_fetch_error}">❌ 失败</span><br><small>${updateTime}</small>`;
+                        } else {
+                            fetchStatusHtml = `<span class="badge badge-success">✅ 成功</span><br><small>${updateTime}</small>`;
+                        }
+                    } else {
+                        fetchStatusHtml = `<span class="badge badge-secondary">⏳ 未抓取</span>`;
+                    }
+                    
                     row.innerHTML = `
                         <td>${item.display_name} <small>(${item.user_id})</small></td>
                         <td>${truncate(item.title, 30)}</td>
+                        <td>${fetchStatusHtml}</td>
                         <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
