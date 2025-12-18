@@ -54,9 +54,24 @@ def start_category_sync_scheduler(application):
     Args:
         application: Telegram Bot Application 实例
     """
-    # 创建异步任务
-    asyncio.create_task(category_sync_task())
-    logger.info("✅ 分类同步调度器已启动")
+    # 使用 application.job_queue 来调度任务
+    # 首次立即同步
+    logger.info("📥 执行首次分类同步...")
+    sync_categories()
+    
+    # 创建定时任务（每15分钟执行一次）
+    async def sync_job(context):
+        logger.info("📥 执行定时分类同步...")
+        success = sync_categories()
+        if success:
+            last_sync = get_last_sync_time()
+            logger.info(f"✅ 分类同步成功，最后同步时间: {last_sync}")
+        else:
+            logger.warning("⚠️ 分类同步失败，将在下次定时任务时重试")
+    
+    # 添加到job_queue（每15分钟执行一次）
+    application.job_queue.run_repeating(sync_job, interval=900, first=10)
+    logger.info("✅ 分类同步调度器已启动（每15分钟同步一次）")
 
 
 if __name__ == '__main__':
