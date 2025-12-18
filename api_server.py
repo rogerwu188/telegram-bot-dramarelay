@@ -241,7 +241,8 @@ def create_task():
         # 支持 video_url 和 video_file_id 两种参数名
         video_url = data.get('video_file_id') or data.get('video_url')
         
-        category = data.get('category')
+        # 优先从 project_style 获取分类，其次是 category
+        category = data.get('project_style') or data.get('category')
         
         # 验证传入的分类是否有效
         if category and category in DRAMA_CATEGORIES and category != 'latest':
