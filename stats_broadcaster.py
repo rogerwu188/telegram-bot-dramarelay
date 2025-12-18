@@ -277,22 +277,26 @@ async def broadcast_all_tasks():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询所有活跃且配置了callback_url的任务
+        # 查询最近24小时内用户已完成的任务
         cur.execute("""
-            SELECT 
-                task_id,
-                external_task_id,
-                project_id,
-                title,
-                video_url,
-                callback_url,
-                callback_secret,
-                duration
-            FROM drama_tasks
-            WHERE status = 'active'
-              AND callback_url IS NOT NULL
-              AND callback_url != ''
-            ORDER BY task_id
+            SELECT DISTINCT
+                t.task_id,
+                t.external_task_id,
+                t.project_id,
+                t.title,
+                ut.submission_link as video_url,
+                t.callback_url,
+                t.callback_secret,
+                t.duration,
+                ut.user_id,
+                ut.submitted_at
+            FROM user_tasks ut
+            JOIN drama_tasks t ON ut.task_id = t.task_id
+            WHERE ut.status = 'submitted'
+              AND t.callback_url IS NOT NULL
+              AND t.callback_url != ''
+              AND ut.submitted_at >= NOW() - INTERVAL '24 hours'
+            ORDER BY ut.submitted_at DESC
         """)
         
         tasks = cur.fetchall()
