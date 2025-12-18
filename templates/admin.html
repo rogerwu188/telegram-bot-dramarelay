@@ -911,7 +911,7 @@
                     row.innerHTML = `
                         <td>${item.display_name} <small>(${item.user_id})</small></td>
                         <td>${truncate(item.title, 30)}</td>
-                        <td><span class="badge">${item.category ? (CATEGORY_NAMES_ZH[item.category] || item.category) : '-'}</span></td>
+                        <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td class="timestamp">${formatTime(item.completed_at)}</td>
@@ -991,7 +991,7 @@
                         <td>${item.external_task_id || '-'}</td>
                         <td><small>${truncate(item.project_id, 20)}</small></td>
                         <td>${truncate(item.title, 30)}</td>
-                        <td><span class="badge">${item.category ? (CATEGORY_NAMES_ZH[item.category] || item.category) : '-'}</span></td>
+                        <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td>${item.assigned_users}</td>
