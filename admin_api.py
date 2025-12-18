@@ -291,57 +291,98 @@ def get_webhook_logs():
         table_exists = cur.fetchone()['exists']
         logger.info(f"🔍 [DEBUG] webhook_logs表存在: {table_exists}, hours={hours}, limit={limit}")
         
-        # 如果表存在，从 webhook_logs 读取
+        # 如果表存在，从 webhook_logs 读取（按任务ID分组，只显示最新的一条回调记录）
         if table_exists:
             if hours > 0:
                 cur.execute("""
+                    WITH latest_webhooks AS (
+                        SELECT DISTINCT ON (task_id)
+                            id,
+                            task_id,
+                            task_title,
+                            project_id,
+                            callback_url,
+                            callback_status,
+                            payload,
+                            created_at
+                        FROM webhook_logs
+                        WHERE created_at >= NOW() - INTERVAL '%s hours'
+                        ORDER BY task_id, created_at DESC
+                    ),
+                    callback_counts AS (
+                        SELECT task_id, COUNT(*) as callback_count
+                        FROM webhook_logs
+                        WHERE created_at >= NOW() - INTERVAL '%s hours'
+                        GROUP BY task_id
+                    )
                     SELECT 
-                        wl.id,
-                        wl.task_id,
-                        wl.task_title as title,
-                        wl.project_id,
-                        wl.callback_url,
-                        wl.callback_status,
-                        wl.payload,
-                        wl.created_at,
+                        lw.id,
+                        lw.task_id,
+                        lw.task_title as title,
+                        lw.project_id,
+                        lw.callback_url,
+                        lw.callback_status,
+                        lw.payload,
+                        lw.created_at,
                         t.external_task_id,
                         t.callback_retry_count,
                         t.callback_last_attempt,
                         t.video_url,
-                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
-                    FROM webhook_logs wl
-                    LEFT JOIN drama_tasks t ON wl.task_id = t.task_id
-                    LEFT JOIN user_tasks ut ON wl.task_id = ut.task_id
-                    WHERE wl.created_at >= NOW() - INTERVAL '%s hours'
-                    GROUP BY wl.id, wl.task_id, wl.task_title, wl.project_id, wl.callback_url, 
-                             wl.callback_status, wl.payload, wl.created_at, t.external_task_id,
-                             t.callback_retry_count, t.callback_last_attempt, t.video_url
-                    ORDER BY wl.created_at DESC
+                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count,
+                        COALESCE(cc.callback_count, 1) as callback_count
+                    FROM latest_webhooks lw
+                    LEFT JOIN drama_tasks t ON lw.task_id = t.task_id
+                    LEFT JOIN user_tasks ut ON lw.task_id = ut.task_id
+                    LEFT JOIN callback_counts cc ON lw.task_id = cc.task_id
+                    GROUP BY lw.id, lw.task_id, lw.task_title, lw.project_id, lw.callback_url, 
+                             lw.callback_status, lw.payload, lw.created_at, t.external_task_id,
+                             t.callback_retry_count, t.callback_last_attempt, t.video_url, cc.callback_count
+                    ORDER BY lw.created_at DESC
                     LIMIT %s
-                """, (hours, limit))
+                """, (hours, hours, limit))
             else:
                 cur.execute("""
+                    WITH latest_webhooks AS (
+                        SELECT DISTINCT ON (task_id)
+                            id,
+                            task_id,
+                            task_title,
+                            project_id,
+                            callback_url,
+                            callback_status,
+                            payload,
+                            created_at
+                        FROM webhook_logs
+                        ORDER BY task_id, created_at DESC
+                    ),
+                    callback_counts AS (
+                        SELECT task_id, COUNT(*) as callback_count
+                        FROM webhook_logs
+                        GROUP BY task_id
+                    )
                     SELECT 
-                        wl.id,
-                        wl.task_id,
-                        wl.task_title as title,
-                        wl.project_id,
-                        wl.callback_url,
-                        wl.callback_status,
-                        wl.payload,
-                        wl.created_at,
+                        lw.id,
+                        lw.task_id,
+                        lw.task_title as title,
+                        lw.project_id,
+                        lw.callback_url,
+                        lw.callback_status,
+                        lw.payload,
+                        lw.created_at,
                         t.external_task_id,
                         t.callback_retry_count,
                         t.callback_last_attempt,
                         t.video_url,
-                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count
-                    FROM webhook_logs wl
-                    LEFT JOIN drama_tasks t ON wl.task_id = t.task_id
-                    LEFT JOIN user_tasks ut ON wl.task_id = ut.task_id
-                    GROUP BY wl.id, wl.task_id, wl.task_title, wl.project_id, wl.callback_url, 
-                             wl.callback_status, wl.payload, wl.created_at, t.external_task_id,
-                             t.callback_retry_count, t.callback_last_attempt, t.video_url
-                    ORDER BY wl.created_at DESC
+                        COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_count,
+                        COALESCE(cc.callback_count, 1) as callback_count
+                    FROM latest_webhooks lw
+                    LEFT JOIN drama_tasks t ON lw.task_id = t.task_id
+                    LEFT JOIN user_tasks ut ON lw.task_id = ut.task_id
+                    LEFT JOIN callback_counts cc ON lw.task_id = cc.task_id
+                    GROUP BY lw.id, lw.task_id, lw.task_title, lw.project_id, lw.callback_url, 
+                             lw.callback_status, lw.payload, lw.created_at, t.external_task_id,
+                             t.callback_retry_count, t.callback_last_attempt, t.video_url, cc.callback_count
+                    ORDER BY lw.created_at DESC
                     LIMIT %s
                 """, (limit,))
             

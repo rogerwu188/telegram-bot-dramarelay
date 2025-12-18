@@ -627,6 +627,7 @@
                                     <th>拆条任务视频</th>
                                     <th>用户分发链接</th>
                                     <th>回调状态</th>
+                                    <th>回调次数</th>
                                     <th>回调时间</th>
                                     <th>重试次数</th>
                                     <th>最后尝试</th>
@@ -823,6 +824,7 @@
                         <td>${item.video_url ? `<a href="${item.video_url}" target="_blank" class="link">🎥 播放</a>` : '-'}</td>
                         <td>${item.user_submissions && item.user_submissions.length > 0 ? item.user_submissions.map(sub => `<a href="${sub.video_url}" target="_blank" class="link" title="User ${sub.user_id}">🔗</a>`).join(' ') : '-'}</td>
                         <td><span class="badge ${item.status_class}">${item.status_label}</span></td>
+                        <td><span class="badge ${item.callback_count > 1 ? 'warning' : 'info'}">${item.callback_count || 1}次</span></td>
                         <td class="timestamp">${formatTime(item.created_at || item.callback_last_attempt)}</td>
                         <td>${item.callback_retry_count || 0}</td>
                         <td class="timestamp">${formatTime(item.callback_last_attempt)}</td>
