@@ -6,7 +6,8 @@
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from category_classifier import get_all_categories, get_category_name
+from x2c_category_sync import get_all_categories_for_bot
+from category_classifier import get_category_name
 import logging
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         logger.info(f"✅ 分类 {category} 查询到任务: {[t['task_id'] for t in available_tasks[:3]]}")
     
     # 构建分类切换按钮
-    categories = get_all_categories(user_lang)
+    categories = get_all_categories_for_bot(user_lang)
     category_buttons = []
     
     # 查询每个分类的可领取任务数量

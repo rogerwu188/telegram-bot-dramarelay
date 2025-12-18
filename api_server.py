@@ -236,22 +236,27 @@ def create_task():
         cur = conn.cursor()
         
         # 处理剧集分类
-        from category_classifier import classify_drama_by_ai, DRAMA_CATEGORIES
+        from x2c_category_sync import get_category_code
         
         # 支持 video_url 和 video_file_id 两种参数名
         video_url = data.get('video_file_id') or data.get('video_url')
         
-        # 优先从 project_style 获取分类，其次是 category
-        category = data.get('project_style') or data.get('category')
+        # 从 X2C 的 project_style 获取分类（格式如 "#Female Revenge Arc"）
+        project_style = data.get('project_style') or data.get('category')
         
-        # 验证传入的分类是否有效
-        if category and category in DRAMA_CATEGORIES and category != 'latest':
-            # 有值且在分类模版库内，使用传入的分类
-            logger.info(f"✅ 使用传入的分类: {data.get('title')} → {category}")
+        # 将 project_style 映射为 Bot 的分类代码
+        if project_style:
+            category = get_category_code(project_style)
+            if category:
+                logger.info(f"✅ 使用 X2C 分类: {data.get('title')} | {project_style} → {category}")
+            else:
+                # 未找到映射，使用原值
+                category = project_style
+                logger.warning(f"⚠️ 未找到分类映射，使用原值: {project_style}")
         else:
-            # 无值或不在模版库内，使用 AI 自动分类
-            category = classify_drama_by_ai(data.get('title'), data.get('description', ''))
-            logger.info(f"🤖 AI 自动分类: {data.get('title')} → {category}")
+            # 没有 project_style，使用默认分类
+            category = 'latest'
+            logger.info(f"🆕 未提供分类，使用默认: {data.get('title')} → {category}")
         
         # 处理任务状态：将 'approved' 映射为 'active'
         # X2C 平台可能传入 'approved' 状态，但 Bot 只识别 'active' 状态

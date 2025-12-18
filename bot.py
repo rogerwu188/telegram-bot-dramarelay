@@ -2788,6 +2788,10 @@ def main():
     # 创建应用
     application = Application.builder().token(BOT_TOKEN).build()
     
+    # 启动分类同步调度器
+    from category_sync_scheduler import start_category_sync_scheduler
+    start_category_sync_scheduler(application)
+    
     # 命令处理器
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("check_invitation", check_invitation_command))
