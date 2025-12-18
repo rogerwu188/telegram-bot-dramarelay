@@ -191,20 +191,22 @@ def update_view_count(user_task_id, view_count, like_count):
         current_view = current['view_count'] or 0
         current_like = current['like_count'] or 0
         
-        # 增量更新：只有新值大于旧值时才更新
+        # 增量更新：只有新值大于旧值时才更新数值
         new_view = max(view_count, current_view)
         new_like = max(like_count, current_like)
         
+        # 无论数值是否变化，都更新时间戳（表示已抓取）
+        cur.execute("""
+            UPDATE user_tasks 
+            SET view_count = %s, like_count = %s, view_count_updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (new_view, new_like, user_task_id))
+        conn.commit()
+        
         if new_view > current_view or new_like > current_like:
-            cur.execute("""
-                UPDATE user_tasks 
-                SET view_count = %s, like_count = %s, view_count_updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (new_view, new_like, user_task_id))
-            conn.commit()
             logger.info(f"✅ 更新播放量: task_id={user_task_id}, view: {current_view} -> {new_view}, like: {current_like} -> {new_like}")
         else:
-            logger.debug(f"📊 播放量无变化: task_id={user_task_id}, view={current_view}, like={current_like}")
+            logger.info(f"📊 播放量无变化: task_id={user_task_id}, view={current_view}, like={current_like} (已更新抓取时间)")
         
         cur.close()
         conn.close()
