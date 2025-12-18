@@ -890,6 +890,11 @@ def update_callback_url_route():
     """批量更新callback_url"""
     return admin_api.update_callback_url()
 
+@app.route('/api/admin/migrate_categories', methods=['POST'])
+def migrate_categories_route():
+    """迁移旧的category值到X2C分类"""
+    return admin_api.migrate_categories()
+
 @app.route('/api/admin/create_webhook_logs_table', methods=['POST'])
 def create_webhook_logs_table():
     """创建webhook_logs表（一次性操作）"""
