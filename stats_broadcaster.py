@@ -295,7 +295,7 @@ async def broadcast_all_tasks():
             WHERE ut.status = 'submitted'
               AND t.callback_url IS NOT NULL
               AND t.callback_url != ''
-              AND ut.submitted_at >= NOW() - INTERVAL '24 hours'
+              AND ut.submitted_at >= NOW() - INTERVAL '7 days'
             ORDER BY ut.submitted_at DESC
         """)
         
