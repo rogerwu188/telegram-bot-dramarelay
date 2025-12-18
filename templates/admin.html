@@ -680,17 +680,17 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>用户</th>
+                                    <th>任务ID</th>
                                     <th>任务标题</th>
+                                    <th>完成人数</th>
                                     <th>抓取状态</th>
                                     <th>剧集类型</th>
                                     <th>平台</th>
                                     <th>奖励</th>
-                                    <th>完成时间</th>
-                                    <th>用时</th>
-                                    <th>提交链接</th>
-                                    <th>播放量</th>
-                                    <th>点赞数</th>
+                                    <th>最新完成</th>
+                                    <th>总播放量</th>
+                                    <th>总点赞</th>
+                                    <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="completions-body"></tbody>
@@ -902,7 +902,7 @@
             }
         }
         
-        // 加载完成日志
+        // 加载完成日志（按任务分组显示）
         async function loadCompletions() {
             const loading = document.getElementById('completions-loading');
             const error = document.getElementById('completions-error');
@@ -937,34 +937,32 @@
                 tbody.innerHTML = '';
                 result.data.forEach(item => {
                     const row = document.createElement('tr');
-                    const viewCount = item.view_count ? item.view_count.toLocaleString() : '-';
-                    const likeCount = item.like_count ? item.like_count.toLocaleString() : '-';
+                    const totalViewCount = item.total_view_count ? item.total_view_count.toLocaleString() : '-';
+                    const totalLikeCount = item.total_like_count ? item.total_like_count.toLocaleString() : '-';
                     
                     // 抓取状态显示
                     let fetchStatusHtml = '';
                     if (item.view_count_updated_at) {
                         const updateTime = formatTime(item.view_count_updated_at);
-                        if (item.view_count_fetch_error) {
-                            fetchStatusHtml = `<span class="badge badge-danger" title="${item.view_count_fetch_error}">❌ 失败</span><br><small>${updateTime}</small>`;
-                        } else {
-                            fetchStatusHtml = `<span class="badge badge-success">✅ 成功</span><br><small>${updateTime}</small>`;
-                        }
+                        fetchStatusHtml = `<span class="badge badge-success">✅ 成功</span><br><small>${updateTime}</small>`;
                     } else {
                         fetchStatusHtml = `<span class="badge badge-secondary">⏳ 未抓取</span>`;
                     }
                     
                     row.innerHTML = `
-                        <td>${item.display_name} <small>(${item.user_id})</small></td>
+                        <td>${item.task_id}</td>
                         <td>${truncate(item.title, 30)}</td>
+                        <td><span class="badge badge-info">${item.completion_count} 人</span></td>
                         <td>${fetchStatusHtml}</td>
                         <td><span class="badge">${item.category || '-'}</span></td>
-                        <td>${item.platform_requirements}</td>
+                        <td>${item.platform_requirements || '-'}</td>
                         <td>${item.node_power_reward} X2C</td>
-                        <td class="timestamp">${formatTime(item.completed_at)}</td>
-                        <td>${formatDuration(item.duration_seconds)}</td>
-                        <td><a href="${item.submission_link}" target="_blank" class="link">${truncate(item.submission_link, 40)}</a></td>
-                        <td><span class="view-count">👁 ${viewCount}</span></td>
-                        <td><span class="like-count">❤️ ${likeCount}</span></td>
+                        <td class="timestamp">${formatTime(item.latest_completed_at)}</td>
+                        <td><span class="view-count">👁 ${totalViewCount}</span></td>
+                        <td><span class="like-count">❤️ ${totalLikeCount}</span></td>
+                        <td>
+                            <button class="btn-view" onclick='showCompleters(${JSON.stringify(item.completers).replace(/'/g, "&apos;")})'>👥 查看完成者(${item.completion_count})</button>
+                        </td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -975,6 +973,30 @@
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
             }
+        }
+        
+        // 显示完成者详情弹窗
+        function showCompleters(completers) {
+            const modal = document.getElementById('callback-modal');
+            const modalTitle = modal.querySelector('.modal-header h3');
+            const jsonViewer = document.getElementById('json-viewer');
+            modalTitle.textContent = '👥 完成者详情 (' + completers.length + ' 人)';
+            
+            // 格式化完成者信息
+            let html = '';
+            completers.forEach((c, index) => {
+                html += `══════════ 完成者 ${index + 1} ══════════\n`;
+                html += `用户: ${c.display_name} (${c.user_id})\n`;
+                html += `完成时间: ${c.completed_at || '-'}\n`;
+                html += `用时: ${formatDuration(c.duration_seconds)}\n`;
+                html += `播放量: ${c.view_count || 0}\n`;
+                html += `点赞数: ${c.like_count || 0}\n`;
+                html += `抓取时间: ${c.view_count_updated_at || '未抓取'}\n`;
+                html += `提交链接: ${c.submission_link}\n\n`;
+            });
+            
+            jsonViewer.textContent = html;
+            modal.classList.add('show');
         }
                 // 分类中文映射
         const CATEGORY_NAMES_ZH = {

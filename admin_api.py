@@ -171,7 +171,7 @@ def get_task_logs():
 def get_completion_logs():
     """
     获取任务完成日志
-    包括：用户信息、完成时间、验证结果
+    按任务分组，同一任务的多个完成者整合到一行
     """
     try:
         limit = int(request.args.get('limit', 50))
@@ -180,13 +180,10 @@ def get_completion_logs():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询最近完成的任务
+        # 查询最近完成的任务（按任务分组）
         if hours > 0:
             cur.execute("""
                 SELECT 
-                    ut.user_id,
-                    u.username,
-                    u.first_name,
                     t.task_id,
                     t.external_task_id,
                     t.project_id,
@@ -194,28 +191,23 @@ def get_completion_logs():
                     t.category,
                     t.platform_requirements,
                     t.node_power_reward,
-                    ut.status,
-                    ut.created_at as assigned_at,
-                    ut.submitted_at as completed_at,
-                    ut.submission_link,
-                    COALESCE(ut.view_count, 0) as view_count,
-                    COALESCE(ut.like_count, 0) as like_count,
-                    ut.view_count_updated_at,
-                    EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
+                    COUNT(DISTINCT ut.user_id) as completion_count,
+                    SUM(COALESCE(ut.view_count, 0)) as total_view_count,
+                    SUM(COALESCE(ut.like_count, 0)) as total_like_count,
+                    MAX(ut.submitted_at) as latest_completed_at,
+                    MIN(ut.submitted_at) as earliest_completed_at,
+                    MAX(ut.view_count_updated_at) as view_count_updated_at
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
-                LEFT JOIN users u ON ut.user_id = u.user_id
                 WHERE ut.status = 'submitted'
                     AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
-                ORDER BY ut.submitted_at DESC
+                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward
+                ORDER BY MAX(ut.submitted_at) DESC
                 LIMIT %s
             """, (hours, limit))
         else:
             cur.execute("""
                 SELECT 
-                    ut.user_id,
-                    u.username,
-                    u.first_name,
                     t.task_id,
                     t.external_task_id,
                     t.project_id,
@@ -223,46 +215,92 @@ def get_completion_logs():
                     t.category,
                     t.platform_requirements,
                     t.node_power_reward,
-                    ut.status,
-                    ut.created_at as assigned_at,
-                    ut.submitted_at as completed_at,
+                    COUNT(DISTINCT ut.user_id) as completion_count,
+                    SUM(COALESCE(ut.view_count, 0)) as total_view_count,
+                    SUM(COALESCE(ut.like_count, 0)) as total_like_count,
+                    MAX(ut.submitted_at) as latest_completed_at,
+                    MIN(ut.submitted_at) as earliest_completed_at,
+                    MAX(ut.view_count_updated_at) as view_count_updated_at
+                FROM user_tasks ut
+                JOIN drama_tasks t ON ut.task_id = t.task_id
+                WHERE ut.status = 'submitted'
+                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward
+                ORDER BY MAX(ut.submitted_at) DESC
+                LIMIT %s
+            """, (limit,))
+        
+        tasks = cur.fetchall()
+        
+        # 为每个任务获取完成者详情
+        result_data = []
+        for task in tasks:
+            task_id = task['task_id']
+            
+            # 获取该任务的所有完成者
+            cur.execute("""
+                SELECT 
+                    ut.user_id,
+                    u.username,
+                    u.first_name,
                     ut.submission_link,
+                    ut.submitted_at as completed_at,
                     COALESCE(ut.view_count, 0) as view_count,
                     COALESCE(ut.like_count, 0) as like_count,
                     ut.view_count_updated_at,
                     EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
                 FROM user_tasks ut
-                JOIN drama_tasks t ON ut.task_id = t.task_id
                 LEFT JOIN users u ON ut.user_id = u.user_id
-                WHERE ut.status = 'submitted'
-                ORDER BY ut.submitted_at DESC
-                LIMIT %s
-            """, (limit,))
-        
-        completions = cur.fetchall()
-        
-        # 转换日期格式
-        for completion in completions:
-            if completion['assigned_at']:
-                completion['assigned_at'] = completion['assigned_at'].isoformat()
-            if completion['completed_at']:
-                completion['completed_at'] = completion['completed_at'].isoformat()
-            if completion.get('view_count_updated_at'):
-                completion['view_count_updated_at'] = completion['view_count_updated_at'].isoformat()
+                WHERE ut.task_id = %s AND ut.status = 'submitted'
+                ORDER BY ut.submitted_at ASC
+            """, (task_id,))
             
-            # 格式化用户名
-            completion['display_name'] = completion.get('first_name') or completion.get('username') or f"User_{completion['user_id']}"
+            completers = cur.fetchall()
+            
+            # 格式化完成者数据
+            completers_list = []
+            for c in completers:
+                display_name = c.get('first_name') or c.get('username') or f"User_{c['user_id']}"
+                completers_list.append({
+                    'user_id': c['user_id'],
+                    'display_name': display_name,
+                    'submission_link': c['submission_link'],
+                    'completed_at': c['completed_at'].isoformat() if c['completed_at'] else None,
+                    'view_count': c['view_count'],
+                    'like_count': c['like_count'],
+                    'view_count_updated_at': c['view_count_updated_at'].isoformat() if c.get('view_count_updated_at') else None,
+                    'duration_seconds': c['duration_seconds']
+                })
+            
+            # 构建任务数据
+            task_data = {
+                'task_id': task['task_id'],
+                'external_task_id': task['external_task_id'],
+                'project_id': task['project_id'],
+                'title': task['title'],
+                'category': task['category'],
+                'platform_requirements': task['platform_requirements'],
+                'node_power_reward': task['node_power_reward'],
+                'completion_count': task['completion_count'],
+                'total_view_count': task['total_view_count'] or 0,
+                'total_like_count': task['total_like_count'] or 0,
+                'latest_completed_at': task['latest_completed_at'].isoformat() if task['latest_completed_at'] else None,
+                'earliest_completed_at': task['earliest_completed_at'].isoformat() if task['earliest_completed_at'] else None,
+                'view_count_updated_at': task['view_count_updated_at'].isoformat() if task.get('view_count_updated_at') else None,
+                'completers': completers_list
+            }
+            result_data.append(task_data)
         
         cur.close()
         conn.close()
         
         return jsonify({
             'success': True,
-            'data': completions,
-            'count': len(completions)
+            'data': result_data,
+            'count': len(result_data)
         })
     
     except Exception as e:
+        logger.error(f"获取完成日志失败: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
