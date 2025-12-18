@@ -30,26 +30,10 @@ def log_webhook_success(task_id, task_title, project_id, callback_url, payload):
     记录成功的webhook日志
     """
     try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        from urllib.parse import urlparse
-        import os
         import json
         
-        database_url = os.environ.get('DATABASE_URL')
-        if not database_url:
-            logger.error("❌ DATABASE_URL 未设置")
-            return
-        
-        # 解析数据库URL
-        result = urlparse(database_url)
-        conn = psycopg2.connect(
-            database=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host=result.hostname,
-            port=result.port
-        )
+        # 使用统一的数据库连接函数
+        conn = get_db_connection()
         cur = conn.cursor()
         
         # 记录到webhook_logs表
@@ -74,25 +58,8 @@ def log_broadcaster_error(task_id, task_title, project_id, video_url, platform, 
     记录回传错误日志
     """
     try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        from urllib.parse import urlparse
-        import os
-        
-        database_url = os.environ.get('DATABASE_URL')
-        if not database_url:
-            logger.error("❌ DATABASE_URL 未设置")
-            return
-        
-        # 解析数据库URL
-        result = urlparse(database_url)
-        conn = psycopg2.connect(
-            database=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host=result.hostname,
-            port=result.port
-        )
+        # 使用统一的数据库连接函数
+        conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("""
@@ -114,17 +81,9 @@ def get_db_connection():
     """获取数据库连接"""
     import psycopg2
     from psycopg2.extras import RealDictCursor
-    from urllib.parse import urlparse
     
-    result = urlparse(DATABASE_URL)
-    return psycopg2.connect(
-        database=result.path[1:],
-        user=result.username,
-        password=result.password,
-        host=result.hostname,
-        port=result.port,
-        cursor_factory=RealDictCursor
-    )
+    # 直接使用DATABASE_URL连接，保留所有连接参数（如SSL等）
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 async def fetch_task_stats(task_id: int, video_url: str, platform: str):
     """
