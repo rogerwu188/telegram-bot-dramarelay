@@ -273,6 +273,7 @@ def get_webhook_logs():
             )
         """)
         table_exists = cur.fetchone()['exists']
+        logger.info(f"🔍 [DEBUG] webhook_logs表存在: {table_exists}, hours={hours}, limit={limit}")
         
         # 如果表存在，从 webhook_logs 读取
         if table_exists:
@@ -329,6 +330,14 @@ def get_webhook_logs():
                 """, (limit,))
             
             webhooks = cur.fetchall()
+            
+            # 调试日志：输出查询到的记录数
+            logger.info(f"🔍 [DEBUG] 查询到的webhook记录数: {len(webhooks)}")
+            
+            # 查询总记录数
+            cur.execute("SELECT COUNT(*) as total FROM webhook_logs")
+            total_count = cur.fetchone()['total']
+            logger.info(f"🔍 [DEBUG] webhook_logs表总记录数: {total_count}")
             
             # 转换日期格式
             for webhook in webhooks:
