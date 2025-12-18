@@ -44,10 +44,15 @@ def log_webhook_success(task_id, task_title, project_id, callback_url, payload):
         """, (task_id, task_title, project_id, callback_url, 'success', json.dumps(payload, ensure_ascii=False)))
         
         conn.commit()
+        
+        # 验证是否插入成功
+        cur.execute("SELECT COUNT(*) as total FROM webhook_logs WHERE task_id = %s", (task_id,))
+        count = cur.fetchone()['total']
+        
         cur.close()
         conn.close()
         
-        logger.info(f"✅ 记录webhook成功日志: 任务 {task_id}")
+        logger.info(f"✅ 记录webhook成功日志: 任务 {task_id}, 表中该任务记录数: {count}")
     except Exception as e:
         logger.error(f"❌ 记录webhook成功日志失败: {e}")
         import traceback
