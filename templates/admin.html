@@ -1227,6 +1227,7 @@
         async function saveCallbackUrl() {
             const input = document.getElementById('callback-url-input');
             const callbackUrl = input.value.trim();
+            const saveBtn = document.querySelector('button[onclick="saveCallbackUrl()"]');
             
             if (!callbackUrl) {
                 alert('⚠️ 请输入 Callback URL');
@@ -1251,13 +1252,15 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    const btn = event.target;
-                    const originalText = btn.textContent;
-                    btn.textContent = '✅ 已保存';
-                    btn.style.background = '#28a745';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                    }, 2000);
+                    if (saveBtn) {
+                        const originalText = saveBtn.textContent;
+                        saveBtn.textContent = '✅ 已保存';
+                        saveBtn.style.background = '#28a745';
+                        setTimeout(() => {
+                            saveBtn.textContent = originalText;
+                        }, 2000);
+                    }
+                    alert('✅ Callback URL 保存成功！');
                 } else {
                     alert('❌ 保存失败: ' + (result.error || '未知错误'));
                 }
