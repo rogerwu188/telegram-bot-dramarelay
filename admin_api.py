@@ -4,6 +4,7 @@
 提供日志查询接口
 """
 
+import logging
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 import psycopg2
@@ -11,6 +12,13 @@ from psycopg2.extras import RealDictCursor
 import os
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
+
+# 配置日志
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
