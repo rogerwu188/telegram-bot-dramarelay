@@ -369,12 +369,18 @@ def get_webhook_logs():
                 # payload已经是JSONB格式
                 webhook['callback_payload'] = webhook.get('payload', {})
                 
-                # 从 payload 中提取 view_count
-                payload = webhook.get('payload', {})
-                stats = payload.get('stats', [])
-                if stats and len(stats) > 0:
-                    # 获取第一个 stats 的 view_count（每个 webhook 只包含一个任务）
-                    webhook['view_count'] = stats[0].get('view_count', 0)
+                # 从 user_tasks 表获取播放量数据（而不是从 payload 中获取）
+                task_id_for_view = webhook.get('task_id')
+                if task_id_for_view:
+                    cur_view = conn.cursor()
+                    cur_view.execute("""
+                        SELECT COALESCE(SUM(view_count), 0) as total_views
+                        FROM user_tasks
+                        WHERE task_id = %s AND status = 'submitted'
+                    """, (task_id_for_view,))
+                    view_result = cur_view.fetchone()
+                    webhook['view_count'] = view_result['total_views'] if view_result else 0
+                    cur_view.close()
                 else:
                     webhook['view_count'] = 0
                 
