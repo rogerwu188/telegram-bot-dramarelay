@@ -157,9 +157,12 @@ async def send_task_completed_webhook(
             conn.close()
             return False
         
+        # 调试日志：输出任务信息
+        logger.info(f"🔍 [DEBUG] 任务信息: task_id={task_id}, title={task.get('title')}, callback_url={task.get('callback_url') or 'NULL'}")
+        
         # 如果没有配置回调 URL,直接返回成功
         if not task['callback_url']:
-            logger.info(f"ℹ️ 任务 {task_id} 未配置回调 URL,跳过回调")
+            logger.warning(f"⚠️ [SKIP] 任务 {task_id} (\"{task.get('title')}\") 未配置回调 URL,跳过回调")
             cur.close()
             conn.close()
             return True
