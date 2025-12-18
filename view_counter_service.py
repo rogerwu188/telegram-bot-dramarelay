@@ -22,8 +22,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# TikTok View Counter API
-TIKTOK_API_URL = 'https://tiktok-view-counter-production.up.railway.app/api/analyze'
+# Video Analytics API (支持 TikTok 和 YouTube)
+VIDEO_ANALYTICS_API_URL = 'https://tiktok-view-counter-production.up.railway.app/api/analyze'
 
 # 数据库连接
 DATABASE_URL = os.getenv('DATABASE_URL') or 'postgresql://postgres:UTKrUjgtzTzfCRQcXtohVuKalpdeCLns@postgres.railway.internal:5432/railway'
@@ -107,41 +107,43 @@ def ensure_view_count_error_log_table():
         logger.error(f"❌ 创建错误日志表失败: {e}")
         return False
 
-def get_tiktok_stats(tiktok_url):
+def get_video_stats(video_url):
     """
-    调用 TikTok View Counter API 获取视频统计数据
+    调用 Video Analytics API 获取视频统计数据
+    支持 TikTok 和 YouTube
     
     Args:
-        tiktok_url (str): TikTok 视频 URL
+        video_url (str): 视频 URL (TikTok 或 YouTube)
         
     Returns:
-        dict: 包含 view_count, like_count 等信息的字典，失败返回 None
+        dict: 包含 view_count, like_count, platform 等信息的字典，失败返回 None
     """
     try:
         response = requests.post(
-            TIKTOK_API_URL,
-            json={'url': tiktok_url},
+            VIDEO_ANALYTICS_API_URL,
+            json={'url': video_url},
             headers={'Content-Type': 'application/json'},
             timeout=60  # 60秒超时
         )
         
         if response.status_code == 200:
             data = response.json()
-            logger.info(f"✅ 获取播放量成功: {tiktok_url} -> 播放量: {data.get('view_count', 0)}, 点赞: {data.get('like_count', 0)}")
+            platform = data.get('platform', 'unknown')
+            logger.info(f"✅ 获取播放量成功 [{platform}]: {video_url} -> 播放量: {data.get('view_count', 0)}, 点赞: {data.get('like_count', 0)}")
             return data
         else:
             error_detail = response.json().get('detail', f'HTTP {response.status_code}')
-            logger.warning(f"⚠️ API返回错误: {tiktok_url} -> {error_detail}")
+            logger.warning(f"⚠️ API返回错误: {video_url} -> {error_detail}")
             return {'error': error_detail, 'error_type': 'api_error'}
             
     except requests.exceptions.Timeout:
-        logger.warning(f"⚠️ 请求超时: {tiktok_url}")
+        logger.warning(f"⚠️ 请求超时: {video_url}")
         return {'error': '请求超时', 'error_type': 'timeout'}
     except requests.exceptions.RequestException as e:
-        logger.error(f"❌ 请求失败: {tiktok_url} -> {str(e)}")
+        logger.error(f"❌ 请求失败: {video_url} -> {str(e)}")
         return {'error': str(e), 'error_type': 'request_error'}
     except Exception as e:
-        logger.error(f"❌ 未知错误: {tiktok_url} -> {str(e)}")
+        logger.error(f"❌ 未知错误: {video_url} -> {str(e)}")
         return {'error': str(e), 'error_type': 'unknown_error'}
 
 def log_view_count_error(user_task_id, submission_link, error_type, error_message):
@@ -215,11 +217,27 @@ def update_view_count(user_task_id, view_count, like_count):
         logger.error(f"❌ 更新播放量失败: {e}")
         return False
 
-def is_tiktok_url(url):
-    """检查是否是TikTok链接"""
+def is_supported_video_url(url):
+    """
+    检查是否是支持的视频链接（TikTok 或 YouTube）
+    
+    Args:
+        url: 视频链接
+        
+    Returns:
+        tuple: (is_supported: bool, platform: str)
+    """
     if not url:
-        return False
-    return 'tiktok.com' in url.lower()
+        return False, None
+    
+    url_lower = url.lower()
+    
+    if 'tiktok.com' in url_lower:
+        return True, 'tiktok'
+    elif 'youtube.com' in url_lower or 'youtu.be' in url_lower:
+        return True, 'youtube'
+    else:
+        return False, None
 
 def fetch_all_view_counts():
     """
@@ -235,14 +253,16 @@ def fetch_all_view_counts():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 获取所有已提交的任务（只获取TikTok链接）
+        # 获取所有已提交的任务（TikTok 和 YouTube）
         cur.execute("""
             SELECT id, submission_link, view_count, like_count
             FROM user_tasks
             WHERE status = 'submitted'
               AND submission_link IS NOT NULL
               AND submission_link != ''
-              AND submission_link LIKE '%tiktok.com%'
+              AND (submission_link LIKE '%tiktok.com%' 
+                   OR submission_link LIKE '%youtube.com%' 
+                   OR submission_link LIKE '%youtu.be%')
             ORDER BY submitted_at DESC
         """)
         
@@ -250,7 +270,7 @@ def fetch_all_view_counts():
         cur.close()
         conn.close()
         
-        logger.info(f"📊 找到 {len(tasks)} 个TikTok任务需要更新播放量")
+        logger.info(f"📊 找到 {len(tasks)} 个视频任务需要更新播放量 (TikTok + YouTube)")
         
         success_count = 0
         error_count = 0
@@ -260,13 +280,14 @@ def fetch_all_view_counts():
             task_id = task['id']
             submission_link = task['submission_link']
             
-            # 检查是否是TikTok链接
-            if not is_tiktok_url(submission_link):
+            # 检查是否是支持的视频链接
+            is_supported, platform = is_supported_video_url(submission_link)
+            if not is_supported:
                 skip_count += 1
                 continue
             
             # 调用API获取播放量
-            result = get_tiktok_stats(submission_link)
+            result = get_video_stats(submission_link)
             
             if result and 'error' not in result:
                 # 成功获取，增量更新
