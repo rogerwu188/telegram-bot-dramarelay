@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import time
 import logging
+import json
 from datetime import datetime
 from typing import Dict, Optional
 import aiohttp
@@ -232,11 +233,29 @@ async def send_task_completed_webhook(
             secret=task['callback_secret']
         )
         
-        # 更新回调状态
+        # 更新回调状态并记录到webhook_logs
         conn = get_db_connection()
         cur = conn.cursor()
         
         retry_count = task['callback_retry_count'] or 0
+        
+        # 记录到webhook_logs表
+        try:
+            cur.execute("""
+                INSERT INTO webhook_logs 
+                (task_id, task_title, project_id, callback_url, callback_status, payload)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                task_id,
+                task['title'],
+                task['project_id'],
+                task['callback_url'],
+                'success' if success else 'failed',
+                json.dumps(payload, ensure_ascii=False)
+            ))
+            logger.info(f"📝 Webhook日志已记录: task_id={task_id}, status={'success' if success else 'failed'}")
+        except Exception as log_error:
+            logger.error(f"⚠️ 记录webhook日志失败: {log_error}")
         
         if success:
             # 回调成功
