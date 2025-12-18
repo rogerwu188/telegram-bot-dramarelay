@@ -277,7 +277,27 @@ async def broadcast_all_tasks():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询最近24小时内用户已完成的任务
+        # 查询最近7天内用户已完成的任务
+        logger.info("🔍 [DEBUG] 开始查询已完成的任务...")
+        
+        # 先查询user_tasks表中所有submitted的记录
+        cur.execute("""
+            SELECT COUNT(*) as total
+            FROM user_tasks 
+            WHERE status = 'submitted'
+        """)
+        total_submitted = cur.fetchone()['total']
+        logger.info(f"🔍 [DEBUG] user_tasks表中 submitted 状态的任务总数: {total_submitted}")
+        
+        # 查询drama_tasks表中有callback_url的任务数
+        cur.execute("""
+            SELECT COUNT(*) as total
+            FROM drama_tasks
+            WHERE callback_url IS NOT NULL AND callback_url != ''
+        """)
+        callback_count = cur.fetchone()['total']
+        logger.info(f"🔍 [DEBUG] drama_tasks表中有callback_url的任务数: {callback_count}")
+        
         cur.execute("""
             SELECT DISTINCT
                 t.task_id,
@@ -300,11 +320,18 @@ async def broadcast_all_tasks():
         """)
         
         tasks = cur.fetchall()
+        logger.info(f"🔍 [DEBUG] 查询到 {len(tasks)} 个符合条件的任务")
+        
+        if tasks:
+            for task in tasks:
+                callback_preview = task['callback_url'][:50] if task['callback_url'] else 'NULL'
+                logger.info(f"🔍 [DEBUG] 任务: task_id={task['task_id']}, title={task['title']}, callback_url={callback_preview}...")
+        
         cur.close()
         conn.close()
         
         if not tasks:
-            logger.info("ℹ️ 没有需要回传的任务")
+            logger.warning("⚠️ 没有需要回传的任务（查询结果为空）")
             return {
                 'success': True,
                 'total': 0,
