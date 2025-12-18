@@ -185,15 +185,12 @@ def get_all_categories_for_bot(language: str = 'zh') -> Dict[str, str]:
     for project_style, info in _cached_categories.items():
         code = info['code']
         
-        # 根据语言选择显示名称
-        if language == 'zh' or language.startswith('zh'):
-            display_name = info['name_zh']
-        else:
-            display_name = info['name_en']
+        # 使用原始名称（不翻译）
+        # X2C API 返回的 name 已经是对应语言的名称
+        display_name = info['name_zh'] if info['language'] == 'zh' else info['name_en']
         
-        # 只返回对应语言的分类（或通用分类）
-        if info['language'] == language or info['language'] == 'all':
-            result[code] = display_name
+        # 返回所有分类（不过滤语言）
+        result[code] = display_name
     
     return result
 

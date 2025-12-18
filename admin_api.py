@@ -1046,6 +1046,88 @@ def update_callback_url():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/admin/migrate_categories', methods=['POST'])
+def migrate_categories():
+    """
+    迁移旧的category值到X2C分类
+    将不在X2C分类列表中的category设置为NULL
+    """
+    try:
+        # X2C分类列表
+        x2c_categories = [
+            'latest',
+            'billionaireRomance',
+            'underdogRevenge',
+            'werewolfVampire',
+            'rebirthTimeTravel',
+            'periodCostume',
+            'marriageBetrayal',
+            'fantasyMysticism',
+            'suspenseCrime',
+            'sciFiApocalypse',
+            'urbanLife',
+            'generalMixed',
+            '霸总甘宠',
+            '仙侠奇幻'
+        ]
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询当前category分布
+        cur.execute("""
+            SELECT category, COUNT(*) as count 
+            FROM drama_tasks 
+            WHERE status = 'active' 
+            GROUP BY category 
+            ORDER BY count DESC
+        """)
+        
+        old_distribution = cur.fetchall()
+        
+        # 更新旧的category为NULL
+        cur.execute("""
+            UPDATE drama_tasks 
+            SET category = NULL 
+            WHERE category IS NOT NULL 
+            AND category NOT IN %s
+        """, (tuple(x2c_categories),))
+        
+        affected_rows = cur.rowcount
+        
+        # 提交更改
+        conn.commit()
+        
+        # 查询更新后的category分布
+        cur.execute("""
+            SELECT category, COUNT(*) as count 
+            FROM drama_tasks 
+            WHERE status = 'active' 
+            GROUP BY category 
+            ORDER BY count DESC
+        """)
+        
+        new_distribution = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'已将 {affected_rows} 个旧任务的category设置为NULL',
+            'affected_rows': affected_rows,
+            'old_distribution': [dict(row) for row in old_distribution],
+            'new_distribution': [dict(row) for row in new_distribution]
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
