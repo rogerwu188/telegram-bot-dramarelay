@@ -143,6 +143,19 @@ async def send_task_completed_webhook(
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 获取全局 Callback URL 配置
+        global_callback_url = None
+        try:
+            cur.execute("""
+                SELECT config_value FROM system_config WHERE config_key = 'x2c_callback_url'
+            """)
+            config_result = cur.fetchone()
+            if config_result:
+                global_callback_url = config_result['config_value']
+                logger.info(f"🔗 使用全局 Callback URL: {global_callback_url}")
+        except Exception as config_error:
+            logger.warning(f"⚠️ 获取全局 Callback URL 失败: {config_error}")
+        
         # 获取任务信息
         cur.execute("""
             SELECT task_id, project_id, external_task_id, title, duration, callback_url, callback_secret, callback_retry_count
@@ -157,11 +170,15 @@ async def send_task_completed_webhook(
             conn.close()
             return False
         
+        # 优先使用全局 Callback URL，如果没有则使用任务级别的
+        callback_url = global_callback_url or task.get('callback_url')
+        callback_secret = task.get('callback_secret') or 'X2C_WEBHOOK_SECRET'
+        
         # 调试日志：输出任务信息
-        logger.info(f"🔍 [DEBUG] 任务信息: task_id={task_id}, title={task.get('title')}, callback_url={task.get('callback_url') or 'NULL'}")
+        logger.info(f"🔍 [DEBUG] 任务信息: task_id={task_id}, title={task.get('title')}, callback_url={callback_url or 'NULL'}")
         
         # 如果没有配置回调 URL,直接返回成功
-        if not task['callback_url']:
+        if not callback_url:
             logger.warning(f"⚠️ [SKIP] 任务 {task_id} (\"{task.get('title')}\") 未配置回调 URL,跳过回调")
             cur.close()
             conn.close()
@@ -229,11 +246,11 @@ async def send_task_completed_webhook(
         }
         
         # 发送回调
-        logger.info(f"📤 准备发送 Webhook: task_id={task_id}, url={task['callback_url']}")
+        logger.info(f"📤 准备发送 Webhook: task_id={task_id}, url={callback_url}")
         success, error = await send_webhook(
-            callback_url=task['callback_url'],
+            callback_url=callback_url,
             payload=payload,
-            secret=task['callback_secret']
+            secret=callback_secret
         )
         
         # 更新回调状态并记录到webhook_logs
@@ -252,7 +269,7 @@ async def send_task_completed_webhook(
                 task_id,
                 task['title'],
                 task['project_id'],
-                task['callback_url'],
+                callback_url,
                 'success' if success else 'failed',
                 json.dumps(payload, ensure_ascii=False)
             ))

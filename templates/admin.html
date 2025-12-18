@@ -495,6 +495,26 @@
                 <small style="color: #856404; display: block; margin-top: 5px;">
                     ⚠️ 请妥善保管 API Key，不要分享给未经授权的人员
                 </small>
+                
+                <!-- X2C Pool Callback URL 配置 -->
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ffc107;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #856404;">
+                        🔗 X2C Pool Callback URL （Webhook回调地址）
+                    </label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="callback-url-input" 
+                               style="flex: 1; padding: 10px; border: 2px solid #ffc107; border-radius: 5px; font-family: monospace; font-size: 14px; background: white;"
+                               placeholder="https://example.com/api/webhook"
+                               value="Loading...">
+                        <button onclick="saveCallbackUrl()" 
+                                style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                            💾 保存
+                        </button>
+                    </div>
+                    <small style="color: #856404; display: block; margin-top: 5px;">
+                        💡 所有Webhook回调都将使用此地址，保存后立即生效
+                    </small>
+                </div>
             </div>
         </div>
         
@@ -1063,6 +1083,7 @@
         window.addEventListener('load', () => {
             refreshData();
             loadApiKey();
+            loadCallbackUrl();
         });
         
         // 显示回调数据弹窗
@@ -1180,6 +1201,70 @@
             }).catch(err => {
                 alert('复制失败：' + err.message);
             });
+        }
+        
+        // X2C Pool Callback URL 功能
+        // 加载 Callback URL
+        async function loadCallbackUrl() {
+            try {
+                const response = await fetch('/api/config/callback-url');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('callback-url-input').value = result.callback_url || '';
+                } else {
+                    document.getElementById('callback-url-input').value = '';
+                    document.getElementById('callback-url-input').placeholder = '加载失败，请手动输入';
+                }
+            } catch (error) {
+                console.error('加载 Callback URL 失败:', error);
+                document.getElementById('callback-url-input').value = '';
+                document.getElementById('callback-url-input').placeholder = '加载失败，请手动输入';
+            }
+        }
+        
+        // 保存 Callback URL
+        async function saveCallbackUrl() {
+            const input = document.getElementById('callback-url-input');
+            const callbackUrl = input.value.trim();
+            
+            if (!callbackUrl) {
+                alert('⚠️ 请输入 Callback URL');
+                return;
+            }
+            
+            // 简单的 URL 格式验证
+            if (!callbackUrl.startsWith('http://') && !callbackUrl.startsWith('https://')) {
+                alert('⚠️ Callback URL 必须以 http:// 或 https:// 开头');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/config/callback-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ callback_url: callbackUrl })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ 已保存';
+                    btn.style.background = '#28a745';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                } else {
+                    alert('❌ 保存失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('保存 Callback URL 失败:', error);
+                alert('❌ 保存失败: ' + error.message);
+            }
         }
         
         // 点击背景关闭弹窗

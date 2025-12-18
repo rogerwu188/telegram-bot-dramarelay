@@ -118,13 +118,12 @@ async def fetch_task_stats(task_id: int, video_url: str, platform: str):
         logger.error(f"❌ 任务 {task_id} 数据抓取异常: {e}")
         return None
 
-async def broadcast_task_stats(task, global_callback_url=None):
+async def broadcast_task_stats(task):
     """
     回传单个任务的统计数据
     
     Args:
         task: 任务信息字典
-        global_callback_url: 全局 Callback URL（可选）
         
     Returns:
         bool: 是否成功
@@ -134,9 +133,8 @@ async def broadcast_task_stats(task, global_callback_url=None):
         task_id = task['task_id']
         external_task_id = task['external_task_id']
         project_id = task['project_id']
-        # 优先使用全局 Callback URL
-        callback_url = global_callback_url or task.get('callback_url')
-        callback_secret = task.get('callback_secret') or 'X2C_WEBHOOK_SECRET'
+        callback_url = task['callback_url']
+        callback_secret = task['callback_secret']
         video_url = task['video_url']
         duration = task['duration']
         
@@ -279,100 +277,34 @@ async def broadcast_all_tasks():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 获取全局 Callback URL 配置
-        global_callback_url = None
-        try:
-            cur.execute("""
-                SELECT config_value FROM system_config WHERE config_key = 'x2c_callback_url'
-            """)
-            config_result = cur.fetchone()
-            if config_result:
-                global_callback_url = config_result['config_value']
-                logger.info(f"🔗 使用全局 Callback URL: {global_callback_url}")
-        except Exception as config_error:
-            logger.warning(f"⚠️ 获取全局 Callback URL 失败: {config_error}")
-        
-        # 查询最近7天内用户已完成的任务
-        logger.info("🔍 [DEBUG] 开始查询已完成的任务...")
-        
-        # 先查询user_tasks表中所有submitted的记录
+        # 查询最近24小时内用户已完成的任务
         cur.execute("""
-            SELECT COUNT(*) as total
-            FROM user_tasks 
-            WHERE status = 'submitted'
+            SELECT DISTINCT
+                t.task_id,
+                t.external_task_id,
+                t.project_id,
+                t.title,
+                ut.submission_link as video_url,
+                t.callback_url,
+                t.callback_secret,
+                t.duration,
+                ut.user_id,
+                ut.submitted_at
+            FROM user_tasks ut
+            JOIN drama_tasks t ON ut.task_id = t.task_id
+            WHERE ut.status = 'submitted'
+              AND t.callback_url IS NOT NULL
+              AND t.callback_url != ''
+              AND ut.submitted_at >= NOW() - INTERVAL '7 days'
+            ORDER BY ut.submitted_at DESC
         """)
-        total_submitted = cur.fetchone()['total']
-        logger.info(f"🔍 [DEBUG] user_tasks表中 submitted 状态的任务总数: {total_submitted}")
-        
-        # 查询最近7天的submitted任务数
-        cur.execute("""
-            SELECT COUNT(*) as total
-            FROM user_tasks
-            WHERE status = 'submitted'
-              AND submitted_at >= NOW() - INTERVAL '7 days'
-        """)
-        recent_count = cur.fetchone()['total']
-        logger.info(f"🔍 [DEBUG] 最近7天内submitted的任务数: {recent_count}")
-        
-        # 如果有全局 Callback URL，查询所有已完成的任务（不需要任务级别的callback_url）
-        if global_callback_url:
-            cur.execute("""
-                SELECT DISTINCT
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    ut.submission_link as video_url,
-                    t.callback_secret,
-                    t.duration,
-                    ut.user_id,
-                    ut.submitted_at
-                FROM user_tasks ut
-                JOIN drama_tasks t ON ut.task_id = t.task_id
-                WHERE ut.status = 'submitted'
-                  AND ut.submitted_at >= NOW() - INTERVAL '7 days'
-                ORDER BY ut.submitted_at DESC
-            """)
-        else:
-            # 没有全局 Callback URL，只查询有任务级别 callback_url 的任务
-            cur.execute("""
-                SELECT DISTINCT
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    ut.submission_link as video_url,
-                    t.callback_url,
-                    t.callback_secret,
-                    t.duration,
-                    ut.user_id,
-                    ut.submitted_at
-                FROM user_tasks ut
-                JOIN drama_tasks t ON ut.task_id = t.task_id
-                WHERE ut.status = 'submitted'
-                  AND t.callback_url IS NOT NULL
-                  AND t.callback_url != ''
-                  AND ut.submitted_at >= NOW() - INTERVAL '7 days'
-                ORDER BY ut.submitted_at DESC
-            """)
         
         tasks = cur.fetchall()
-        logger.info(f"🔍 [DEBUG] 查询到 {len(tasks)} 个符合条件的任务")
-        
-        if tasks:
-            for task in tasks:
-                task_callback = global_callback_url or task.get('callback_url', 'NULL')
-                callback_preview = task_callback[:50] if task_callback else 'NULL'
-                logger.info(f"🔍 [DEBUG] 任务: task_id={task['task_id']}, title={task['title']}, callback_url={callback_preview}...")
-        
         cur.close()
         conn.close()
         
         if not tasks:
-            if global_callback_url:
-                logger.warning("⚠️ 没有需要回传的任务（最近7天内没有已完成的任务）")
-            else:
-                logger.warning("⚠️ 没有需要回传的任务（未配置全局 Callback URL 且任务没有单独的 callback_url）")
+            logger.info("ℹ️ 没有需要回传的任务")
             return {
                 'success': True,
                 'total': 0,
@@ -402,7 +334,7 @@ async def broadcast_all_tasks():
                 total_views += views
             
             # 回传数据
-            success = await broadcast_task_stats(task, global_callback_url)
+            success = await broadcast_task_stats(task)
             if success:
                 success_count += 1
             else:

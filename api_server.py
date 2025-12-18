@@ -890,6 +890,11 @@ def update_callback_url_route():
     """批量更新callback_url"""
     return admin_api.update_callback_url()
 
+@app.route('/api/admin/delete_null_tasks', methods=['POST'])
+def delete_null_tasks_route():
+    """删除category为NULL的旧任务"""
+    return admin_api.delete_null_category_tasks()
+
 @app.route('/api/admin/migrate_categories', methods=['POST'])
 def migrate_categories_route():
     """迁移旧的category值到X2C分类"""
@@ -963,6 +968,127 @@ def create_webhook_logs_table():
         
     except Exception as e:
         logger.error(f"❌ 创建webhook_logs表失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ============================================================
+# 全局 Callback URL 配置 API
+# ============================================================
+
+@app.route('/api/config/callback-url', methods=['GET'])
+def get_callback_url():
+    """获取全局 Callback URL"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 检查system_config表是否存在
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'system_config'
+            )
+        """)
+        exists = cur.fetchone()['exists']
+        
+        if not exists:
+            # 创建system_config表
+            cur.execute("""
+                CREATE TABLE system_config (
+                    id SERIAL PRIMARY KEY,
+                    config_key VARCHAR(100) UNIQUE NOT NULL,
+                    config_value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            logger.info("✅ system_config表创建成功")
+        
+        # 获取callback_url配置
+        cur.execute("""
+            SELECT config_value FROM system_config WHERE config_key = 'x2c_callback_url'
+        """)
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        callback_url = result['config_value'] if result else ''
+        
+        return jsonify({
+            'success': True,
+            'callback_url': callback_url
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 获取Callback URL失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/config/callback-url', methods=['POST'])
+def set_callback_url():
+    """设置全局 Callback URL"""
+    try:
+        data = request.get_json()
+        callback_url = data.get('callback_url', '').strip()
+        
+        if not callback_url:
+            return jsonify({
+                'success': False,
+                'error': 'Callback URL 不能为空'
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 检查system_config表是否存在
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'system_config'
+            )
+        """)
+        exists = cur.fetchone()['exists']
+        
+        if not exists:
+            # 创建system_config表
+            cur.execute("""
+                CREATE TABLE system_config (
+                    id SERIAL PRIMARY KEY,
+                    config_key VARCHAR(100) UNIQUE NOT NULL,
+                    config_value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            logger.info("✅ system_config表创建成功")
+        
+        # 使用UPSERT更新或插入配置
+        cur.execute("""
+            INSERT INTO system_config (config_key, config_value, updated_at)
+            VALUES ('x2c_callback_url', %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (config_key) 
+            DO UPDATE SET config_value = %s, updated_at = CURRENT_TIMESTAMP
+        """, (callback_url, callback_url))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"✅ Callback URL 已更新: {callback_url}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Callback URL 保存成功',
+            'callback_url': callback_url
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 保存Callback URL失败: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
