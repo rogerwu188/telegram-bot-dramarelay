@@ -1137,6 +1137,51 @@ def migrate_categories():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/tasks/search', methods=['GET'])
+def search_tasks():
+    """搜索任务"""
+    try:
+        title = request.args.get('title', '')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT *
+            FROM drama_tasks
+            WHERE title LIKE %s
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (f'%{title}%',))
+        
+        tasks = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 转换datetime对象为字符串
+        tasks_data = []
+        for task in tasks:
+            task_dict = dict(task)
+            for key, value in task_dict.items():
+                if isinstance(value, datetime):
+                    task_dict[key] = value.isoformat()
+            tasks_data.append(task_dict)
+        
+        return jsonify({
+            'success': True,
+            'count': len(tasks_data),
+            'data': tasks_data
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
