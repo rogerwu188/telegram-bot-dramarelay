@@ -298,6 +298,38 @@ async def broadcast_all_tasks():
         callback_count = cur.fetchone()['total']
         logger.info(f"🔍 [DEBUG] drama_tasks表中有callback_url的任务数: {callback_count}")
         
+        # 查询JOIN后的总数（不考虑callback_url和时间）
+        cur.execute("""
+            SELECT COUNT(*) as total
+            FROM user_tasks ut
+            JOIN drama_tasks t ON ut.task_id = t.task_id
+            WHERE ut.status = 'submitted'
+        """)
+        join_count = cur.fetchone()['total']
+        logger.info(f"🔍 [DEBUG] JOIN后的任务总数（不考虑callback_url和时间）: {join_count}")
+        
+        # 查询JOIN后有callback_url的总数（不考虑时间）
+        cur.execute("""
+            SELECT COUNT(*) as total
+            FROM user_tasks ut
+            JOIN drama_tasks t ON ut.task_id = t.task_id
+            WHERE ut.status = 'submitted'
+              AND t.callback_url IS NOT NULL
+              AND t.callback_url != ''
+        """)
+        join_callback_count = cur.fetchone()['total']
+        logger.info(f"🔍 [DEBUG] JOIN后有callback_url的任务数（不考虑时间）: {join_callback_count}")
+        
+        # 查询最近7天的submitted任务数
+        cur.execute("""
+            SELECT COUNT(*) as total
+            FROM user_tasks
+            WHERE status = 'submitted'
+              AND submitted_at >= NOW() - INTERVAL '7 days'
+        """)
+        recent_count = cur.fetchone()['total']
+        logger.info(f"🔍 [DEBUG] 最近7天内submitted的任务数: {recent_count}")
+        
         cur.execute("""
             SELECT DISTINCT
                 t.task_id,
