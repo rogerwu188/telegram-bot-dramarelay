@@ -1095,6 +1095,87 @@ def set_callback_url():
         }), 500
 
 # ============================================================
+# 播放量抓取服务 API
+# ============================================================
+
+# 导入播放量抓取服务
+try:
+    from view_counter_service import (
+        fetch_all_view_counts,
+        start_view_count_timer,
+        stop_view_count_timer,
+        is_timer_running,
+        ensure_view_count_columns,
+        ensure_view_count_error_log_table
+    )
+    VIEW_COUNTER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"⚠️ 播放量抓取服务不可用: {e}")
+    VIEW_COUNTER_AVAILABLE = False
+
+@app.route('/api/view-counter/start', methods=['POST'])
+def start_view_counter():
+    """启动播放量抓取定时器"""
+    if not VIEW_COUNTER_AVAILABLE:
+        return jsonify({'success': False, 'error': '播放量抓取服务不可用'}), 500
+    
+    try:
+        # 确保表结构正确
+        ensure_view_count_columns()
+        ensure_view_count_error_log_table()
+        
+        if is_timer_running():
+            return jsonify({'success': False, 'error': '定时器已在运行中'})
+        
+        start_view_count_timer(interval_minutes=10)
+        return jsonify({'success': True, 'message': '播放量抓取定时器已启动，间隔: 10分钟'})
+    except Exception as e:
+        logger.error(f"❌ 启动播放量定时器失败: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/view-counter/stop', methods=['POST'])
+def stop_view_counter():
+    """停止播放量抓取定时器"""
+    if not VIEW_COUNTER_AVAILABLE:
+        return jsonify({'success': False, 'error': '播放量抓取服务不可用'}), 500
+    
+    try:
+        stop_view_count_timer()
+        return jsonify({'success': True, 'message': '播放量抓取定时器已停止'})
+    except Exception as e:
+        logger.error(f"❌ 停止播放量定时器失败: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/view-counter/status', methods=['GET'])
+def get_view_counter_status():
+    """获取播放量抓取定时器状态"""
+    if not VIEW_COUNTER_AVAILABLE:
+        return jsonify({'success': False, 'error': '播放量抓取服务不可用'}), 500
+    
+    return jsonify({
+        'success': True,
+        'running': is_timer_running(),
+        'interval_minutes': 10
+    })
+
+@app.route('/api/view-counter/trigger', methods=['POST'])
+def trigger_view_counter():
+    """手动触发一次播放量抓取"""
+    if not VIEW_COUNTER_AVAILABLE:
+        return jsonify({'success': False, 'error': '播放量抓取服务不可用'}), 500
+    
+    try:
+        # 确保表结构正确
+        ensure_view_count_columns()
+        ensure_view_count_error_log_table()
+        
+        result = fetch_all_view_counts()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"❌ 手动抓取播放量失败: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================
 # 启动服务器
 # ============================================================
 

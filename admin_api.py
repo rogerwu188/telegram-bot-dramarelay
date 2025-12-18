@@ -198,6 +198,8 @@ def get_completion_logs():
                     ut.created_at as assigned_at,
                     ut.submitted_at as completed_at,
                     ut.submission_link,
+                    COALESCE(ut.view_count, 0) as view_count,
+                    COALESCE(ut.like_count, 0) as like_count,
                     EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
@@ -224,6 +226,8 @@ def get_completion_logs():
                     ut.created_at as assigned_at,
                     ut.submitted_at as completed_at,
                     ut.submission_link,
+                    COALESCE(ut.view_count, 0) as view_count,
+                    COALESCE(ut.like_count, 0) as like_count,
                     EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
