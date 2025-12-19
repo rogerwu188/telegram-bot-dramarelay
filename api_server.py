@@ -326,6 +326,25 @@ def create_task():
         ))
         
         new_task = cur.fetchone()
+        
+        # 保存原始接收数据到日志表
+        try:
+            import json
+            cur.execute("""
+                INSERT INTO task_receive_logs (task_id, project_id, title, raw_data, parsed_category, final_category)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                new_task['task_id'],
+                data.get('project_id'),
+                data.get('title'),
+                json.dumps(raw_data, ensure_ascii=False),
+                project_style,  # X2C发送的原始分类值
+                category  # 最终存储的分类值
+            ))
+            logger.info(f"📝 已保存任务接收日志: task_id={new_task['task_id']}, parsed_category={project_style}, final_category={category}")
+        except Exception as log_error:
+            logger.warning(f"⚠️ 保存任务接收日志失败: {log_error}")
+        
         conn.commit()
         cur.close()
         conn.close()
