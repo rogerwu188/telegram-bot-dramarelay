@@ -178,21 +178,29 @@ async def broadcast_task_stats(task, global_callback_url=None):
         # 提取数据（确保为整数，默认为0）
         view_count = int(stats.get('views') or stats.get('view_count') or 0)
         like_count = int(stats.get('likes') or stats.get('like_count') or 0)
+        comment_count = int(stats.get('comments') or stats.get('comment_count') or 0)
+        share_count = int(stats.get('shares') or stats.get('share_count') or 0)
         
+        # 构建符合X2C Pool期望的数据结构
         stats_data = {
             'project_id': project_id,
             'task_id': external_task_id,
             'duration': duration,
-            'account_count': 0  # 分发数据回传不统计账号数
+            'account_count': 0,  # 分发数据回传不统计账号数
+            # X2C Pool期望的字段（始终发送，即使为0）
+            'view_count': view_count,
+            'like_count': like_count,
+            'comment_count': comment_count,
+            'share_count': share_count,
+            'external_url': video_url  # 外部视频链接
         }
         
-        # 根据平台填充字段（始终发送所有字段，即使为0）
+        # 同时保留平台特定字段（向后兼容）
         if platform == 'youtube' or platform == 'douyin':
             # YouTube/抖音平台数据
             stats_data['yt_view_count'] = view_count
             stats_data['yt_like_count'] = like_count
-            stats_data['yt_account_count'] = 0  # 分发数据不统计账号
-            # TikTok字段设为0
+            stats_data['yt_account_count'] = 0
             stats_data['tt_view_count'] = 0
             stats_data['tt_like_count'] = 0
             stats_data['tt_account_count'] = 0
@@ -200,13 +208,12 @@ async def broadcast_task_stats(task, global_callback_url=None):
             # TikTok平台数据
             stats_data['tt_view_count'] = view_count
             stats_data['tt_like_count'] = like_count
-            stats_data['tt_account_count'] = 0  # 分发数据不统计账号
-            # YouTube字段设为0
+            stats_data['tt_account_count'] = 0
             stats_data['yt_view_count'] = 0
             stats_data['yt_like_count'] = 0
             stats_data['yt_account_count'] = 0
         else:
-            # 未知平台，所有字段设为0
+            # 未知平台
             stats_data['yt_view_count'] = 0
             stats_data['yt_like_count'] = 0
             stats_data['yt_account_count'] = 0
