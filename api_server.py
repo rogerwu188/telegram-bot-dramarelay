@@ -228,6 +228,11 @@ def create_task():
         # 记录接收到的原始数据
         logger.info(f"📥 接收到任务数据: {raw_data}")
         
+        # 详细记录 category 字段
+        logger.info(f"🎯 [DEBUG] raw_data 中的 category: {raw_data.get('category')}")
+        logger.info(f"🎯 [DEBUG] raw_data 中的 project_style: {raw_data.get('project_style')}")
+        logger.info(f"🎯 [DEBUG] raw_data 的所有字段: {list(raw_data.keys())}")
+        
         # 处理 X2C 的 datasets 数组结构
         # X2C 传递的格式: {"datasets": [{...task_data...}], "source": "x2c-distribution-episode", ...}
         if 'datasets' in raw_data and isinstance(raw_data['datasets'], list) and len(raw_data['datasets']) > 0:
@@ -240,6 +245,10 @@ def create_task():
         else:
             # 直接使用原始数据（兼容旧格式）
             data = raw_data
+        
+        # 详细记录解析后的 data 中的 category
+        logger.info(f"🎯 [DEBUG] 解析后 data 中的 category: {data.get('category')}")
+        logger.info(f"🎯 [DEBUG] 解析后 data 中的 project_style: {data.get('project_style')}")
         
         # 验证必填字段
         if not data.get('title'):
