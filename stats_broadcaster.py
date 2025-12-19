@@ -145,81 +145,85 @@ async def broadcast_task_stats(task, global_callback_url=None):
             logger.warning(f"⚠️ 任务 {task_id} 没有配置 callback_url，跳过")
             return False
         
-        if not video_url:
-            logger.warning(f"⚠️ 任务 {task_id} 没有视频链接，跳过")
-            return False
+        # 从user_tasks表聚合用户提交的统计数据
+        conn = get_db_connection()
+        cur = conn.cursor()
         
-        # 判断平台类型
-        platform = 'youtube'  # 默认YouTube
-        if 'tiktok.com' in video_url or 'vm.tiktok.com' in video_url:
-            platform = 'tiktok'
-        elif 'douyin.com' in video_url or 'v.douyin.com' in video_url:
-            platform = 'douyin'
+        # 查询该任务所有用户提交的数据，按平台分组统计
+        cur.execute('''
+            SELECT 
+                platform,
+                COUNT(DISTINCT user_id) as account_count,
+                COALESCE(SUM(view_count), 0) as total_views,
+                COALESCE(SUM(like_count), 0) as total_likes
+            FROM user_tasks
+            WHERE task_id = %s AND status = 'submitted'
+            GROUP BY platform
+        ''', (task_id,))
+        platform_stats = cur.fetchall()
         
-        # 抓取视频数据
-        stats = await fetch_task_stats(task_id, video_url, platform)
+        cur.close()
+        conn.close()
         
-        if not stats:
-            logger.warning(f"⚠️ 任务 {task_id} 无法获取视频数据，使用默认值")
-            # 记录视频抓取失败的错误日志
-            log_broadcaster_error(
-                task_id=task_id,
-                task_title=task.get('title', ''),
-                project_id=task.get('project_id', ''),
-                video_url=video_url,
-                platform=platform,
-                error_type='VIDEO_FETCH_FAILED',
-                error_message=f'无法从{platform}平台获取视频统计数据',
-                callback_url=callback_url
-            )
-            stats = {}
+        # 初始化统计数据
+        yt_view_count = 0
+        yt_like_count = 0
+        yt_account_count = 0
+        tt_view_count = 0
+        tt_like_count = 0
+        tt_account_count = 0
+        total_account_count = 0
         
-        # 构建回传数据
-        # 提取数据（确保为整数，默认为0）
-        view_count = int(stats.get('views') or stats.get('view_count') or 0)
-        like_count = int(stats.get('likes') or stats.get('like_count') or 0)
-        comment_count = int(stats.get('comments') or stats.get('comment_count') or 0)
-        share_count = int(stats.get('shares') or stats.get('share_count') or 0)
+        # 根据平台分类统计
+        for ps in platform_stats:
+            platform_name = (ps['platform'] or '').lower()
+            views = int(ps['total_views'] or 0)
+            likes = int(ps['total_likes'] or 0)
+            accounts = int(ps['account_count'] or 0)
+            total_account_count += accounts
+            
+            if platform_name in ['youtube', 'yt']:
+                yt_view_count += views
+                yt_like_count += likes
+                yt_account_count += accounts
+            elif platform_name in ['tiktok', 'tt']:
+                tt_view_count += views
+                tt_like_count += likes
+                tt_account_count += accounts
+            else:
+                # 其他平台默认计入TikTok
+                tt_view_count += views
+                tt_like_count += likes
+                tt_account_count += accounts
+        
+        # 计算总播放量和点赞数
+        total_view_count = yt_view_count + tt_view_count
+        total_like_count = yt_like_count + tt_like_count
+        
+        logger.info(f"📊 任务 {task_id} 统计数据: 总播放={total_view_count}, 总点赞={total_like_count}, 总账号数={total_account_count}")
+        logger.info(f"   YouTube: 播放={yt_view_count}, 点赞={yt_like_count}, 账号={yt_account_count}")
+        logger.info(f"   TikTok: 播放={tt_view_count}, 点赞={tt_like_count}, 账号={tt_account_count}")
         
         # 构建符合X2C Pool期望的数据结构
         stats_data = {
             'project_id': project_id,
             'task_id': external_task_id,
             'duration': duration,
-            'account_count': 0,  # 分发数据回传不统计账号数
+            'account_count': total_account_count,
             # X2C Pool期望的字段（始终发送，即使为0）
-            'view_count': view_count,
-            'like_count': like_count,
-            'comment_count': comment_count,
-            'share_count': share_count,
-            'external_url': video_url  # 外部视频链接
+            'view_count': total_view_count,
+            'like_count': total_like_count,
+            'comment_count': 0,  # 暂时不统计评论数
+            'share_count': 0,    # 暂时不统计分享数
+            'external_url': video_url or '',  # 外部视频链接
+            # 平台特定字段
+            'yt_view_count': yt_view_count,
+            'yt_like_count': yt_like_count,
+            'yt_account_count': yt_account_count,
+            'tt_view_count': tt_view_count,
+            'tt_like_count': tt_like_count,
+            'tt_account_count': tt_account_count
         }
-        
-        # 同时保留平台特定字段（向后兼容）
-        if platform == 'youtube' or platform == 'douyin':
-            # YouTube/抖音平台数据
-            stats_data['yt_view_count'] = view_count
-            stats_data['yt_like_count'] = like_count
-            stats_data['yt_account_count'] = 0
-            stats_data['tt_view_count'] = 0
-            stats_data['tt_like_count'] = 0
-            stats_data['tt_account_count'] = 0
-        elif platform == 'tiktok':
-            # TikTok平台数据
-            stats_data['tt_view_count'] = view_count
-            stats_data['tt_like_count'] = like_count
-            stats_data['tt_account_count'] = 0
-            stats_data['yt_view_count'] = 0
-            stats_data['yt_like_count'] = 0
-            stats_data['yt_account_count'] = 0
-        else:
-            # 未知平台
-            stats_data['yt_view_count'] = 0
-            stats_data['yt_like_count'] = 0
-            stats_data['yt_account_count'] = 0
-            stats_data['tt_view_count'] = 0
-            stats_data['tt_like_count'] = 0
-            stats_data['tt_account_count'] = 0
         
         # 构建payload（符合X2C Pool批量更新格式）
         payload = {
