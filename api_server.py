@@ -223,10 +223,23 @@ def get_task(task_id):
 def create_task():
     """创建新任务"""
     try:
-        data = request.get_json()
+        raw_data = request.get_json()
         
         # 记录接收到的原始数据
-        logger.info(f"📥 接收到任务数据: {data}")
+        logger.info(f"📥 接收到任务数据: {raw_data}")
+        
+        # 处理 X2C 的 datasets 数组结构
+        # X2C 传递的格式: {"datasets": [{...task_data...}], "source": "x2c-distribution-episode", ...}
+        if 'datasets' in raw_data and isinstance(raw_data['datasets'], list) and len(raw_data['datasets']) > 0:
+            # 从 datasets 数组中提取任务数据
+            data = raw_data['datasets'][0]
+            # 保留顶层的 callback_url（如果 datasets 内没有）
+            if not data.get('callback_url') and raw_data.get('callback_url'):
+                data['callback_url'] = raw_data.get('callback_url')
+            logger.info(f"📦 解析 X2C datasets 结构: source={raw_data.get('source')}, 任务数={len(raw_data['datasets'])}")
+        else:
+            # 直接使用原始数据（兼容旧格式）
+            data = raw_data
         
         # 验证必填字段
         if not data.get('title'):
@@ -244,7 +257,7 @@ def create_task():
         # 支持 video_url 和 video_file_id 两种参数名
         video_url = data.get('video_file_id') or data.get('video_url')
         
-        # 从 X2C 的 project_style 获取分类（格式如 "#Female Revenge Arc"）
+        # 从 X2C 的 project_style 或 category 获取分类
         project_style = data.get('project_style') or data.get('category')
         
         # 将 project_style 映射为 Bot 的分类代码
