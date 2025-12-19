@@ -175,6 +175,10 @@ async def broadcast_task_stats(task, global_callback_url=None):
             stats = {}
         
         # 构建回传数据
+        # 提取数据（确保为整数，默认为0）
+        view_count = int(stats.get('views') or stats.get('view_count') or 0)
+        like_count = int(stats.get('likes') or stats.get('like_count') or 0)
+        
         stats_data = {
             'project_id': project_id,
             'task_id': external_task_id,
@@ -182,36 +186,37 @@ async def broadcast_task_stats(task, global_callback_url=None):
             'account_count': 0  # 分发数据回传不统计账号数
         }
         
-        # 提取数据
-        view_count = stats.get('views') or stats.get('view_count', 0)
-        like_count = stats.get('likes') or stats.get('like_count', 0)
-        
-        # 添加总播放量和总点赞数（X2C Pool要求）
-        if view_count > 0:
-            stats_data['view_count'] = view_count
-        if like_count > 0:
-            stats_data['like_count'] = like_count
-        
-        # 根据平台填充字段（抖音计入yt_*）
+        # 根据平台填充字段（始终发送所有字段，即使为0）
         if platform == 'youtube' or platform == 'douyin':
-            if view_count > 0:
-                stats_data['yt_view_count'] = view_count
-            if like_count > 0:
-                stats_data['yt_like_count'] = like_count
-            if view_count > 0 or like_count > 0:
-                stats_data['yt_account_count'] = 0  # 分发数据不统计账号
+            # YouTube/抖音平台数据
+            stats_data['yt_view_count'] = view_count
+            stats_data['yt_like_count'] = like_count
+            stats_data['yt_account_count'] = 0  # 分发数据不统计账号
+            # TikTok字段设为0
+            stats_data['tt_view_count'] = 0
+            stats_data['tt_like_count'] = 0
+            stats_data['tt_account_count'] = 0
         elif platform == 'tiktok':
-            if view_count > 0:
-                stats_data['tt_view_count'] = view_count
-            if like_count > 0:
-                stats_data['tt_like_count'] = like_count
-            if view_count > 0 or like_count > 0:
-                stats_data['tt_account_count'] = 0  # 分发数据不统计账号
+            # TikTok平台数据
+            stats_data['tt_view_count'] = view_count
+            stats_data['tt_like_count'] = like_count
+            stats_data['tt_account_count'] = 0  # 分发数据不统计账号
+            # YouTube字段设为0
+            stats_data['yt_view_count'] = 0
+            stats_data['yt_like_count'] = 0
+            stats_data['yt_account_count'] = 0
+        else:
+            # 未知平台，所有字段设为0
+            stats_data['yt_view_count'] = 0
+            stats_data['yt_like_count'] = 0
+            stats_data['yt_account_count'] = 0
+            stats_data['tt_view_count'] = 0
+            stats_data['tt_like_count'] = 0
+            stats_data['tt_account_count'] = 0
         
         # 构建payload（符合X2C Pool批量更新格式）
         payload = {
             'site_name': 'DramaRelayBot',
-            'production_source': 'ai_factory',  # X2C Pool要求的字段
             'stats': [stats_data]
         }
         
