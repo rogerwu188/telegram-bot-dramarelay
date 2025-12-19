@@ -132,15 +132,18 @@ def sync_categories() -> bool:
 
 def get_category_code(project_style: str) -> Optional[str]:
     """
-    根据 X2C 的 project_style 获取 Bot 的分类代码
+    根据 X2C 的 project_style 或 category 获取 Bot 的分类代码
     
     Args:
-        project_style: X2C 发送的分类值，如 "#Female Revenge Arc"
+        project_style: X2C 发送的分类值，如 "#Female Revenge Arc" 或 "综合其他"
         
     Returns:
         str: Bot 的分类代码，如 "werewolfVampire"，如果未找到返回 None
     """
     global _cached_categories
+    
+    if not project_style:
+        return None
     
     # 如果缓存为空，先同步一次
     if _cached_categories is None:
@@ -150,13 +153,31 @@ def get_category_code(project_style: str) -> Optional[str]:
     if _cached_categories is None:
         return None
     
-    # 查找映射
+    # 尝试直接查找（带#号的格式）
     category_info = _cached_categories.get(project_style)
     if category_info:
         return category_info['code']
     
+    # 尝试添加#号后查找（X2C可能发送不带#的分类名）
+    if not project_style.startswith('#'):
+        category_info = _cached_categories.get(f"#{project_style}")
+        if category_info:
+            logger.info(f"✅ 分类映射: {project_style} -> #{project_style} -> {category_info['code']}")
+            return category_info['code']
+    
+    # 尝试遍历所有分类，模糊匹配名称
+    for key, info in _cached_categories.items():
+        # 匹配 name_zh 或 name_en
+        if info.get('name_zh') == project_style or info.get('name_en') == project_style:
+            logger.info(f"✅ 分类模糊匹配: {project_style} -> {info['code']}")
+            return info['code']
+        # 匹配 key 去掉#号后的值
+        if key.startswith('#') and key[1:] == project_style:
+            logger.info(f"✅ 分类匹配: {project_style} -> {info['code']}")
+            return info['code']
+    
     # 未找到映射
-    logger.warning(f"⚠️ 未找到 project_style 的映射: {project_style}")
+    logger.warning(f"⚠️ 未找到 project_style/category 的映射: {project_style}")
     return None
 
 
