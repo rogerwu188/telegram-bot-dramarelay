@@ -1221,6 +1221,153 @@ def trigger_view_counter():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 ## ============================================================
+# X2C Pool 任务接收接口 - 按照标准协议直接接收任务
+# ============================================================
+
+@app.route('/api/x2c/tasks', methods=['POST'])
+@require_api_key
+def x2c_task_receive():
+    """
+    X2C Pool 任务接收接口
+    
+    按照 X2C Pool 任务分发接口标准 v1.1 实现
+    接收扁平的 JSON 对象，不使用 datasets 数组嵌套
+    
+    必填字段:
+    - title: 任务标题
+    - task_id: X2C 平台的剧集ID (Episode ID)
+    - video_url: 视频文件链接
+    - category: 剧集类型
+    - callback_url: 回调URL
+    """
+    import json
+    
+    try:
+        # 获取原始请求数据
+        raw_body = request.get_data(as_text=True)
+        data = request.get_json()
+        
+        # 记录完整的原始数据
+        logger.info(f"📥 [X2C] 接收到任务数据")
+        logger.info(f"📥 [X2C] 字段列表: {list(data.keys()) if data else 'None'}")
+        logger.info(f"📥 [X2C] 字段数量: {len(data.keys()) if data else 0}")
+        logger.info(f"📥 [X2C] category: {data.get('category')}")
+        logger.info(f"📥 [X2C] callback_url: {data.get('callback_url')}")
+        logger.info(f"📥 [X2C] 完整数据: {data}")
+        
+        # 验证必填字段
+        required_fields = ['title', 'task_id', 'video_url', 'category', 'callback_url']
+        missing_fields = [f for f in required_fields if not data.get(f)]
+        
+        if missing_fields:
+            logger.warning(f"⚠️ [X2C] 缺少必填字段: {missing_fields}")
+            return jsonify({
+                'success': False,
+                'error': f'缺少必填字段: {missing_fields}',
+                'received_fields': list(data.keys()) if data else []
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 处理剧集分类
+        from x2c_category_sync import get_category_code
+        
+        raw_category = data.get('category')
+        category = get_category_code(raw_category)
+        
+        if category:
+            logger.info(f"✅ [X2C] 分类映射成功: {raw_category} → {category}")
+        else:
+            # 未找到映射，使用默认分类
+            category = 'latest'
+            logger.warning(f"⚠️ [X2C] 未找到分类映射，使用默认: {raw_category} → {category}")
+        
+        # 处理任务状态：将 'approved' 映射为 'active'
+        raw_status = data.get('status', 'active')
+        task_status = 'active' if raw_status in ['approved', 'active', None] else raw_status
+        
+        # 插入任务到数据库
+        cur.execute("""
+            INSERT INTO drama_tasks (
+                project_id, external_task_id, title, description, video_file_id, thumbnail_url,
+                duration, node_power_reward, platform_requirements, status,
+                video_url, keywords_template, video_title,
+                callback_url, category, hashtags
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING task_id, project_id, external_task_id, title, category, created_at
+        """, (
+            data.get('project_id'),
+            data.get('task_id'),  # X2C平台提供的task_id（剧集ID），存储到external_task_id
+            data.get('title'),
+            data.get('description'),
+            data.get('video_url'),  # 使用video_url作为video_file_id
+            data.get('thumbnail_url'),
+            data.get('duration', 15),
+            data.get('node_power_reward', 10),
+            data.get('platform_requirements', 'TikTok,YouTube,Instagram'),
+            task_status,
+            data.get('video_url'),
+            data.get('keywords'),
+            data.get('video_title') or data.get('title'),  # 如果没有video_title，使用title
+            data.get('callback_url'),
+            category,
+            data.get('hashtags')
+        ))
+        
+        new_task = cur.fetchone()
+        
+        # 保存原始接收数据到日志表
+        try:
+            cur.execute("""
+                INSERT INTO task_receive_logs (task_id, project_id, title, raw_data, parsed_category, final_category)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                new_task['task_id'],
+                data.get('project_id'),
+                data.get('title'),
+                raw_body,  # 保存原始请求体
+                raw_category,  # X2C发送的原始分类值
+                category  # 最终存储的分类值
+            ))
+            logger.info(f"📝 [X2C] 已保存任务接收日志: task_id={new_task['task_id']}")
+        except Exception as log_error:
+            logger.warning(f"⚠️ [X2C] 保存任务接收日志失败: {log_error}")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        task_dict = dict(new_task)
+        if task_dict.get('created_at'):
+            task_dict['created_at'] = task_dict['created_at'].isoformat()
+        
+        logger.info(f"✅ [X2C] 任务创建成功: internal_id={task_dict['task_id']}, external_id={task_dict.get('external_task_id')}, category={task_dict.get('category')} - {task_dict['title']}")
+        
+        # 返回成功响应
+        return jsonify({
+            'success': True,
+            'message': '任务创建成功',
+            'data': {
+                'internal_task_id': task_dict['task_id'],
+                'project_id': task_dict.get('project_id'),
+                'task_id': task_dict.get('external_task_id'),  # 返回X2C提供的task_id
+                'title': task_dict.get('title'),
+                'category': task_dict.get('category'),
+                'received_fields': list(data.keys())
+            }
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"❌ [X2C] 创建任务失败: {e}")
+        import traceback
+        logger.error(f"❌ [X2C] 错误详情: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ============================================================
 # 专用测试接口 - 用于排查字段丢失问题
 # ============================================================
 
