@@ -1220,10 +1220,132 @@ def trigger_view_counter():
         logger.error(f"❌ 手动抓取播放量失败: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+## ============================================================
+# 专用测试接口 - 用于排查字段丢失问题
+# ============================================================
+
+@app.route('/api/test/echo', methods=['POST', 'GET'])
+def test_echo():
+    """测试接口 - 记录完整的原始请求数据"""
+    import json
+    
+    try:
+        # 获取请求信息
+        method = request.method
+        headers = dict(request.headers)
+        raw_body = request.get_data(as_text=True)
+        
+        # 尝试解析JSON
+        parsed_json = None
+        field_names = []
+        field_count = 0
+        category_value = None
+        
+        try:
+            parsed_json = request.get_json(force=True)
+            if parsed_json:
+                field_names = list(parsed_json.keys())
+                field_count = len(field_names)
+                category_value = parsed_json.get('category')
+        except:
+            pass
+        
+        # 获取客户端IP
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        
+        # 保存到数据库
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO api_test_logs (endpoint, method, headers, raw_body, parsed_json, field_count, field_names, category_value, ip_address)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            '/api/test/echo',
+            method,
+            json.dumps(headers, ensure_ascii=False),
+            raw_body,
+            json.dumps(parsed_json, ensure_ascii=False) if parsed_json else None,
+            field_count,
+            field_names,
+            category_value,
+            ip_address
+        ))
+        
+        log_id = cur.fetchone()['id']
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"🧪 测试接口收到请求: log_id={log_id}, field_count={field_count}, category={category_value}")
+        logger.info(f"🧪 字段列表: {field_names}")
+        logger.info(f"🧪 原始数据: {raw_body[:500] if raw_body else 'empty'}")
+        
+        return jsonify({
+            'success': True,
+            'log_id': log_id,
+            'received': {
+                'method': method,
+                'field_count': field_count,
+                'field_names': field_names,
+                'category_value': category_value,
+                'raw_body_length': len(raw_body) if raw_body else 0
+            },
+            'message': '数据已记录，请查询 api_test_logs 表获取完整数据'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 测试接口错误: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/test/logs', methods=['GET'])
+def get_test_logs():
+    """获取测试日志"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        limit = request.args.get('limit', 10, type=int)
+        
+        cur.execute("""
+            SELECT id, endpoint, method, field_count, field_names, category_value, ip_address, created_at,
+                   raw_body, parsed_json
+            FROM api_test_logs
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (limit,))
+        
+        logs = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        logs_list = []
+        for log in logs:
+            log_dict = dict(log)
+            if log_dict.get('created_at'):
+                log_dict['created_at'] = log_dict['created_at'].isoformat()
+            logs_list.append(log_dict)
+        
+        return jsonify({
+            'success': True,
+            'data': logs_list,
+            'count': len(logs_list)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 获取测试日志失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # ============================================================
 # 启动服务器
 # ============================================================
-
 if __name__ == '__main__':
     logger.info("=" * 60)
     logger.info("🚀 Starting X2C Drama Relay Bot API Server")
