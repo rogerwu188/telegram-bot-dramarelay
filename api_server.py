@@ -225,6 +225,9 @@ def create_task():
     try:
         data = request.get_json()
         
+        # 记录接收到的原始数据
+        logger.info(f"📥 接收到任务数据: {data}")
+        
         # 验证必填字段
         if not data.get('title'):
             return jsonify({
