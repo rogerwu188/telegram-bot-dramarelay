@@ -290,8 +290,8 @@ def create_task():
                 project_id, external_task_id, title, description, video_file_id, thumbnail_url,
                 duration, node_power_reward, platform_requirements, status,
                 video_url, task_template, keywords_template, video_title,
-                callback_url, callback_secret, title_en, description_en, category
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                callback_url, callback_secret, title_en, description_en, category, hashtags
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING task_id, project_id, external_task_id, title, category, created_at
         """, (
             data.get('project_id'),
@@ -306,13 +306,14 @@ def create_task():
             task_status,
             data.get('video_url'),
             data.get('task_template'),
-            data.get('keywords_template'),
+            data.get('keywords_template') or data.get('keywords'),  # 兼容X2C的keywords字段
             data.get('video_title'),
             data.get('callback_url'),
             data.get('callback_secret'),
             data.get('title_en'),
             data.get('description_en'),
-            category
+            category,
+            data.get('hashtags')  # X2C平台提供的hashtags
         ))
         
         new_task = cur.fetchone()
