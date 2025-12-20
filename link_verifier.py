@@ -164,11 +164,16 @@ class LinkVerifier:
                         logger.info(f"👤 作者: {author_name}")
                         
                         # 验证关键词匹配（使用严格模式）
-                        result['matched'] = self._check_keywords_match_strict(
+                        match_result = self._check_keywords_match_strict(
                             result['page_text'],
                             task_title,
                             task_description
                         )
+                        result['matched'] = match_result['matched']
+                        
+                        # 如果不匹配，设置错误原因
+                        if not result['matched']:
+                            result['error'] = match_result.get('reason', '内容不匹配')
                         
                         result['success'] = True
                     else:
@@ -287,7 +292,7 @@ class LinkVerifier:
         logger.info(f"🔑 提取到的核心关键词: {keywords}")
         return keywords
     
-    def _check_keywords_match_strict(self, page_text: str, task_title: str, task_description: str) -> bool:
+    def _check_keywords_match_strict(self, page_text: str, task_title: str, task_description: str) -> dict:
         """
         严格检查页面文本是否包含任务关键词
         
@@ -301,11 +306,11 @@ class LinkVerifier:
             task_description: 任务描述
         
         Returns:
-            bool: 是否匹配
+            dict: {'matched': bool, 'reason': str}
         """
         if not page_text:
             logger.warning("⚠️ 页面文本为空，默认不匹配")
-            return False
+            return {'matched': False, 'reason': '无法获取视频标题信息'}
         
         page_text_lower = page_text.lower()
         
@@ -315,22 +320,26 @@ class LinkVerifier:
             logger.info(f"🎬 检查剧名匹配: {drama_name}")
             if drama_name.lower() in page_text_lower:
                 logger.info(f"✅ 剧名匹配成功: {drama_name}")
-                return True
+                return {'matched': True, 'reason': ''}
             else:
                 # 剧名不匹配，检查剧名的部分词是否匹配
                 drama_words = re.findall(r'[\u4e00-\u9fff]{2,}', drama_name)
                 matched_drama_words = [w for w in drama_words if w.lower() in page_text_lower]
                 if len(matched_drama_words) >= 2:
                     logger.info(f"✅ 剧名部分匹配成功: {matched_drama_words}")
-                    return True
+                    return {'matched': True, 'reason': ''}
                 logger.warning(f"⚠️ 剧名不匹配: 期望 '{drama_name}'，实际 '{page_text[:100]}'")
+                return {
+                    'matched': False, 
+                    'reason': f'视频标题中未找到剧名《{drama_name}》，请确保提交的是正确的剧集视频'
+                }
         
         # 2. 提取核心关键词
         keywords = self._extract_core_keywords(task_title, task_description)
         
         if not keywords:
             logger.warning("⚠️ 未提取到关键词，默认不匹配")
-            return False
+            return {'matched': False, 'reason': '无法提取任务关键词'}
         
         # 3. 检查关键词匹配（需要匹配至少2个）
         matched_keywords = []
@@ -345,14 +354,18 @@ class LinkVerifier:
         
         if len(matched_keywords) >= min_match_count:
             logger.info(f"✅ 关键词匹配成功: 匹配 {len(matched_keywords)} 个，要求 {min_match_count} 个")
-            return True
+            return {'matched': True, 'reason': ''}
         else:
             logger.warning(f"⚠️ 关键词匹配失败: 匹配 {len(matched_keywords)} 个，要求 {min_match_count} 个")
-            return False
+            return {
+                'matched': False, 
+                'reason': f'视频标题与任务内容不匹配，请确保提交的是正确的任务视频'
+            }
     
     def _check_keywords_match(self, page_text: str, task_title: str, task_description: str) -> bool:
         """
         检查页面文本是否包含任务关键词（旧版本，保留兼容）
         现在调用严格版本
         """
-        return self._check_keywords_match_strict(page_text, task_title, task_description)
+        result = self._check_keywords_match_strict(page_text, task_title, task_description)
+        return result['matched']
