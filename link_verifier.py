@@ -163,8 +163,8 @@ class LinkVerifier:
                         logger.info(f"📝 视频标题: {title}")
                         logger.info(f"👤 作者: {author_name}")
                         
-                        # 验证关键词匹配
-                        result['matched'] = self._check_keywords_match(
+                        # 验证关键词匹配（使用严格模式）
+                        result['matched'] = self._check_keywords_match_strict(
                             result['page_text'],
                             task_title,
                             task_description
@@ -232,9 +232,68 @@ class LinkVerifier:
         logger.info(f"✅ 通用链接验证通过（简化模式）")
         return result
     
-    def _check_keywords_match(self, page_text: str, task_title: str, task_description: str) -> bool:
+    def _extract_drama_name(self, task_title: str) -> str:
         """
-        检查页面文本是否包含任务关键词
+        从任务标题中提取剧名（《》中的内容）
+        
+        Args:
+            task_title: 任务标题
+        
+        Returns:
+            str: 剧名，如果没有则返回空字符串
+        """
+        match = re.search(r'《(.+?)》', task_title)
+        if match:
+            return match.group(1)
+        return ''
+    
+    def _extract_core_keywords(self, task_title: str, task_description: str) -> list:
+        """
+        提取核心关键词（更严格的提取逻辑）
+        
+        Args:
+            task_title: 任务标题
+            task_description: 任务描述
+        
+        Returns:
+            list: 核心关键词列表
+        """
+        keywords = []
+        
+        # 1. 提取剧名（最重要的关键词）
+        drama_name = self._extract_drama_name(task_title)
+        if drama_name:
+            keywords.append(drama_name)
+            # 剧名可能有多个词，也单独添加
+            drama_words = re.findall(r'[\u4e00-\u9fff]{2,}', drama_name)
+            keywords.extend(drama_words)
+        
+        # 2. 提取标题中的中文词组（至少3个字）
+        title_words = re.findall(r'[\u4e00-\u9fff]{3,}', task_title)
+        keywords.extend(title_words)
+        
+        # 3. 提取描述中的中文词组（至少3个字）
+        desc_words = re.findall(r'[\u4e00-\u9fff]{3,}', task_description)
+        keywords.extend(desc_words)
+        
+        # 4. 提取 hashtag 标签（如果有）
+        hashtags = re.findall(r'#([\w\u4e00-\u9fff]+)', task_description)
+        keywords.extend([tag for tag in hashtags if len(tag) >= 2])
+        
+        # 去重并过滤常见词
+        common_words = {'视频', '链接', '任务', '完成', '提交', '下载', '上传', '平台', '内容', '分发', '奖励', '获得', '可以', '请求', '系统', '用户'}
+        keywords = list(set([kw for kw in keywords if kw not in common_words and len(kw) >= 2]))
+        
+        logger.info(f"🔑 提取到的核心关键词: {keywords}")
+        return keywords
+    
+    def _check_keywords_match_strict(self, page_text: str, task_title: str, task_description: str) -> bool:
+        """
+        严格检查页面文本是否包含任务关键词
+        
+        匹配规则：
+        1. 如果任务标题包含剧名（《》），则必须匹配剧名
+        2. 否则，需要匹配至少2个核心关键词
         
         Args:
             page_text: 页面文本内容
@@ -248,33 +307,52 @@ class LinkVerifier:
             logger.warning("⚠️ 页面文本为空，默认不匹配")
             return False
         
-        # 提取关键词（从标题和描述中提取）
-        keywords = []
-        
-        # 从标题中提取关键词（去除标点符号）
-        title_words = re.findall(r'[\w\u4e00-\u9fff]+', task_title)
-        keywords.extend([w for w in title_words if len(w) > 1])
-        
-        # 从描述中提取关键词
-        desc_words = re.findall(r'[\w\u4e00-\u9fff]+', task_description)
-        keywords.extend([w for w in desc_words if len(w) > 1])
-        
-        # 去重
-        keywords = list(set(keywords))
-        
-        logger.info(f"🔑 提取到的关键词: {keywords}")
-        
-        # 检查是否有任意关键词匹配
         page_text_lower = page_text.lower()
-        matched_keywords = []
         
+        # 1. 首先检查剧名匹配（最严格的检查）
+        drama_name = self._extract_drama_name(task_title)
+        if drama_name:
+            logger.info(f"🎬 检查剧名匹配: {drama_name}")
+            if drama_name.lower() in page_text_lower:
+                logger.info(f"✅ 剧名匹配成功: {drama_name}")
+                return True
+            else:
+                # 剧名不匹配，检查剧名的部分词是否匹配
+                drama_words = re.findall(r'[\u4e00-\u9fff]{2,}', drama_name)
+                matched_drama_words = [w for w in drama_words if w.lower() in page_text_lower]
+                if len(matched_drama_words) >= 2:
+                    logger.info(f"✅ 剧名部分匹配成功: {matched_drama_words}")
+                    return True
+                logger.warning(f"⚠️ 剧名不匹配: 期望 '{drama_name}'，实际 '{page_text[:100]}'")
+        
+        # 2. 提取核心关键词
+        keywords = self._extract_core_keywords(task_title, task_description)
+        
+        if not keywords:
+            logger.warning("⚠️ 未提取到关键词，默认不匹配")
+            return False
+        
+        # 3. 检查关键词匹配（需要匹配至少2个）
+        matched_keywords = []
         for keyword in keywords:
             if keyword.lower() in page_text_lower:
                 matched_keywords.append(keyword)
         
-        if matched_keywords:
-            logger.info(f"✅ 匹配到关键词: {matched_keywords}")
+        logger.info(f"📊 匹配到的关键词: {matched_keywords} / {len(keywords)}")
+        
+        # 需要匹配至少2个关键词，或者匹配超过30%的关键词
+        min_match_count = max(2, len(keywords) // 3)
+        
+        if len(matched_keywords) >= min_match_count:
+            logger.info(f"✅ 关键词匹配成功: 匹配 {len(matched_keywords)} 个，要求 {min_match_count} 个")
             return True
         else:
-            logger.warning(f"⚠️ 未匹配到任何关键词")
+            logger.warning(f"⚠️ 关键词匹配失败: 匹配 {len(matched_keywords)} 个，要求 {min_match_count} 个")
             return False
+    
+    def _check_keywords_match(self, page_text: str, task_title: str, task_description: str) -> bool:
+        """
+        检查页面文本是否包含任务关键词（旧版本，保留兼容）
+        现在调用严格版本
+        """
+        return self._check_keywords_match_strict(page_text, task_title, task_description)
