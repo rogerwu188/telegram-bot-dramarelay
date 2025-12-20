@@ -1770,6 +1770,10 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     message_parts = []
     
     if user_lang == 'zh':
+        message_parts.append("━" * 30)
+        message_parts.append("")
+        message_parts.append("🆕 <b>【新任务】</b>")
+        message_parts.append("")
         message_parts.append("📤 <b>提交任务</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 完成可获得：{reward} X2C")
@@ -1790,6 +1794,10 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("")
         message_parts.append("📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）")
     else:
+        message_parts.append("━" * 30)
+        message_parts.append("")
+        message_parts.append("🆕 <b>【New Task】</b>")
+        message_parts.append("")
         message_parts.append("📤 <b>Submit Task</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 Reward: {reward} X2C")
