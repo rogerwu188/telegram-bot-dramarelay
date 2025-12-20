@@ -429,7 +429,7 @@ MESSAGES = {
 
 📊 【已完成分发任务】
 
-💰 总 X2C：{total_power}
+💰 累计获得 X2C 奖励：{total_power}
 ✅ 已完成任务：{completed_tasks}
 🔄 进行中任务：{in_progress_tasks}
 📈 本周排名：#{rank}""",
@@ -606,7 +606,7 @@ Viral videos can mine 10,000+ x2c
 
 📊 【Completed Tasks】
 
-💰 Total X2C: {total_power}
+💰 Total X2C Earned: {total_power}
 ✅ Completed Tasks: {completed_tasks}
 🔄 In Progress: {in_progress_tasks}
 📈 This Week Rank: #{rank}""",
