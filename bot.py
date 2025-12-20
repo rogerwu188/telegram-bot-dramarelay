@@ -1734,6 +1734,8 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     # 兼容不同的字段名：keywords 或 keywords_template
     keywords_raw = task.get('keywords') or task.get('keywords_template', '') or ''
     reward = task.get('node_power_reward', 0)
+    # 获取视频链接
+    video_url = task.get('video_url', '')
     
     # 清理 keywords：完全删除包含“视频链接：”的行
     keywords_lines = keywords_raw.split('\n') if keywords_raw else []
@@ -1771,6 +1773,8 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("📤 <b>提交任务</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 完成可获得：{reward} X2C")
+        if video_url:
+            message_parts.append(f"🔗 视频链接：{video_url}")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("📋【一键复制内容】")
@@ -1789,6 +1793,8 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("📤 <b>Submit Task</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 Reward: {reward} X2C")
+        if video_url:
+            message_parts.append(f"🔗 Video Link: {video_url}")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("📋【One-Click Copy Content】")
