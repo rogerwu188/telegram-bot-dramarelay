@@ -377,11 +377,7 @@ def init_database():
 
 MESSAGES = {
     'zh': {
-        'welcome': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🏠 【主菜单】
-
-🎬 X2C 流量节点 (Traffic Node) 已连接
+        'welcome': """🎬 X2C 流量节点 (Traffic Node) 已连接
 欢迎回来，节点 @{username}。
 这里是全球首个 Post-to-Earn 去中心化短剧分发网络。
 
@@ -401,7 +397,7 @@ MESSAGES = {
 👇 点击下方指令，激活节点开始挖矿：""",
         'menu_get_tasks': '⛏️ 领取挖矿原料',
         'menu_submit_link': '🔗 提交工作凭证',
-        'menu_my_power': '📊 已完成分发任务',
+        'menu_my_power': '📊 我的算力',
         'menu_ranking': '⚡ 全网算力榜',
         'menu_airdrop': '👥 邀请好友 (+10%)',
         'menu_bind_wallet': '📤 钱包提现',
@@ -417,19 +413,17 @@ MESSAGES = {
 📱 平台：{platforms}
 
 ⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。""",
-        'task_claimed': '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 【任务已领取】\n\n✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。',
+        'task_claimed': '✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。',
         'task_already_claimed': '⚠️ 你已经领取过这个任务了。',
-        'select_task_to_submit': '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🆕 【继续提交任务】\n\n📋 请选择要提交的任务：',
+        'select_task_to_submit': '请选择要提交的任务：',
         'no_tasks_in_progress': '你当前没有进行中的任务。\n\n请先领取任务！',
         'select_platform': '请选择你上传的平台：',
         'enter_link': '请输入你上传的链接：',
         'link_submitted': '✅ 链接提交成功！\n\n你获得了 {reward} X2C！\n\n总算力：{total_power}',
         'invalid_link': '❌ 链接格式不正确，请重新输入。',
-        'my_power': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        'my_power': """📊 我的算力统计
 
-📊 【已完成分发任务】
-
-💰 累计获得 X2C 奖励：{total_power}
+💰 总 X2C：{total_power}
 ✅ 已完成任务：{completed_tasks}
 🔄 进行中任务：{in_progress_tasks}
 📈 本周排名：#{rank}""",
@@ -554,11 +548,7 @@ https://solscan.io/tx/{tx_hash}
         'share_link': '📤 分享给好友',
     },
     'en': {
-        'welcome': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🏠 【Main Menu】
-
-🎬 X2C Traffic Node Connected
+        'welcome': """🎬 X2C Traffic Node Connected
 Welcome back, Node @{username}.
 This is the world's first Post-to-Earn decentralized drama distribution network.
 
@@ -578,7 +568,7 @@ Viral videos can mine 10,000+ x2c
 👇 Click commands below to activate node and start mining:""",
         'menu_get_tasks': '⛏️ Get Mining Materials',
         'menu_submit_link': '🔗 Submit Work Proof',
-        'menu_my_power': '📊 Completed Tasks',
+        'menu_my_power': '📊 My Hashrate',
         'menu_ranking': '⚡ Global Hashrate Board',
         'menu_airdrop': '👥 Invite Friends (+10%)',
         'menu_bind_wallet': '📤 Wallet Withdrawal',
@@ -594,19 +584,17 @@ Viral videos can mine 10,000+ x2c
 📱 Platforms: {platforms}
 
 ⬇️ Click the button below to claim the task. The video will be automatically downloaded to the chat.""",
-        'task_claimed': '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 【Task Claimed】\n\n✅ Task claimed successfully!\n\nDownloading video... After download completes, please upload it to your chosen platform, and come back to submit the link.',
+        'task_claimed': '✅ Task claimed successfully!\n\nDownloading video... After download completes, please upload it to your chosen platform, and come back to submit the link.',
         'task_already_claimed': '⚠️ You have already claimed this task.',
-        'select_task_to_submit': '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🆕 【Continue Submitting】\n\n📋 Please select the task to submit:',
+        'select_task_to_submit': 'Please select the task to submit:',
         'no_tasks_in_progress': 'You have no tasks in progress.\n\nPlease claim a task first!',
         'select_platform': 'Please select the platform you uploaded to:',
         'enter_link': 'Please enter your upload link:',
         'link_submitted': '✅ Link submitted successfully!\n\nYou earned {reward} X2C!\n\nTotal Power: {total_power}',
         'invalid_link': '❌ Invalid link format. Please try again.',
-        'my_power': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        'my_power': """📊 My X2C Stats
 
-📊 【Completed Tasks】
-
-💰 Total X2C Earned: {total_power}
+💰 Total X2C: {total_power}
 ✅ Completed Tasks: {completed_tasks}
 🔄 In Progress: {in_progress_tasks}
 📈 This Week Rank: #{rank}""",
@@ -1481,11 +1469,15 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 ━━━━━━━━━━━━━━━━━━
 📋【一键复制内容】
-💡 请复制到 TikTok 或 YouTube
 
 <pre>
-{plot_keyword} | {drama_name}
-{description}
+【YouTube】
+标题: {plot_keyword} | {drama_name}
+描述: {description}
+
+【TikTok】
+描述: {description}
+
 {hashtags}
 </pre>
 
@@ -1508,11 +1500,15 @@ Please click the link below to download:
 
 ━━━━━━━━━━━━━━━━━━
 📋【One-Click Copy Content】
-💡 Please copy to TikTok or YouTube
 
 <pre>
-{title}
-{description}
+【YouTube】
+Title: {title}
+Description: {description}
+
+【TikTok】
+Description: {description}
+
 {hashtags}
 </pre>
 
@@ -1534,7 +1530,7 @@ to receive 🎉 {reward} X2C"""
                 text=download_msg,
                 reply_markup=reply_markup,
                 parse_mode='HTML',
-                disable_web_page_preview=True
+                disable_web_page_preview=False
             )
             
             # 保存提示消息ID
@@ -1592,11 +1588,25 @@ to receive 🎉 {reward} X2C"""
 📥 视频已下载，请选择任意平台发布内容，即可获得对应奖励：
 
 ━━━━━━━━━━━━━━━━━━
-📋【一键复制内容】
-💡 请复制到 TikTok 或 YouTube
+🎬【YouTube 上传内容】
 
+▶️ 视频文件名称（右键直接另存，或直接拖拽）：
+{plot_keyword} · {drama_name_with_brackets}
+
+▶️ 复制到 YouTube Title栏：
 {plot_keyword} | {drama_name}
+
+▶️ 复制到 YouTube Description栏：
 {description}
+
+（YouTube 不需要填写标签，保持空白即可）
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok 上传内容】
+
+▶️ TikTok 视频描述（请完整复制以下内容）：
+{description}
+
 {hashtags}
 
 ━━━━━━━━━━━━━━━━━━
@@ -1616,12 +1626,32 @@ to receive 🎉 {reward} X2C"""
 📥 Please download the video and upload to any platform to receive rewards:
 
 ━━━━━━━━━━━━━━━━━━
-📋【One-Click Copy Content】
-💡 Please copy to TikTok or YouTube
+🎬【YouTube Upload Content】
 
+▶ Video Title (copy directly):
+```
 {title}
+```
+
+▶ Video Description (paste in YouTube description):
+```
 {description}
+```
+
+(YouTube does not require tags, leave blank)
+
+━━━━━━━━━━━━━━━━━━
+🎬【TikTok Upload Content】
+
+▶ TikTok Description (copy completely):
+```
+{description}
+```
+
+▶ TikTok Hashtags (paste below description):
+```
 {hashtags}
+```
 
 ━━━━━━━━━━━━━━━━━━
 💰【Reward】
@@ -1640,8 +1670,7 @@ to receive 🎉 {reward} X2C"""
                 chat_id=query.message.chat_id,
                 text=final_msg,
                 reply_markup=reply_markup,
-                parse_mode=None,
-                disable_web_page_preview=True
+                parse_mode=None
             )
             
             # 保存提示消息ID，以便用户提交链接时删除
@@ -1747,8 +1776,6 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     # 兼容不同的字段名：keywords 或 keywords_template
     keywords_raw = task.get('keywords') or task.get('keywords_template', '') or ''
     reward = task.get('node_power_reward', 0)
-    # 获取视频链接
-    video_url = task.get('video_url', '')
     
     # 清理 keywords：完全删除包含“视频链接：”的行
     keywords_lines = keywords_raw.split('\n') if keywords_raw else []
@@ -1783,49 +1810,67 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     message_parts = []
     
     if user_lang == 'zh':
-        message_parts.append("━" * 30)
-        message_parts.append("")
-        message_parts.append("🆕 <b>【新任务】</b>")
-        message_parts.append("")
         message_parts.append("📤 <b>提交任务</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 完成可获得：{reward} X2C")
-        if video_url:
-            message_parts.append(f"🔗 视频链接：{video_url}")
         message_parts.append("")
         message_parts.append("━" * 30)
-        message_parts.append("📋【一键复制内容】")
-        message_parts.append("💡 请复制到 TikTok 或 YouTube")
+        message_parts.append("🎬【YouTube 上传内容】")
         message_parts.append("")
-        message_parts.append("<pre>")
+        message_parts.append(f"▶️ 视频文件名称：")
+        message_parts.append(f"{plot_keyword} · {drama_name_with_brackets}")
+        message_parts.append("")
+        message_parts.append(f"▶️ 复制到 YouTube Title栏：")
         message_parts.append(f"{plot_keyword} | {drama_name}")
+        message_parts.append("")
+        message_parts.append(f"▶️ 复制到 YouTube Description栏：")
         message_parts.append(description)
+        message_parts.append("")
+        message_parts.append("（YouTube 不需要填写标签，保持空白即可）")
+        message_parts.append("")
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【TikTok 上传内容】")
+        message_parts.append("")
+        message_parts.append("▶️ TikTok 视频描述（请完整复制以下内容）：")
+        message_parts.append(description)
+        message_parts.append("")
         message_parts.append(hashtags)
-        message_parts.append("</pre>")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("")
         message_parts.append("📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）")
     else:
-        message_parts.append("━" * 30)
-        message_parts.append("")
-        message_parts.append("🆕 <b>【New Task】</b>")
-        message_parts.append("")
         message_parts.append("📤 <b>Submit Task</b>")
         message_parts.append(f"🎬 {title}")
         message_parts.append(f"💰 Reward: {reward} X2C")
-        if video_url:
-            message_parts.append(f"🔗 Video Link: {video_url}")
         message_parts.append("")
         message_parts.append("━" * 30)
-        message_parts.append("📋【One-Click Copy Content】")
-        message_parts.append("💡 Please copy to TikTok or YouTube")
+        message_parts.append("🎬【YouTube Upload Content】")
         message_parts.append("")
-        message_parts.append("<pre>")
+        message_parts.append("▶ Video Title (copy directly):")
+        message_parts.append("```")
         message_parts.append(title)
+        message_parts.append("```")
+        message_parts.append("")
+        message_parts.append("▶ Video Description (paste in YouTube description):")
+        message_parts.append("```")
         message_parts.append(description)
+        message_parts.append("```")
+        message_parts.append("")
+        message_parts.append("(YouTube does not require tags, leave blank)")
+        message_parts.append("")
+        message_parts.append("━" * 30)
+        message_parts.append("🎬【TikTok Upload Content】")
+        message_parts.append("")
+        message_parts.append("▶ TikTok Description (copy completely):")
+        message_parts.append("```")
+        message_parts.append(description)
+        message_parts.append("```")
+        message_parts.append("")
+        message_parts.append("▶ TikTok Hashtags (paste below description):")
+        message_parts.append("```")
         message_parts.append(hashtags)
-        message_parts.append("</pre>")
+        message_parts.append("```")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("")
@@ -1845,8 +1890,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         sent_msg = await query.edit_message_text(
             message,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='HTML',
-            disable_web_page_preview=True
+            parse_mode='HTML'
         )
         logger.info(f"✅ 成功编辑原消息: message_id={sent_msg.message_id}")
     except Exception as e:
@@ -1856,8 +1900,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
             chat_id=query.message.chat_id,
             text=message,
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode='HTML',
-            disable_web_page_preview=True
+            parse_mode='HTML'
         )
         logger.warning(f"⚠️ 已发送新消息: message_id={sent_msg.message_id}")
     
@@ -2419,7 +2462,7 @@ async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(message, reply_markup=keyboard)
 
-async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
+async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理邀请好友"""
     query = update.callback_query
     await query.answer()
@@ -2431,11 +2474,8 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     invite_link = f"https://t.me/{BOT_USERNAME}?start=invite_{user_id}"
     
     # 获取邀请统计
-    from invitation_system import get_invitation_stats, get_active_invitees
+    from invitation_system import get_invitation_stats
     stats = get_invitation_stats(user_id)
-    
-    # 获取有效被邀请人列表
-    invitees_data = get_active_invitees(user_id, page=page, per_page=10)
     
     message = get_message(user_lang, 'invite_friends',
         invite_link=invite_link,
@@ -2444,65 +2484,12 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
         total_rewards=stats['total_rewards']
     )
     
-    # 添加有效被邀请人列表
-    if invitees_data['invitees']:
-        if user_lang == 'zh':
-            message += "\n\n👥 有效邀请列表："
-        else:
-            message += "\n\n👥 Active Invitees:"
-        
-        for inv in invitees_data['invitees']:
-            username = inv.get('username') or inv.get('first_name') or f"User_{inv['user_id']}"
-            if inv.get('username'):
-                message += f"\n• @{username}"
-            else:
-                message += f"\n• {username}"
-        
-        # 显示分页信息
-        if invitees_data['total_pages'] > 1:
-            if user_lang == 'zh':
-                message += f"\n\n📄 第 {page}/{invitees_data['total_pages']} 页"
-            else:
-                message += f"\n\n📄 Page {page}/{invitees_data['total_pages']}"
-    
-    # 构建键盘
-    keyboard_rows = []
-    
-    # 分页按钮
-    if invitees_data['total_pages'] > 1:
-        pagination_row = []
-        if page > 1:
-            if user_lang == 'zh':
-                pagination_row.append(InlineKeyboardButton("⬅️ 上一页", callback_data=f'invite_page_{page-1}'))
-            else:
-                pagination_row.append(InlineKeyboardButton("⬅️ Prev", callback_data=f'invite_page_{page-1}'))
-        if page < invitees_data['total_pages']:
-            if user_lang == 'zh':
-                pagination_row.append(InlineKeyboardButton("下一页 ➡️", callback_data=f'invite_page_{page+1}'))
-            else:
-                pagination_row.append(InlineKeyboardButton("Next ➡️", callback_data=f'invite_page_{page+1}'))
-        if pagination_row:
-            keyboard_rows.append(pagination_row)
-    
-    # 分享按钮
-    keyboard_rows.append([InlineKeyboardButton(get_message(user_lang, 'share_link'), url=f"https://t.me/share/url?url={invite_link}")])
-    # 返回按钮
-    keyboard_rows.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
-    
-    keyboard = InlineKeyboardMarkup(keyboard_rows)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_message(user_lang, 'share_link'), url=f"https://t.me/share/url?url={invite_link}")],
+        [InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')]
+    ])
     
     await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True)
-
-
-async def invite_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理邀请列表翻页"""
-    query = update.callback_query
-    
-    # 从callback_data中提取页码
-    page = int(query.data.split('_')[-1])
-    
-    # 调用invite_friends_callback并传入页码
-    await invite_friends_callback(update, context, page=page)
 
 async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理提现 - Step 1: 输入 SOL 地址"""
@@ -2797,7 +2784,6 @@ def main():
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
     application.add_handler(CallbackQueryHandler(invite_friends_callback, pattern='^invite_friends$'))
-    application.add_handler(CallbackQueryHandler(invite_page_callback, pattern='^invite_page_'))
     application.add_handler(CallbackQueryHandler(tutorial_callback, pattern='^tutorial$'))
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
