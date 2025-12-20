@@ -377,7 +377,11 @@ def init_database():
 
 MESSAGES = {
     'zh': {
-        'welcome': """🎬 X2C 流量节点 (Traffic Node) 已连接
+        'welcome': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏠 【主菜单】
+
+🎬 X2C 流量节点 (Traffic Node) 已连接
 欢迎回来，节点 @{username}。
 这里是全球首个 Post-to-Earn 去中心化短剧分发网络。
 
@@ -413,7 +417,7 @@ MESSAGES = {
 📱 平台：{platforms}
 
 ⬇️ 点击下方按钮领取任务，系统将自动下载视频到聊天窗口。""",
-        'task_claimed': '✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。',
+        'task_claimed': '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 【任务已领取】\n\n✅ 任务领取成功！\n\n正在下载视频，下载完成后请上传到你选择的平台，然后回来提交链接。',
         'task_already_claimed': '⚠️ 你已经领取过这个任务了。',
         'select_task_to_submit': '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🆕 【继续提交任务】\n\n📋 请选择要提交的任务：',
         'no_tasks_in_progress': '你当前没有进行中的任务。\n\n请先领取任务！',
@@ -548,7 +552,11 @@ https://solscan.io/tx/{tx_hash}
         'share_link': '📤 分享给好友',
     },
     'en': {
-        'welcome': """🎬 X2C Traffic Node Connected
+        'welcome': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏠 【Main Menu】
+
+🎬 X2C Traffic Node Connected
 Welcome back, Node @{username}.
 This is the world's first Post-to-Earn decentralized drama distribution network.
 
@@ -584,7 +592,7 @@ Viral videos can mine 10,000+ x2c
 📱 Platforms: {platforms}
 
 ⬇️ Click the button below to claim the task. The video will be automatically downloaded to the chat.""",
-        'task_claimed': '✅ Task claimed successfully!\n\nDownloading video... After download completes, please upload it to your chosen platform, and come back to submit the link.',
+        'task_claimed': '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📥 【Task Claimed】\n\n✅ Task claimed successfully!\n\nDownloading video... After download completes, please upload it to your chosen platform, and come back to submit the link.',
         'task_already_claimed': '⚠️ You have already claimed this task.',
         'select_task_to_submit': '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🆕 【Continue Submitting】\n\n📋 Please select the task to submit:',
         'no_tasks_in_progress': 'You have no tasks in progress.\n\nPlease claim a task first!',
