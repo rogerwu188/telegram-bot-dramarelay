@@ -246,7 +246,8 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
                 await bot.send_message(
                     chat_id=user_id,
                     text=success_msg,
-                    parse_mode='HTML'
+                    parse_mode='HTML',
+                    disable_web_page_preview=True
                 )
                 
                 # 发送 Webhook 回调
@@ -296,7 +297,8 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
             await bot.send_message(
                 chat_id=user_id,
                 text=fail_msg,
-                parse_mode='HTML'
+                parse_mode='HTML',
+                disable_web_page_preview=True
             )
             
             return False
