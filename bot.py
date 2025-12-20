@@ -1883,7 +1883,7 @@ async def platform_select_callback(update: Update, context: ContextTypes.DEFAULT
     return SUBMIT_LINK
 
 async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理链接输入（新版本：编辑原消息）"""
+    """处理链接输入（异步验证模式：立即返回，后台验证）"""
     user_id = update.effective_user.id
     user_lang = get_user_language(user_id)
     
@@ -1969,10 +1969,9 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     cur.execute("SELECT title, description, node_power_reward FROM drama_tasks WHERE task_id = %s", (task_id,))
     task = cur.fetchone()
     cur.close()
-    # 不在这里关闭连接，后面还需要使用
+    conn.close()
     
     if not task:
-        conn.close()  # 关闭数据库连接
         if task_card_message_id and task_card_chat_id:
             await context.bot.edit_message_text(
                 chat_id=task_card_chat_id,
@@ -1981,27 +1980,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
         return ConversationHandler.END
     
-    # 更新任务卡片显示"验证中"
-    if task_card_message_id and task_card_chat_id:
-        verifying_text = (
-            f"🔍 <b>正在验证视频内容...</b>\n\n"
-            f"🎬 任务：{task['title']}\n\n"
-            f"⏳ 请稍候，这可能需要 5-15 秒"
-        ) if user_lang.startswith('zh') else (
-            f"🔍 <b>Verifying video content...</b>\n\n"
-            f"🎬 Task: {task['title']}\n\n"
-            f"⏳ Please wait, this may take 5-15 seconds"
-        )
-        
-        await context.bot.edit_message_text(
-            chat_id=task_card_chat_id,
-            message_id=task_card_message_id,
-            text=verifying_text,
-            parse_mode='HTML',
-            disable_web_page_preview=True
-        )
-    
-    # 先验证链接格式
+    # 先验证链接格式（快速检查）
     logger.info(f"🔍 验证链接格式: platform={platform}, url={link[:50]}...")
     validation_result = link_verifier.validate_platform_url(link, platform)
     
@@ -2031,316 +2010,73 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     [InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data=f"view_task_{task_id}")]
                 ])
             )
-            logger.info("✅ 链接格式错误消息已发送")
         except Exception as e:
             logger.error(f"❌ 发送链接格式错误消息失败: {e}", exc_info=True)
         
-        logger.info("🔙 返回 SUBMIT_LINK 状态")
         return ConversationHandler.END
     
-    logger.info("✅ 链接格式验证通过，开始内容验证")
+    # ========== 异步验证模式：立即返回，后台验证 ==========
     
-    # 调用验证器（异步）并设置超时
-    logger.info(f"🔍 开始调用 verify_link: url={link[:50]}...")
-    try:
-        verify_result = await asyncio.wait_for(
-            link_verifier.verify_link(
-                url=link,
-                task_title=task['title'],
-                task_description=task['description'] or ''
-            ),
-            timeout=45.0  # 45秒超时
-        )
-        logger.info(f"✅ verify_link 返回: success={verify_result.get('success')}, matched={verify_result.get('matched')}")
-    except asyncio.TimeoutError:
-        logger.error("⚠️ verify_link 超时！45秒未返回")
-        verify_result = {
-            'success': False,
-            'matched': False,
-            'error': '验证超时，请稍后重试'
-        }
-    except Exception as e:
-        logger.error(f"❌ verify_link 异常: {e}", exc_info=True)
-        verify_result = {
-            'success': False,
-            'matched': False,
-            'error': f'验证失败: {str(e)}'
-        }
+    # 将链接添加到验证队列
+    from async_verification_worker import add_to_verification_queue
+    queue_id = add_to_verification_queue(user_id, task_id, link, platform)
     
-    # 检查验证结果
-    if not verify_result['success']:
-        error_msg = (
-            f"❌ **验证失败**\n\n"
-            f"无法访问您提交的链接，请检查：\n"
-            f"• 链接是否可以正常访问\n"
-            f"• 视频是否公开可见\n\n"
-            f"错误信息：{verify_result.get('error', '未知错误')}\n\n"
-            f"🔁 点击下方按钮重试"
+    if queue_id is None:
+        # 该链接已经验证完成
+        success_msg = (
+            "✅ **该链接已提交过**\n\n"
+            "此链接之前已成功验证并获得奖励。\n"
+            "请提交新的视频链接。"
         ) if user_lang.startswith('zh') else (
-            f"❌ **Verification Failed**\n\n"
-            f"Cannot access your submitted link. Please check:\n"
-            f"• Link is accessible\n"
-            f"• Video is publicly visible\n\n"
-            f"Error: {verify_result.get('error', 'Unknown error')}\n\n"
-            f"🔁 Click button below to retry"
+            "✅ **Link Already Submitted**\n\n"
+            "This link was already verified and rewarded.\n"
+            "Please submit a new video link."
         )
-        
-        retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
-        ]])
-        
-        logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
-        if task_card_message_id and task_card_chat_id:
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=task_card_chat_id,
-                    message_id=task_card_message_id,
-                    text=error_msg,
-                    reply_markup=retry_button,
-                    parse_mode='HTML'
-                )
-                logger.info("✅ 不匹配错误消息已发送")
-            except Exception as e:
-                logger.error(f"❌ 发送不匹配错误消息失败: {e}", exc_info=True)
-        else:
-            logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空")
-        
-        logger.info("✅ 返回 SUBMIT_LINK 状态")
-        return SUBMIT_LINK
-    
-    if not verify_result['matched']:
-        error_msg = (
-            f"❌ **内容不匹配**\n\n"
-            f"📝 您提交的视频内容与任务要求不匹配。\n\n"
-            f"🎯 任务要求：{task['title']}\n"
-            f"📱 您的视频：{verify_result.get('page_title', '未知')}\n\n"
-            f"✅ 请确保上传的是正确的任务视频，然后点击重试。"
-        ) if user_lang.startswith('zh') else (
-            f"❌ **Content Mismatch**\n\n"
-            f"📝 Your submitted video content doesn't match the task requirements.\n\n"
-            f"🎯 Task: {task['title']}\n"
-            f"📱 Your video: {verify_result.get('page_title', 'Unknown')}\n\n"
-            f"✅ Please ensure you upload the correct task video and click retry."
-        )
-        
-        retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
-        ]])
-        
-        logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
-        if task_card_message_id and task_card_chat_id:
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=task_card_chat_id,
-                    message_id=task_card_message_id,
-                    text=error_msg,
-                    reply_markup=retry_button,
-                    parse_mode='HTML'
-                )
-                logger.info("✅ 不匹配错误消息已发送")
-            except Exception as e:
-                logger.error(f"❌ 发送不匹配错误消息失败: {e}", exc_info=True)
-        else:
-            logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空")
-        
-        logger.info("✅ 返回 SUBMIT_LINK 状态")
-        return SUBMIT_LINK
-    
-    # 验证通过，缓存验证结果以便重试
-    context.user_data['verified_submission'] = {
-        'task_id': task_id,
-        'platform': platform,
-        'link': link,
-        'verify_result': verify_result,
-        'task': task,
-        'timestamp': datetime.now().timestamp()
-    }
-    logger.info(f"✅ 已缓存验证结果，有效期10分钟")
-    
-    # 验证通过，提交链接
-    logger.info(f"✅ 验证通过，开始提交任务: user_id={user_id}, task_id={task_id}, platform={platform}")
-    try:
-        reward = submit_task_link(user_id, task_id, platform, link)
-        logger.info(f"✅ 任务提交成功，奖励: {reward} X2C")
-        
-        # 更新最后提交时间
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE users SET last_submission_time = NOW() WHERE user_id = %s",
-                (user_id,)
-            )
-            conn.commit()
-            cur.close()
-            logger.info(f"✅ 已更新用户 {user_id} 的最后提交时间")
-        except Exception as update_error:
-            logger.error(f"⚠️ 更新最后提交时间失败: {update_error}")
-            conn.rollback()
-        
-        # 发送 Webhook 回调通知
-        try:
-            from webhook_notifier import send_task_completed_webhook
-            await send_task_completed_webhook(
-                task_id=task_id,
-                user_id=user_id,
-                platform=platform.lower(),
-                submission_link=link,
-                node_power_earned=reward,
-                verification_details=verify_result
-            )
-            logger.info(f"📤 Webhook 回调已发送: task_id={task_id}")
-        except Exception as webhook_error:
-            logger.error(f"⚠️ Webhook 回调失败 (不影响任务提交): {webhook_error}", exc_info=True)
-    except Exception as e:
-        logger.error(f"❌ 提交任务失败: {e}", exc_info=True)
-        error_msg = (
-            f"❌ <b>提交失败</b>\n\n"
-            f"验证成功但保存失败，请点击下方按钮重试\n\n"
-            f"错误信息：{str(e)}"
-        ) if user_lang.startswith('zh') else (
-            f"❌ <b>Submission Failed</b>\n\n"
-            f"Verification passed but save failed, please click the button below to retry\n\n"
-            f"Error: {str(e)}"
-        )
-        
-        # 添加重试按钮
-        retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试提交" if user_lang.startswith('zh') else "🔁 Retry Submission", callback_data=f'retry_submit_{task_id}')
-        ]])
         
         if task_card_message_id and task_card_chat_id:
             await context.bot.edit_message_text(
                 chat_id=task_card_chat_id,
                 message_id=task_card_message_id,
-                text=error_msg,
-                reply_markup=retry_button,
-                parse_mode='HTML'
+                text=success_msg,
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🏠 返回主菜单" if user_lang.startswith('zh') else "🏠 Back to Menu", callback_data='back_to_menu')
+                ]])
             )
-        conn.close()
         return ConversationHandler.END
     
-    # 关闭数据库连接
-    conn.close()
-    
-    try:
-        stats = get_user_stats(user_id)
-        logger.info(f"✅ 获取用户统计成功: total_power={stats.get('total_power')}")
-        # 确保 total_power 不为 None
-        if stats.get('total_power') is None:
-            stats['total_power'] = 0
-            logger.warning("⚠️ total_power 为 None，设置为 0")
-    except Exception as e:
-        logger.error(f"❌ 获取用户统计失败: {e}", exc_info=True)
-        stats = {'total_power': 0}
-    
-    # 删除之前的提示消息
-    try:
-        if 'task_hint_messages' in context.user_data and task_id in context.user_data['task_hint_messages']:
-            hint_msg_id = context.user_data['task_hint_messages'][task_id]
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=hint_msg_id
-            )
-            del context.user_data['task_hint_messages'][task_id]
-            logger.info(f"✅ Deleted hint message for task {task_id}")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to delete hint message: {e}")
-    
-    # 删除视频消息
-    try:
-        if 'task_video_messages' in context.user_data and task_id in context.user_data['task_video_messages']:
-            video_msg_id = context.user_data['task_video_messages'][task_id]
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id,
-                message_id=video_msg_id
-            )
-            del context.user_data['task_video_messages'][task_id]
-            logger.info(f"✅ Deleted video message for task {task_id}")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to delete video message: {e}")
-    
-    # 显示提交成功消息（编辑任务卡片）
-    platform_emoji = {
-        'tiktok': '📱 TikTok',
-        'youtube': '▶️ YouTube',
-        'instagram': '📷 Instagram',
-        'facebook': '👥 Facebook',
-        'twitter': '🐦 Twitter'
-    }
-    
-    # 使用 HTML 链接显示完整可点击的链接
-    link_text = "查看视频" if user_lang.startswith('zh') else "View Video"
-    
-    success_msg = (
-        f"✅ <b>任务提交成功！</b>\n\n"
-        f"🎯 任务名称：{task['title']}\n"
-        f"📱 平台：{platform.capitalize()}\n"
-        f"🔗 已提交：<a href=\"{link}\">{link_text}</a>\n\n"
-        f"🎁 获得奖励：{reward} X2C\n"
-        f"📊 累计算力：{stats['total_power']}\n\n"
-        f"🔥 你正在推动短剧全球传播！\n"
-        f"继续分发更多内容，解锁更高等级与更多X2C 奖励。"
+    # 立即返回"已接收"消息
+    received_msg = (
+        f"✅ <b>链接已接收！</b>\n\n"
+        f"🎬 任务：{task['title']}\n"
+        f"💰 奖励：{task['node_power_reward']} X2C\n\n"
+        f"🔍 系统正在后台核验中，请稍候...\n"
+        f"核验完成后会自动通知您结果。\n\n"
+        f"💡 您现在可以继续领取其他任务！"
     ) if user_lang.startswith('zh') else (
-        f"✅ <b>Task Submitted Successfully!</b>\n\n"
-        f"🎯 Task Name: {task['title']}\n"
-        f"📱 Platform: {platform.capitalize()}\n"
-        f"🔗 Submitted: <a href=\"{link}\">{link_text}</a>\n\n"
-        f"🎁 Reward Earned: {reward} X2C\n"
-        f"📊 Total Power: {stats['total_power']}\n\n"
-        f"🔥 You're driving global short drama distribution!\n"
-        f"Keep distributing more content to unlock higher levels and more X2C rewards."
+        f"✅ <b>Link Received!</b>\n\n"
+        f"🎬 Task: {task['title']}\n"
+        f"💰 Reward: {task['node_power_reward']} X2C\n\n"
+        f"🔍 System is verifying in background...\n"
+        f"You will be notified when verification is complete.\n\n"
+        f"💡 You can continue to claim other tasks!"
     )
     
-    back_button = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏠 返回主菜单" if user_lang.startswith('zh') else "🏠 Back to Menu", callback_data='back_to_menu')
-    ]])
-    
-    logger.info(f"📣 准备发送成功消息: task_card_message_id={task_card_message_id}, task_card_chat_id={task_card_chat_id}")
-    
-    # 先删除任务卡片消息
     if task_card_message_id and task_card_chat_id:
-        try:
-            await context.bot.delete_message(
-                chat_id=task_card_chat_id,
-                message_id=task_card_message_id
-            )
-            logger.info("✅ 任务卡片已删除")
-        except Exception as e:
-            logger.error(f"❌ 删除任务卡片失败: {e}", exc_info=True)
-    else:
-        logger.warning("⚠️ task_card_message_id 或 task_card_chat_id 为空，无法删除消息")
-    
-    # 发送成功通知消息（保留，不删除）
-    try:
-        notification_msg = await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=success_msg,
+        await context.bot.edit_message_text(
+            chat_id=task_card_chat_id,
+            message_id=task_card_message_id,
+            text=received_msg,
             parse_mode='HTML',
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🏠 返回主菜单" if user_lang.startswith('zh') else "🏠 Back to Menu", callback_data='back_to_menu')
+            ]]),
             disable_web_page_preview=True
         )
-        logger.info("✅ 成功通知已发送并保留")
-    except Exception as e:
-        logger.error(f"❌ 发送成功通知失败: {e}", exc_info=True)
     
-    # 自动显示主菜单
-    try:
-        welcome_message = get_message(user_lang, 'welcome')
-        keyboard = get_main_menu_keyboard(user_lang)
-        
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=welcome_message,
-            reply_markup=keyboard
-        )
-        logger.info("✅ 主菜单已自动显示")
-    except Exception as e:
-        logger.error(f"❌ 显示主菜单失败: {e}", exc_info=True)
+    logger.info(f"✅ 链接已加入验证队列: queue_id={queue_id}, user={user_id}, task={task_id}")
     
-    logger.info("✅ link_input_handler 完成，返回 ConversationHandler.END")
     return ConversationHandler.END
-
 async def my_power_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理我的算力"""
     query = update.callback_query
@@ -2773,11 +2509,24 @@ def main():
     logger.info("🔧 Running database migrations...")
     auto_migrate()
     
+    # 初始化异步验证队列表
+    from async_verification_worker import init_pending_verifications_table
+    init_pending_verifications_table()
+    
     # 初始化数据库
     init_database()
     
     # 创建应用
     application = Application.builder().token(BOT_TOKEN).build()
+    
+    # 启动异步验证 Worker
+    async def start_verification_worker(app):
+        """启动验证 Worker 作为后台任务"""
+        from async_verification_worker import run_verification_worker
+        logger.info("🔧 Starting async verification worker...")
+        asyncio.create_task(run_verification_worker(app.bot, link_verifier, interval=5))
+    
+    application.post_init = start_verification_worker
     
     # 启动分类同步调度器
     from category_sync_scheduler import start_category_sync_scheduler
