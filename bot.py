@@ -1522,7 +1522,7 @@ to receive 🎉 {reward} X2C"""
                 text=download_msg,
                 reply_markup=reply_markup,
                 parse_mode='HTML',
-                disable_web_page_preview=False
+                disable_web_page_preview=True
             )
             
             # 保存提示消息ID
@@ -1628,7 +1628,8 @@ to receive 🎉 {reward} X2C"""
                 chat_id=query.message.chat_id,
                 text=final_msg,
                 reply_markup=reply_markup,
-                parse_mode=None
+                parse_mode=None,
+                disable_web_page_preview=True
             )
             
             # 保存提示消息ID，以便用户提交链接时删除
