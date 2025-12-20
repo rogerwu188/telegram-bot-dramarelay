@@ -1688,11 +1688,25 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
     
+    # 获取用户所有 pending 状态的任务
+    from check_pending_status import get_user_pending_tasks
+    conn = get_db_connection()
+    pending_task_ids = get_user_pending_tasks(conn, user_id)
+    conn.close()
+    
     # 显示进行中的任务列表
     keyboard = []
     for task in tasks:
-        button_text = f"📤 {task['title']} ({task['node_power_reward']} X2C)"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task['task_id']}")])
+        task_id = task['task_id']
+        if task_id in pending_task_ids:
+            # pending 状态：显示但不可点击
+            button_text = f"⏳ {task['title']} (核验中...)" if user_lang.startswith('zh') else f"⏳ {task['title']} (Verifying...)"
+            # 使用 noop 回调，点击时显示提示
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"pending_task_{task_id}")])
+        else:
+            # 可以提交
+            button_text = f"📤 {task['title']} ({task['node_power_reward']} X2C)"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task_id}")])
     
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
     
@@ -2497,6 +2511,30 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     
     return ConversationHandler.END
 
+async def pending_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理点击 pending 状态的任务"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    user_lang = get_user_language(user_id)
+    
+    # 显示提示消息
+    if user_lang.startswith('zh'):
+        await query.answer("该任务正在核验中，请稍候...", show_alert=True)
+    else:
+        await query.answer("This task is being verified, please wait...", show_alert=True)
+
+async def retry_submit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理重试提交"""
+    query = update.callback_query
+    await query.answer()
+    
+    # 提取 task_id
+    task_id = int(query.data.split('_')[-1])
+    
+    # 调用 submit_task_select_callback
+    context.user_data['submit_task_id'] = task_id
+    await submit_task_select_callback(update, context)
+
 # ============================================================
 # 主函数
 # ============================================================
@@ -2593,6 +2631,9 @@ def main():
     
     # 重试提交 handler
     application.add_handler(CallbackQueryHandler(retry_submit_callback, pattern='^retry_submit_\d+$'))
+    
+    # pending 任务点击提示 handler
+    application.add_handler(CallbackQueryHandler(pending_task_callback, pattern='^pending_task_\d+$'))
     
     # 检查是否有 WEBHOOK_URL 环境变量
     webhook_url = os.getenv('WEBHOOK_URL')
