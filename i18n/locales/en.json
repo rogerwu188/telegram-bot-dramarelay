@@ -1,13 +1,13 @@
 {
-  "welcome": "🎬 X2C Traffic Node Connected\nWelcome back, Node @{username}.\nThis is the world's first Post-to-Earn decentralized drama distribution network.\n\n📊 Node Dashboard:\n• Hashrate Status: 🔴 Idle\n• Global Token Price: $0.002 / x2c 📈\n• Mining Difficulty: 🔥 Easy (TikTok/Reels/Shorts)\n\n⛏️ How to Mine x2c?\n1️⃣ Get Materials: Claim viral drama clips\n2️⃣ Contribute Hashrate: Upload to social media (0 followers OK)\n3️⃣ Submit Proof: Post link, more traffic = more x2c!\n\n💰 Expected Earnings:\nViral videos can mine 10,000+ x2c\n\n👇 Click commands below to activate node and start mining:",
+  "welcome": "🎬 <b>Welcome to X2C Traffic Mining Pool, @{username}!</b>\nYour TikTok / Shorts account is your money printer! 💸\n\n<b>📊 Mining Dashboard (Live Status):</b>\n• <b>Current Role:</b> Traffic Partner (Level 1)\n• <b>Live Price:</b> <code>$0.002 / X2C</code> 📈\n• <b>Global Hit Rate:</b> 🔥 Very High (Max 10,000 X2C per video)\n\n<b>🚀 How to Earn Passively (Post-to-Earn)?</b>\n1️⃣ <b>Get Content:</b> Bot delivers viral drama clips instantly.\n2️⃣ <b>Post Video:</b> Upload to TikTok or Shorts (0 followers OK!).\n3️⃣ <b>Submit Link:</b> Views = Auto mining even while you sleep!\n\n👇 <b>Click below to start your first traffic mining machine!</b>",
   "menu": {
-    "get_tasks": "⛏️ Get Mining Materials",
-    "submit_link": "🔗 Submit Work Proof",
-    "my_power": "📊 Completed Tasks",
-    "ranking": "⚡ Global Hashrate Board",
-    "airdrop": "👥 Invite Friends (+10%)",
-    "bind_wallet": "📤 Wallet Withdrawal",
-    "tutorial": "📚 Node Mining Guide",
+    "get_tasks": "🎬 Start Mining (Get Video)",
+    "submit_link": "📝 Submit Link (Claim Rewards)",
+    "my_power": "📂 My Task Records",
+    "ranking": "🏆 Rich Leaderboard",
+    "airdrop": "🤝 Invite & Earn (+10%)",
+    "bind_wallet": "💸 Withdraw Assets",
+    "tutorial": "📘 3-Min Tutorial",
     "language": "🌐 Language / 语言"
   },
   "task": {
@@ -26,8 +26,8 @@
     "invalid_link": "❌ Invalid link format. Please try again."
   },
   "stats": {
-    "my_power": "📊 My X2C Stats\n\n💰 Total X2C: {total_power}\n✅ Completed Tasks: {completed_tasks}\n🔄 In Progress: {in_progress_tasks}\n📈 This Week Rank: #{rank}",
-    "ranking": "🏆 Global Ranking\n\n{ranking_list}\n\nYour Rank: #{your_rank}\nYour Power: {your_power} X2C"
+    "my_power": "📊 My Task Records\n\n💰 Total X2C Earned: {total_power}\n✅ Completed Tasks: {completed_tasks}\n🔄 In Progress: {in_progress_tasks}\n📈 This Week Rank: #{rank}",
+    "ranking": "🏆 Rich Leaderboard\n\n{ranking_list}\n\nYour Rank: #{your_rank}\nYour Power: {your_power} X2C"
   },
   "airdrop": {
     "status": "🎁 Airdrop Status\n\n📅 Current Round: Round {round}\n✅ Eligibility: {eligible}\n💰 Estimated Airdrop: {estimated} X2C\n⏰ Next Snapshot: {next_snapshot}\n\nMinimum Requirement: 100 X2C"
@@ -45,9 +45,9 @@
     "confirm_button": "✅ Confirm Withdrawal",
     "cancel_button": "❌ Cancel and Return to Menu"
   },
-  "tutorial": "📚 X2C · Mining Manual (Official Guide)\n\n1️⃣ Claim Tasks\n\nGo to \"🎬 Get Drama Tasks\" and select the official drama content you want to distribute.\n\n2️⃣ Download Materials\n\nAfter clicking \"Confirm Claim\", you can download the video materials for this task.\n\n3️⃣ Publish to Platforms\n\nPublish the materials to video platforms such as TikTok / YouTube, and ensure the video is publicly accessible.\n\n4️⃣ Submit Content Link\n\nIn \"🔗 Submit Link\", select the task, fill in the publishing platform and corresponding link for automatic system verification.\n\n5️⃣ Get Computing Power Rewards\n\nAfter content verification passes, the system will immediately distribute the corresponding X2C (computing power) to your account.\n\n6️⃣ Join Monthly Airdrop\n\nUsers who accumulate 100+ X2C can automatically qualify for the monthly X2C airdrop.\n\n───\n\n💡 Usage Instructions\n• Each task can only be submitted once\n• Submitted links must be real, valid, and published by yourself\n• It is recommended to distribute to multiple platforms for higher computing power rewards\n• Please follow the publishing rules of each platform and avoid violating content",
+  "tutorial": "📘 X2C · 3-Minute Tutorial\n\n1️⃣ Claim Tasks\n\nGo to \"🎬 Start Mining\" and select viral drama clips to distribute.\n\n2️⃣ Download Materials\n\nAfter clicking \"Confirm Claim\", you can download the video materials for this task.\n\n3️⃣ Publish to Platforms\n\nPublish the materials to TikTok / YouTube Shorts, 0 followers OK!\n\n4️⃣ Submit Content Link\n\nIn \"📝 Submit Link\", select the task, fill in the publishing platform and corresponding link for automatic system verification.\n\n5️⃣ Get X2C Rewards\n\nAfter content verification passes, the system will immediately distribute the corresponding X2C to your account.\n\n6️⃣ Join Monthly Airdrop\n\nUsers who accumulate 100+ X2C can automatically qualify for the monthly X2C airdrop.\n\n───\n\n💡 Usage Instructions\n• Each task can only be submitted once\n• Submitted links must be real, valid, and published by yourself\n• It is recommended to distribute to multiple platforms for higher rewards\n• Please follow the publishing rules of each platform and avoid violating content",
   "invite": {
-    "message": "👥 Invite Friends Rewards\n\nWhen your invited friend completes their first task:\n\n🔸 You get: 10% permanent power bonus from every task they complete\n🔸 They don't lose any rewards (platform bonus)\n🔸 You also get +5 X2C bonus when they complete first task\n\n📈 More invites = More passive income channels\n🔥 Invite more, earn more\n\n🔗 Your invitation link:\n{invite_link}\n\n📊 Invitation Stats:\n• Total invites: {invited_count}\n• Active invites: {active_count}\n• Total referral rewards: {total_rewards} X2C",
+    "message": "🤝 Invite & Earn Mechanism\n\nWhen your invited friend completes their first task:\n\n🔸 You get: 10% permanent bonus from every task they complete\n🔸 They don't lose any rewards (platform bonus)\n🔸 You also get +5 X2C bonus when they complete first task\n\n📈 More invites = More passive income channels\n🔥 Invite more, earn more\n\n🔗 Your invitation link:\n{invite_link}\n\n📊 Invitation Stats:\n• Total invites: {invited_count}\n• Active invites: {active_count}\n• Total referral rewards: {total_rewards} X2C",
     "copy_link": "📋 Copy Invite Link",
     "share_link": "📤 Share to Friends"
   },
