@@ -1468,26 +1468,18 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 • 下载后上传到 TikTok/YouTube
 
 ━━━━━━━━━━━━━━━━━━
-🎬【YouTube 上传内容】
+📋【一键复制内容】
 
-▶️ 视频文件名称：
-{plot_keyword} · {drama_name_with_brackets}
+<pre>
+【YouTube】
+标题: {plot_keyword} | {drama_name}
+描述: {description}
 
-▶️ 复制到 YouTube Title栏：
-{plot_keyword} | {drama_name}
-
-▶️ 复制到 YouTube Description栏：
-{description}
-
-（YouTube 不需要填写标签，保持空白即可）
-
-━━━━━━━━━━━━━━━━━━
-🎬【TikTok 上传内容】
-
-▶️ TikTok 视频描述（请完整复制以下内容）：
-{description}
+【TikTok】
+描述: {description}
 
 {hashtags}
+</pre>
 
 ━━━━━━━━━━━━━━━━━━
 💰【奖励说明】
@@ -1507,32 +1499,18 @@ Please click the link below to download:
 • Upload to TikTok/YouTube after downloading
 
 ━━━━━━━━━━━━━━━━━━
-🎬【YouTube Upload Content】
+📋【One-Click Copy Content】
 
-▶ Video Title (copy directly):
-```
-{title}
-```
+<pre>
+【YouTube】
+Title: {title}
+Description: {description}
 
-▶ Video Description (paste in YouTube description):
-```
-{description}
-```
+【TikTok】
+Description: {description}
 
-(YouTube does not require tags, leave blank)
-
-━━━━━━━━━━━━━━━━━━
-🎬【TikTok Upload Content】
-
-▶ TikTok Description (copy completely):
-```
-{description}
-```
-
-▶ TikTok Hashtags (paste below description):
-```
 {hashtags}
-```
+</pre>
 
 ━━━━━━━━━━━━━━━━━━
 💰【Reward】
@@ -1648,30 +1626,16 @@ to receive 🎉 {reward} X2C"""
 📥 Please download the video and upload to any platform to receive rewards:
 
 ━━━━━━━━━━━━━━━━━━
-🎬【YouTube Upload Content】
+📋【One-Click Copy Content】
 
-▶ Video Title (copy directly):
 ```
-{title}
-```
+【YouTube】
+Title: {title}
+Description: {description}
 
-▶ Video Description (paste in YouTube description):
-```
-{description}
-```
+【TikTok】
+Description: {description}
 
-(YouTube does not require tags, leave blank)
-
-━━━━━━━━━━━━━━━━━━
-🎬【TikTok Upload Content】
-
-▶ TikTok Description (copy completely):
-```
-{description}
-```
-
-▶ TikTok Hashtags (paste below description):
-```
 {hashtags}
 ```
 
@@ -1837,26 +1801,18 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append(f"💰 完成可获得：{reward} X2C")
         message_parts.append("")
         message_parts.append("━" * 30)
-        message_parts.append("🎬【YouTube 上传内容】")
+        message_parts.append("📋【一键复制内容】")
         message_parts.append("")
-        message_parts.append(f"▶️ 视频文件名称：")
-        message_parts.append(f"{plot_keyword} · {drama_name_with_brackets}")
+        message_parts.append("<pre>")
+        message_parts.append("【YouTube】")
+        message_parts.append(f"标题: {plot_keyword} | {drama_name}")
+        message_parts.append(f"描述: {description}")
         message_parts.append("")
-        message_parts.append(f"▶️ 复制到 YouTube Title栏：")
-        message_parts.append(f"{plot_keyword} | {drama_name}")
-        message_parts.append("")
-        message_parts.append(f"▶️ 复制到 YouTube Description栏：")
-        message_parts.append(description)
-        message_parts.append("")
-        message_parts.append("（YouTube 不需要填写标签，保持空白即可）")
-        message_parts.append("")
-        message_parts.append("━" * 30)
-        message_parts.append("🎬【TikTok 上传内容】")
-        message_parts.append("")
-        message_parts.append("▶️ TikTok 视频描述（请完整复制以下内容）：")
-        message_parts.append(description)
+        message_parts.append("【TikTok】")
+        message_parts.append(f"描述: {description}")
         message_parts.append("")
         message_parts.append(hashtags)
+        message_parts.append("</pre>")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("")
@@ -1867,32 +1823,18 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append(f"💰 Reward: {reward} X2C")
         message_parts.append("")
         message_parts.append("━" * 30)
-        message_parts.append("🎬【YouTube Upload Content】")
+        message_parts.append("📋【One-Click Copy Content】")
         message_parts.append("")
-        message_parts.append("▶ Video Title (copy directly):")
-        message_parts.append("```")
-        message_parts.append(title)
-        message_parts.append("```")
+        message_parts.append("<pre>")
+        message_parts.append("【YouTube】")
+        message_parts.append(f"Title: {title}")
+        message_parts.append(f"Description: {description}")
         message_parts.append("")
-        message_parts.append("▶ Video Description (paste in YouTube description):")
-        message_parts.append("```")
-        message_parts.append(description)
-        message_parts.append("```")
+        message_parts.append("【TikTok】")
+        message_parts.append(f"Description: {description}")
         message_parts.append("")
-        message_parts.append("(YouTube does not require tags, leave blank)")
-        message_parts.append("")
-        message_parts.append("━" * 30)
-        message_parts.append("🎬【TikTok Upload Content】")
-        message_parts.append("")
-        message_parts.append("▶ TikTok Description (copy completely):")
-        message_parts.append("```")
-        message_parts.append(description)
-        message_parts.append("```")
-        message_parts.append("")
-        message_parts.append("▶ TikTok Hashtags (paste below description):")
-        message_parts.append("```")
         message_parts.append(hashtags)
-        message_parts.append("```")
+        message_parts.append("</pre>")
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("")
