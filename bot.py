@@ -401,7 +401,7 @@ MESSAGES = {
 👇 点击下方指令，激活节点开始挖矿：""",
         'menu_get_tasks': '⛏️ 领取挖矿原料',
         'menu_submit_link': '🔗 提交工作凭证',
-        'menu_my_power': '📊 我的算力',
+        'menu_my_power': '📊 已完成分发任务',
         'menu_ranking': '⚡ 全网算力榜',
         'menu_airdrop': '👥 邀请好友 (+10%)',
         'menu_bind_wallet': '📤 钱包提现',
@@ -425,7 +425,9 @@ MESSAGES = {
         'enter_link': '请输入你上传的链接：',
         'link_submitted': '✅ 链接提交成功！\n\n你获得了 {reward} X2C！\n\n总算力：{total_power}',
         'invalid_link': '❌ 链接格式不正确，请重新输入。',
-        'my_power': """📊 我的算力统计
+        'my_power': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 【已完成分发任务】
 
 💰 总 X2C：{total_power}
 ✅ 已完成任务：{completed_tasks}
@@ -576,7 +578,7 @@ Viral videos can mine 10,000+ x2c
 👇 Click commands below to activate node and start mining:""",
         'menu_get_tasks': '⛏️ Get Mining Materials',
         'menu_submit_link': '🔗 Submit Work Proof',
-        'menu_my_power': '📊 My Hashrate',
+        'menu_my_power': '📊 Completed Tasks',
         'menu_ranking': '⚡ Global Hashrate Board',
         'menu_airdrop': '👥 Invite Friends (+10%)',
         'menu_bind_wallet': '📤 Wallet Withdrawal',
@@ -600,7 +602,9 @@ Viral videos can mine 10,000+ x2c
         'enter_link': 'Please enter your upload link:',
         'link_submitted': '✅ Link submitted successfully!\n\nYou earned {reward} X2C!\n\nTotal Power: {total_power}',
         'invalid_link': '❌ Invalid link format. Please try again.',
-        'my_power': """📊 My X2C Stats
+        'my_power': """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 【Completed Tasks】
 
 💰 Total X2C: {total_power}
 ✅ Completed Tasks: {completed_tasks}
