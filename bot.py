@@ -1469,15 +1469,11 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 ━━━━━━━━━━━━━━━━━━
 📋【一键复制内容】
+💡 请复制到 TikTok 或 YouTube
 
 <pre>
-【YouTube】
-标题: {plot_keyword} | {drama_name}
-描述: {description}
-
-【TikTok】
-描述: {description}
-
+{plot_keyword} | {drama_name}
+{description}
 {hashtags}
 </pre>
 
@@ -1500,15 +1496,11 @@ Please click the link below to download:
 
 ━━━━━━━━━━━━━━━━━━
 📋【One-Click Copy Content】
+💡 Please copy to TikTok or YouTube
 
 <pre>
-【YouTube】
-Title: {title}
-Description: {description}
-
-【TikTok】
-Description: {description}
-
+{title}
+{description}
 {hashtags}
 </pre>
 
@@ -1627,15 +1619,11 @@ to receive 🎉 {reward} X2C"""
 
 ━━━━━━━━━━━━━━━━━━
 📋【One-Click Copy Content】
+💡 Please copy to TikTok or YouTube
 
 ```
-【YouTube】
-Title: {title}
-Description: {description}
-
-【TikTok】
-Description: {description}
-
+{title}
+{description}
 {hashtags}
 ```
 
@@ -1802,15 +1790,11 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("📋【一键复制内容】")
+        message_parts.append("💡 请复制到 TikTok 或 YouTube")
         message_parts.append("")
         message_parts.append("<pre>")
-        message_parts.append("【YouTube】")
-        message_parts.append(f"标题: {plot_keyword} | {drama_name}")
-        message_parts.append(f"描述: {description}")
-        message_parts.append("")
-        message_parts.append("【TikTok】")
-        message_parts.append(f"描述: {description}")
-        message_parts.append("")
+        message_parts.append(f"{plot_keyword} | {drama_name}")
+        message_parts.append(description)
         message_parts.append(hashtags)
         message_parts.append("</pre>")
         message_parts.append("")
@@ -1824,15 +1808,11 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
         message_parts.append("")
         message_parts.append("━" * 30)
         message_parts.append("📋【One-Click Copy Content】")
+        message_parts.append("💡 Please copy to TikTok or YouTube")
         message_parts.append("")
         message_parts.append("<pre>")
-        message_parts.append("【YouTube】")
-        message_parts.append(f"Title: {title}")
-        message_parts.append(f"Description: {description}")
-        message_parts.append("")
-        message_parts.append("【TikTok】")
-        message_parts.append(f"Description: {description}")
-        message_parts.append("")
+        message_parts.append(title)
+        message_parts.append(description)
         message_parts.append(hashtags)
         message_parts.append("</pre>")
         message_parts.append("")
