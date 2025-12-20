@@ -1337,7 +1337,7 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     task = get_task_by_id(task_id)
     
     if not task:
-        await query.edit_message_text("任务不存在" if user_lang == 'zh' else "Task not found")
+        await query.edit_message_text("任务不存在" if user_lang.startswith('zh') else "Task not found")
         return
     
     # 显示任务详情，根据用户语言选择内容（自动翻译）
@@ -1353,8 +1353,8 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     
     keyboard = [
-        [InlineKeyboardButton("✅ 确认领取" if user_lang == 'zh' else "✅ Claim Task", callback_data=f"claim_{task_id}")],
-        [InlineKeyboardButton("« 返回任务列表" if user_lang == 'zh' else "« Back to Tasks", callback_data='get_tasks')]
+        [InlineKeyboardButton("✅ 确认领取" if user_lang.startswith('zh') else "✅ Claim Task", callback_data=f"claim_{task_id}")],
+        [InlineKeyboardButton("« 返回任务列表" if user_lang.startswith('zh') else "« Back to Tasks", callback_data='get_tasks')]
     ]
     
     # 如果有视频文件，发送视频
@@ -1385,7 +1385,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     if not task:
         await query.edit_message_text(
-            "❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found",
+            "❌ 任务不存在" if user_lang.startswith('zh') else "❌ Task not found",
             reply_markup=get_main_menu_keyboard(user_lang)
         )
         return
@@ -1467,7 +1467,7 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             drama_name_with_brackets = f"《{drama_name}》"
             
             # 发送下载链接消息
-            if user_lang == 'zh':
+            if user_lang.startswith('zh'):
                 download_msg = f"""📥 <b>视频文件过大({file_size_mb:.0f} MB)</b>
 
 请点击下面的链接直接下载：
@@ -1524,7 +1524,7 @@ to receive 🎉 {reward} X2C"""
             
             # 创建提交链接按钮
             keyboard = [
-                [InlineKeyboardButton("📎 提交链接" if user_lang == 'zh' else "📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                [InlineKeyboardButton("📎 提交链接" if user_lang.startswith('zh') else "📎 Submit Link", callback_data=f"submit_link_{task_id}")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -1586,7 +1586,7 @@ to receive 🎉 {reward} X2C"""
             drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
             drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
             
-            if user_lang == 'zh':
+            if user_lang.startswith('zh'):
                 final_msg = f"""🔗 视频链接：{video_url}
 
 📥 视频已下载，请选择任意平台发布内容，即可获得对应奖励：
@@ -1655,11 +1655,11 @@ to receive 🎉 {reward} X2C"""
             
         except Exception as e:
             logger.error(f"Error downloading video: {e}")
-            error_msg = "❌ 视频下载失败，请稍后重试" if user_lang == 'zh' else "❌ Failed to download video, please try again later"
+            error_msg = "❌ 视频下载失败，请稍后重试" if user_lang.startswith('zh') else "❌ Failed to download video, please try again later"
             
             # 创建返回主菜单按钮
             keyboard = [
-                [InlineKeyboardButton("« 返回主菜单" if user_lang == 'zh' else "« Back to Menu", callback_data="back_to_menu")]
+                [InlineKeyboardButton("« 返回主菜单" if user_lang.startswith('zh') else "« Back to Menu", callback_data="back_to_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -1733,7 +1733,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     if not task:
         logger.warning(f"⚠️ Task {task_id} not found for user {user_id}")
         await query.edit_message_text(
-            "❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found",
+            "❌ 任务不存在" if user_lang.startswith('zh') else "❌ Task not found",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
             ]])
@@ -1782,7 +1782,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     # 构建消息
     message_parts = []
     
-    if user_lang == 'zh':
+    if user_lang.startswith('zh'):
         message_parts.append("━" * 30)
         message_parts.append("")
         message_parts.append("🆕 <b>【新任务】</b>")
@@ -1835,7 +1835,7 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     
     keyboard = [[
         InlineKeyboardButton(
-            "« 返回" if user_lang == 'zh' else "« Back",
+            "« 返回" if user_lang.startswith('zh') else "« Back",
             callback_data='back_to_menu'
         )
     ]]
@@ -1918,7 +1918,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "• 链接是否指向具体的视频页面\n"
             "• 支持的平台：TikTok、YouTube、Instagram、Facebook、Twitter\n\n"
             "🔁 请重新发送正确的链接"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             "❌ **Link Validation Failed**\n\n"
             "🔍 Please check:\n"
             "• Link is complete (includes https://)\n"
@@ -1930,8 +1930,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # 编辑任务卡片显示错误
         if task_card_message_id and task_card_chat_id:
             retry_button = InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
+                InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+                InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
             ]])
             
             await context.bot.edit_message_text(
@@ -1951,7 +1951,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # 显示限制错误
         if task_card_message_id and task_card_chat_id:
             retry_button = InlineKeyboardMarkup([[
-                InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
+                InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
             ]])
             
             await context.bot.edit_message_text(
@@ -1977,7 +1977,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await context.bot.edit_message_text(
                 chat_id=task_card_chat_id,
                 message_id=task_card_message_id,
-                text="❌ 任务不存在" if user_lang == 'zh' else "❌ Task not found"
+                text="❌ 任务不存在" if user_lang.startswith('zh') else "❌ Task not found"
             )
         return ConversationHandler.END
     
@@ -1987,7 +1987,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"🔍 <b>正在验证视频内容...</b>\n\n"
             f"🎬 任务：{task['title']}\n\n"
             f"⏳ 请稍候，这可能需要 5-15 秒"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             f"🔍 <b>Verifying video content...</b>\n\n"
             f"🎬 Task: {task['title']}\n\n"
             f"⏳ Please wait, this may take 5-15 seconds"
@@ -2013,7 +2013,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"📝 {validation_result['error_message']}\n\n"
             f"🔗 您提供的链接: {link[:100]}...\n\n"
             f"✅ 请确保提交的是正确的平台视频链接。"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             f"❌ **Invalid Link Format**\n\n"
             f"📝 {validation_result['error_message']}\n\n"
             f"🔗 Your link: {link[:100]}...\n\n"
@@ -2027,8 +2027,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 text=error_text,
                 parse_mode='HTML',
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f"submit_link_{task_id}")],
-                    [InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data=f"view_task_{task_id}")]
+                    [InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f"submit_link_{task_id}")],
+                    [InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data=f"view_task_{task_id}")]
                 ])
             )
             logger.info("✅ 链接格式错误消息已发送")
@@ -2076,7 +2076,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"• 视频是否公开可见\n\n"
             f"错误信息：{verify_result.get('error', '未知错误')}\n\n"
             f"🔁 点击下方按钮重试"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             f"❌ **Verification Failed**\n\n"
             f"Cannot access your submitted link. Please check:\n"
             f"• Link is accessible\n"
@@ -2086,8 +2086,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         
         retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
+            InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+            InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
         ]])
         
         logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
@@ -2116,7 +2116,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"🎯 任务要求：{task['title']}\n"
             f"📱 您的视频：{verify_result.get('page_title', '未知')}\n\n"
             f"✅ 请确保上传的是正确的任务视频，然后点击重试。"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             f"❌ **Content Mismatch**\n\n"
             f"📝 Your submitted video content doesn't match the task requirements.\n\n"
             f"🎯 Task: {task['title']}\n"
@@ -2125,8 +2125,8 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         
         retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试" if user_lang == 'zh' else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
-            InlineKeyboardButton("« 返回" if user_lang == 'zh' else "« Back", callback_data='back_to_menu')
+            InlineKeyboardButton("🔁 重试" if user_lang.startswith('zh') else "🔁 Retry", callback_data=f'submit_task_{task_id}'),
+            InlineKeyboardButton("« 返回" if user_lang.startswith('zh') else "« Back", callback_data='back_to_menu')
         ]])
         
         logger.info(f"⚠️ 内容不匹配，准备发送错误消息")
@@ -2199,7 +2199,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"❌ <b>提交失败</b>\n\n"
             f"验证成功但保存失败，请点击下方按钮重试\n\n"
             f"错误信息：{str(e)}"
-        ) if user_lang == 'zh' else (
+        ) if user_lang.startswith('zh') else (
             f"❌ <b>Submission Failed</b>\n\n"
             f"Verification passed but save failed, please click the button below to retry\n\n"
             f"Error: {str(e)}"
@@ -2207,7 +2207,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         # 添加重试按钮
         retry_button = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔁 重试提交" if user_lang == 'zh' else "🔁 Retry Submission", callback_data=f'retry_submit_{task_id}')
+            InlineKeyboardButton("🔁 重试提交" if user_lang.startswith('zh') else "🔁 Retry Submission", callback_data=f'retry_submit_{task_id}')
         ]])
         
         if task_card_message_id and task_card_chat_id:
@@ -2271,7 +2271,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     }
     
     # 使用 HTML 链接显示完整可点击的链接
-    link_text = "查看视频" if user_lang == 'zh' else "View Video"
+    link_text = "查看视频" if user_lang.startswith('zh') else "View Video"
     
     success_msg = (
         f"✅ <b>任务提交成功！</b>\n\n"
@@ -2282,7 +2282,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"📊 累计算力：{stats['total_power']}\n\n"
         f"🔥 你正在推动短剧全球传播！\n"
         f"继续分发更多内容，解锁更高等级与更多X2C 奖励。"
-    ) if user_lang == 'zh' else (
+    ) if user_lang.startswith('zh') else (
         f"✅ <b>Task Submitted Successfully!</b>\n\n"
         f"🎯 Task Name: {task['title']}\n"
         f"📱 Platform: {platform.capitalize()}\n"
@@ -2294,7 +2294,7 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     
     back_button = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🏠 返回主菜单" if user_lang == 'zh' else "🏠 Back to Menu", callback_data='back_to_menu')
+        InlineKeyboardButton("🏠 返回主菜单" if user_lang.startswith('zh') else "🏠 Back to Menu", callback_data='back_to_menu')
     ]])
     
     logger.info(f"📣 准备发送成功消息: task_card_message_id={task_card_message_id}, task_card_chat_id={task_card_chat_id}")
@@ -2410,7 +2410,7 @@ async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         round=1,
         eligible=eligible,
         estimated=stats['estimated_airdrop'],
-        next_snapshot="2025-12-01" if user_lang == 'zh' else "Dec 1, 2025"
+        next_snapshot="2025-12-01" if user_lang.startswith('zh') else "Dec 1, 2025"
     )
     
     keyboard = InlineKeyboardMarkup([[
@@ -2446,7 +2446,7 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     
     # 添加有效被邀请人列表
     if invitees_data['invitees']:
-        if user_lang == 'zh':
+        if user_lang.startswith('zh'):
             message += "\n\n👥 有效邀请列表："
         else:
             message += "\n\n👥 Active Invitees:"
@@ -2460,7 +2460,7 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
         
         # 显示分页信息
         if invitees_data['total_pages'] > 1:
-            if user_lang == 'zh':
+            if user_lang.startswith('zh'):
                 message += f"\n\n📄 第 {page}/{invitees_data['total_pages']} 页"
             else:
                 message += f"\n\n📄 Page {page}/{invitees_data['total_pages']}"
@@ -2472,12 +2472,12 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     if invitees_data['total_pages'] > 1:
         pagination_row = []
         if page > 1:
-            if user_lang == 'zh':
+            if user_lang.startswith('zh'):
                 pagination_row.append(InlineKeyboardButton("⬅️ 上一页", callback_data=f'invite_page_{page-1}'))
             else:
                 pagination_row.append(InlineKeyboardButton("⬅️ Prev", callback_data=f'invite_page_{page-1}'))
         if page < invitees_data['total_pages']:
-            if user_lang == 'zh':
+            if user_lang.startswith('zh'):
                 pagination_row.append(InlineKeyboardButton("下一页 ➡️", callback_data=f'invite_page_{page+1}'))
             else:
                 pagination_row.append(InlineKeyboardButton("Next ➡️", callback_data=f'invite_page_{page+1}'))
