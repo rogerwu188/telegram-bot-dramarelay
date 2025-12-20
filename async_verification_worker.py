@@ -243,11 +243,14 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
                     f"Keep distributing to unlock higher levels and more X2C rewards!"
                 )
                 
+                # 发送成功通知并附带主菜单
+                from bot import get_main_menu_keyboard
                 await bot.send_message(
                     chat_id=user_id,
                     text=success_msg,
                     parse_mode='HTML',
-                    disable_web_page_preview=True
+                    disable_web_page_preview=True,
+                    reply_markup=get_main_menu_keyboard(user_lang)
                 )
                 
                 # 发送 Webhook 回调
@@ -294,11 +297,14 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
                 f"Please check and resubmit."
             )
             
+            # 发送失败通知并附带主菜单
+            from bot import get_main_menu_keyboard
             await bot.send_message(
                 chat_id=user_id,
                 text=fail_msg,
                 parse_mode='HTML',
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                reply_markup=get_main_menu_keyboard(user_lang)
             )
             
             return False
