@@ -204,3 +204,68 @@ def get_inviter_id(invitee_id: int) -> int:
     except Exception as e:
         logger.error(f"❌ Failed to get inviter ID: {e}", exc_info=True)
         return None
+
+
+def get_active_invitees(inviter_id: int, page: int = 1, per_page: int = 10) -> dict:
+    """获取有效被邀请人列表（分页）
+    
+    Args:
+        inviter_id: 邀请人ID
+        page: 页码（从1开始）
+        per_page: 每页数量
+    
+    Returns:
+        dict: {
+            'invitees': [{'username': str, 'first_name': str, 'user_id': int}, ...],
+            'total': int,
+            'page': int,
+            'total_pages': int
+        }
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 获取总数
+        cur.execute("""
+            SELECT COUNT(*) as count
+            FROM user_invitations ui
+            WHERE ui.inviter_id = %s AND ui.first_task_completed = TRUE
+        """, (inviter_id,))
+        total_result = cur.fetchone()
+        total = total_result['count'] if total_result else 0
+        
+        # 计算总页数
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+        
+        # 获取当前页的被邀请人列表
+        offset = (page - 1) * per_page
+        cur.execute("""
+            SELECT u.user_id, u.username, u.first_name
+            FROM user_invitations ui
+            JOIN users u ON ui.invitee_id = u.user_id
+            WHERE ui.inviter_id = %s AND ui.first_task_completed = TRUE
+            ORDER BY ui.first_task_completed_at DESC
+            LIMIT %s OFFSET %s
+        """, (inviter_id, per_page, offset))
+        
+        invitees = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return {
+            'invitees': [dict(inv) for inv in invitees] if invitees else [],
+            'total': total,
+            'page': page,
+            'total_pages': total_pages
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get active invitees: {e}", exc_info=True)
+        return {
+            'invitees': [],
+            'total': 0,
+            'page': 1,
+            'total_pages': 1
+        }

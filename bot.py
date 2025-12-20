@@ -2417,7 +2417,7 @@ async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(message, reply_markup=keyboard)
 
-async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 1):
     """处理邀请好友"""
     query = update.callback_query
     await query.answer()
@@ -2429,8 +2429,11 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     invite_link = f"https://t.me/{BOT_USERNAME}?start=invite_{user_id}"
     
     # 获取邀请统计
-    from invitation_system import get_invitation_stats
+    from invitation_system import get_invitation_stats, get_active_invitees
     stats = get_invitation_stats(user_id)
+    
+    # 获取有效被邀请人列表
+    invitees_data = get_active_invitees(user_id, page=page, per_page=10)
     
     message = get_message(user_lang, 'invite_friends',
         invite_link=invite_link,
@@ -2439,12 +2442,65 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
         total_rewards=stats['total_rewards']
     )
     
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(get_message(user_lang, 'share_link'), url=f"https://t.me/share/url?url={invite_link}")],
-        [InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')]
-    ])
+    # 添加有效被邀请人列表
+    if invitees_data['invitees']:
+        if user_lang == 'zh':
+            message += "\n\n👥 有效邀请列表："
+        else:
+            message += "\n\n👥 Active Invitees:"
+        
+        for inv in invitees_data['invitees']:
+            username = inv.get('username') or inv.get('first_name') or f"User_{inv['user_id']}"
+            if inv.get('username'):
+                message += f"\n• @{username}"
+            else:
+                message += f"\n• {username}"
+        
+        # 显示分页信息
+        if invitees_data['total_pages'] > 1:
+            if user_lang == 'zh':
+                message += f"\n\n📄 第 {page}/{invitees_data['total_pages']} 页"
+            else:
+                message += f"\n\n📄 Page {page}/{invitees_data['total_pages']}"
+    
+    # 构建键盘
+    keyboard_rows = []
+    
+    # 分页按钮
+    if invitees_data['total_pages'] > 1:
+        pagination_row = []
+        if page > 1:
+            if user_lang == 'zh':
+                pagination_row.append(InlineKeyboardButton("⬅️ 上一页", callback_data=f'invite_page_{page-1}'))
+            else:
+                pagination_row.append(InlineKeyboardButton("⬅️ Prev", callback_data=f'invite_page_{page-1}'))
+        if page < invitees_data['total_pages']:
+            if user_lang == 'zh':
+                pagination_row.append(InlineKeyboardButton("下一页 ➡️", callback_data=f'invite_page_{page+1}'))
+            else:
+                pagination_row.append(InlineKeyboardButton("Next ➡️", callback_data=f'invite_page_{page+1}'))
+        if pagination_row:
+            keyboard_rows.append(pagination_row)
+    
+    # 分享按钮
+    keyboard_rows.append([InlineKeyboardButton(get_message(user_lang, 'share_link'), url=f"https://t.me/share/url?url={invite_link}")])
+    # 返回按钮
+    keyboard_rows.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
+    
+    keyboard = InlineKeyboardMarkup(keyboard_rows)
     
     await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True)
+
+
+async def invite_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """处理邀请列表翻页"""
+    query = update.callback_query
+    
+    # 从callback_data中提取页码
+    page = int(query.data.split('_')[-1])
+    
+    # 调用invite_friends_callback并传入页码
+    await invite_friends_callback(update, context, page=page)
 
 async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理提现 - Step 1: 输入 SOL 地址"""
@@ -2739,6 +2795,7 @@ def main():
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
     application.add_handler(CallbackQueryHandler(airdrop_callback, pattern='^airdrop$'))
     application.add_handler(CallbackQueryHandler(invite_friends_callback, pattern='^invite_friends$'))
+    application.add_handler(CallbackQueryHandler(invite_page_callback, pattern='^invite_page_'))
     application.add_handler(CallbackQueryHandler(tutorial_callback, pattern='^tutorial$'))
     application.add_handler(CallbackQueryHandler(language_callback, pattern='^language$'))
     application.add_handler(CallbackQueryHandler(set_language_callback, pattern='^set_lang_'))
