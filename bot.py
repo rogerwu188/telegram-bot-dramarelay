@@ -2607,7 +2607,11 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
 async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """返回主菜单"""
     query = update.callback_query
-    await query.answer()
+    
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ query.answer() failed: {e}")
     
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
@@ -2618,7 +2622,19 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     welcome_message = get_message(user_lang, 'welcome', username=username)
     keyboard = get_main_menu_keyboard(user_lang)
     
-    await query.edit_message_text(welcome_message, reply_markup=keyboard)
+    try:
+        await query.edit_message_text(welcome_message, reply_markup=keyboard)
+    except Exception as e:
+        logger.warning(f"⚠️ edit_message_text failed: {e}, trying send_message")
+        # 如果编辑失败，尝试发送新消息
+        try:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=welcome_message,
+                reply_markup=keyboard
+            )
+        except Exception as e2:
+            logger.error(f"❌ send_message also failed: {e2}")
     
     # 清理 context 数据
     context.user_data.clear()
