@@ -317,6 +317,13 @@ class LinkVerifier:
         hashtags = re.findall(r'#([\w\u4e00-\u9fff]+)', task_description)
         keywords.extend([tag for tag in hashtags if len(tag) >= 2])
         
+        # 5. 提取英文单词（至少3个字母，用于英文剧名如 Godfall, Revenge 等）
+        english_words = re.findall(r'[A-Za-z]{3,}', task_title)
+        # 过滤常见英文词
+        common_english = {'the', 'and', 'for', 'from', 'with', 'clip', 'video', 'episode', 'part'}
+        english_words = [w for w in english_words if w.lower() not in common_english]
+        keywords.extend(english_words)
+        
         # 去重并过滤常见词
         common_words = {'视频', '链接', '任务', '完成', '提交', '下载', '上传', '平台', '内容', '分发', '奖励', '获得', '可以', '请求', '系统', '用户'}
         keywords = list(set([kw for kw in keywords if kw not in common_words and len(kw) >= 2]))
