@@ -122,7 +122,7 @@ class LinkVerifier:
     
     async def _verify_tiktok_oembed(self, url: str, task_title: str, task_description: str) -> dict:
         """
-        使用 TikTok oEmbed API 验证链接
+        使用 TikTok oEmbed API 验证链接（带自动重试机制）
         
         Args:
             url: TikTok 视频链接
@@ -141,58 +141,82 @@ class LinkVerifier:
             'error': None
         }
         
-        try:
-            # 构建 oEmbed API URL
-            oembed_url = f"https://www.tiktok.com/oembed?url={quote(url)}"
-            logger.info(f"📡 调用 TikTok oEmbed API: {oembed_url}")
-            
-            # 发送 HTTP GET 请求（添加 User-Agent 头，避免被 TikTok 拒绝）
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
-            async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(oembed_url, timeout=aiohttp.ClientTimeout(total=15)) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        logger.info(f"✅ oEmbed API 返回成功")
-                        
-                        # 提取标题和作者
-                        title = data.get('title', '')
-                        author_name = data.get('author_name', '')
-                        
-                        result['page_title'] = title
-                        result['page_text'] = f"{title} {author_name}"
-                        
-                        logger.info(f"📝 视频标题: {title}")
-                        logger.info(f"👤 作者: {author_name}")
-                        
-                        # 验证关键词匹配（使用严格模式）
-                        match_result = self._check_keywords_match_strict(
-                            result['page_text'],
-                            task_title,
-                            task_description
-                        )
-                        result['matched'] = match_result['matched']
-                        
-                        # 如果不匹配，设置错误原因
-                        if not result['matched']:
-                            result['error'] = match_result.get('reason', '内容不匹配')
-                        
-                        result['success'] = True
-                    else:
-                        logger.error(f"❌ oEmbed API 返回错误: {response.status}, URL: {url}")
-                        logger.error(f"❌ oEmbed 请求 URL: {oembed_url}")
-                        result['error'] = f"API 返回错误: {response.status}"
-                        
-        except aiohttp.ClientError as e:
-            logger.error(f"❌ 网络请求失败: {e}")
-            result['error'] = f"网络请求失败: {str(e)}"
-        except Exception as e:
-            logger.error(f"❌ oEmbed 验证失败: {e}", exc_info=True)
-            result['error'] = str(e)
+        # 构建 oEmbed API URL
+        oembed_url = f"https://www.tiktok.com/oembed?url={quote(url)}"
+        logger.info(f"📡 调用 TikTok oEmbed API: {oembed_url}")
         
+        # 发送 HTTP GET 请求（添加 User-Agent 头，避免被 TikTok 拒绝）
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+        
+        # 自动重试机制：最多重试 3 次，每次间隔 2 秒
+        max_retries = 3
+        retry_delay = 2
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession(headers=headers) as session:
+                    async with session.get(oembed_url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            logger.info(f"✅ oEmbed API 返回成功 (第 {attempt + 1} 次尝试)")
+                            
+                            # 提取标题和作者
+                            title = data.get('title', '')
+                            author_name = data.get('author_name', '')
+                            
+                            result['page_title'] = title
+                            result['page_text'] = f"{title} {author_name}"
+                            
+                            logger.info(f"📝 视频标题: {title}")
+                            logger.info(f"👤 作者: {author_name}")
+                            
+                            # 验证关键词匹配（使用严格模式）
+                            match_result = self._check_keywords_match_strict(
+                                result['page_text'],
+                                task_title,
+                                task_description
+                            )
+                            result['matched'] = match_result['matched']
+                            
+                            # 如果不匹配，设置错误原因
+                            if not result['matched']:
+                                result['error'] = match_result.get('reason', '内容不匹配')
+                            
+                            result['success'] = True
+                            return result  # 成功，直接返回
+                        else:
+                            last_error = f"API 返回错误: {response.status}"
+                            logger.warning(f"⚠️ oEmbed API 返回错误: {response.status} (第 {attempt + 1}/{max_retries} 次尝试)")
+                            
+                            # 如果不是最后一次尝试，等待后重试
+                            if attempt < max_retries - 1:
+                                logger.info(f"⏳ 等待 {retry_delay} 秒后重试...")
+                                await asyncio.sleep(retry_delay)
+                            
+            except aiohttp.ClientError as e:
+                last_error = f"网络请求失败: {str(e)}"
+                logger.warning(f"⚠️ 网络请求失败: {e} (第 {attempt + 1}/{max_retries} 次尝试)")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ 等待 {retry_delay} 秒后重试...")
+                    await asyncio.sleep(retry_delay)
+                    
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"❌ oEmbed 验证失败: {e} (第 {attempt + 1}/{max_retries} 次尝试)", exc_info=True)
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ 等待 {retry_delay} 秒后重试...")
+                    await asyncio.sleep(retry_delay)
+        
+        # 所有重试都失败
+        logger.error(f"❌ oEmbed API 连续 {max_retries} 次失败, URL: {url}")
+        result['error'] = last_error
         return result
     
     async def _verify_youtube(self, url: str, task_title: str, task_description: str) -> dict:
