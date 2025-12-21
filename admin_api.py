@@ -976,6 +976,7 @@ def trigger_broadcaster_api():
     try:
         from stats_broadcaster import broadcast_all_tasks
         import asyncio
+        import traceback
         
         # 运行异步任务
         loop = asyncio.new_event_loop()
@@ -983,15 +984,28 @@ def trigger_broadcaster_api():
         result = loop.run_until_complete(broadcast_all_tasks())
         loop.close()
         
+        # 检查内部结果是否成功
+        if result and result.get('success') == False:
+            # 内部失败，返回详细错误信息
+            return jsonify({
+                'success': False,
+                'error': result.get('error', '内部错误'),
+                'data': result
+            })
+        
         return jsonify({
             'success': True,
             'data': result
         })
     
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"❌ 触发回传异常: {e}\n{error_trace}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'traceback': error_trace
         }), 500
 
 @app.route('/api/admin/delete_tasks', methods=['POST'])
