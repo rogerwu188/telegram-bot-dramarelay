@@ -354,8 +354,9 @@ class LinkVerifier:
         
         logger.info(f"📊 匹配到的关键词: {matched_keywords} / {len(keywords)}")
         
-        # 需要匹配至少2个关键词，或者匹配超过30%的关键词
-        min_match_count = max(2, len(keywords) // 3)
+        # 需要匹配至少1个关键词，如果有多个关键词则需要匹配至少2个
+        # 使用 min(2, len(keywords)) 确保不会要求匹配比实际关键词数量更多的数量
+        min_match_count = min(2, len(keywords))
         
         if len(matched_keywords) >= min_match_count:
             logger.info(f"✅ 关键词匹配成功: 匹配 {len(matched_keywords)} 个，要求 {min_match_count} 个")
