@@ -1450,13 +1450,14 @@
                     return;
                 }
             } else {
-                // 当前未运行，先获取任务数量，然后确认启动
+                // 当前未运行，先获取任务完成日志的任务数量，然后确认启动
                 try {
-                    const statsResponse = await fetch('/api/logs/stats?hours=0');
-                    const statsResult = await statsResponse.json();
-                    const taskCount = statsResult.success ? (statsResult.data.total_tasks || 0) : 0;
+                    // 从任务完成日志API获取有用户完成的任务数量
+                    const completionsResponse = await fetch('/api/logs/completions?hours=0&limit=10000');
+                    const completionsResult = await completionsResponse.json();
+                    const taskCount = completionsResult.success ? (completionsResult.count || 0) : 0;
                     
-                    if (!confirm(`确认启动分发数据回传？\n\n回传任务总量: ${taskCount} 条\n回传间隔: 3 分钟`)) {
+                    if (!confirm(`确认启动分发数据回传？\n\n回传任务总量: ${taskCount} 条（有用户完成的任务）\n回传间隔: 3 分钟`)) {
                         return;
                     }
                 } catch (e) {
