@@ -7,6 +7,7 @@
 import os
 import asyncio
 import logging
+import random
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import psycopg2
@@ -426,8 +427,10 @@ async def run_verification_worker(bot, link_verifier, interval: int = 5):
                         import traceback
                         logger.error(traceback.format_exc())
                     
-                    # 每个任务之间稍微间隔，避免过于频繁
-                    await asyncio.sleep(1)
+                    # 每个任务之间随机间隔 3-8 秒，避免触发反爬虫机制
+                    delay = random.uniform(3, 8)
+                    logger.info(f"⏳ 等待 {delay:.1f} 秒后处理下一个任务...")
+                    await asyncio.sleep(delay)
             
         except Exception as e:
             logger.error(f"❌ Worker 循环异常: {e}")
