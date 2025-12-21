@@ -39,33 +39,37 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 查询该分类的活跃任务（直接在 SQL 中过滤已领取的任务，并过滤超过48小时的任务）
-    # 任务超过48小时自动过期，不再允许领取
+    # 获取任务过期时间配置
+    from task_expiry import get_task_expiry_hours
+    expiry_hours = get_task_expiry_hours()
+    
+    # 查询该分类的活跃任务（直接在 SQL 中过滤已领取的任务，并过滤超过有效期的任务）
+    # 任务超过有效期自动过期，不再允许领取
     if category == 'latest':
         # latest 分类显示所有类型的最新任务（包括 category 为 NULL 的任务）
         cur.execute("""
             SELECT * FROM drama_tasks
             WHERE status = 'active' 
-            AND created_at > NOW() - INTERVAL '48 hours'
+            AND created_at > NOW() - INTERVAL '%s hours'
             AND task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
             ORDER BY created_at DESC
             LIMIT %s OFFSET %s
-        """, (user_id, page_size, offset))
+        """, (expiry_hours, user_id, page_size, offset))
     else:
         # 其他分类只显示该分类的任务
         cur.execute("""
             SELECT * FROM drama_tasks
             WHERE status = 'active' 
             AND category = %s 
-            AND created_at > NOW() - INTERVAL '48 hours'
+            AND created_at > NOW() - INTERVAL '%s hours'
             AND task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
             ORDER BY created_at DESC
             LIMIT %s OFFSET %s
-        """, (category, user_id, page_size, offset))
+        """, (category, expiry_hours, user_id, page_size, offset))
     
     available_tasks = cur.fetchall()
     
@@ -89,26 +93,26 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     
     for cat_code in categories.keys():
         if cat_code == 'latest':
-            # latest 分类显示所有类型的任务数（过滤超过48小时的任务）
+            # latest 分类显示所有类型的任务数（过滤超过有效期的任务）
             cur.execute("""
                 SELECT COUNT(*) as count FROM drama_tasks
                 WHERE status = 'active' 
-                AND created_at > NOW() - INTERVAL '48 hours'
+                AND created_at > NOW() - INTERVAL '%s hours'
                 AND task_id NOT IN (
                     SELECT task_id FROM user_tasks WHERE user_id = %s
                 )
-            """, (user_id,))
+            """, (expiry_hours, user_id))
         else:
-            # 其他分类只统计该分类的任务（过滤超过48小时的任务）
+            # 其他分类只统计该分类的任务（过滤超过有效期的任务）
             cur.execute("""
                 SELECT COUNT(*) as count FROM drama_tasks
                 WHERE status = 'active' 
                 AND category = %s 
-                AND created_at > NOW() - INTERVAL '48 hours'
+                AND created_at > NOW() - INTERVAL '%s hours'
                 AND task_id NOT IN (
                     SELECT task_id FROM user_tasks WHERE user_id = %s
                 )
-            """, (cat_code, user_id))
+            """, (cat_code, expiry_hours, user_id))
         
         result = cur.fetchone()
         category_counts[cat_code] = result['count'] if result else 0

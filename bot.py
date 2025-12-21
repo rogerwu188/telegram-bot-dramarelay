@@ -1314,6 +1314,61 @@ async def clear_pending_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(f"❌ 清理失败: {str(e)}")
 
 
+async def set_expiry_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """设置任务有效期（小时）
+    
+    用法: /set_expiry <小时数>
+    示例: /set_expiry 48
+    """
+    user_id = update.effective_user.id
+    
+    # 仅允许管理员使用
+    if user_id != 5156570084:
+        await update.message.reply_text("❌ 此命令仅供管理员使用")
+        return
+    
+    from task_expiry import get_task_expiry_hours, set_task_expiry_hours
+    
+    # 获取参数
+    if not context.args:
+        # 显示当前配置
+        current_hours = get_task_expiry_hours()
+        await update.message.reply_text(
+            f"🕐 任务有效期设置\n\n"
+            f"当前有效期: {current_hours} 小时\n\n"
+            f"用法: /set_expiry <小时数>\n"
+            f"示例: /set_expiry 48"
+        )
+        return
+    
+    try:
+        new_hours = int(context.args[0])
+        
+        if new_hours < 1:
+            await update.message.reply_text("❌ 有效期必须大于 0 小时")
+            return
+        
+        if new_hours > 720:  # 最多 30 天
+            await update.message.reply_text("❌ 有效期不能超过 720 小时（30天）")
+            return
+        
+        old_hours = get_task_expiry_hours()
+        
+        if set_task_expiry_hours(new_hours):
+            await update.message.reply_text(
+                f"✅ 任务有效期已更新\n\n"
+                f"原有效期: {old_hours} 小时\n"
+                f"新有效期: {new_hours} 小时\n\n"
+                f"任务创建后超过 {new_hours} 小时将自动过期"
+            )
+            logger.info(f"🕐 管理员 {user_id} 将任务有效期从 {old_hours} 小时改为 {new_hours} 小时")
+        else:
+            await update.message.reply_text("❌ 设置失败，请查看日志")
+            
+    except ValueError:
+        await update.message.reply_text("❌ 请输入有效的数字\n\n示例: /set_expiry 48")
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理 /start 命令"""
     user = update.effective_user
@@ -2639,8 +2694,9 @@ def main():
     from category_sync_scheduler import start_category_sync_scheduler
     start_category_sync_scheduler(application)
     
-    # 启动任务过期清理调度器（48小时过期）
-    from task_expiry import start_expiry_cleanup_scheduler
+    # 初始化 bot_settings 表并启动任务过期清理调度器
+    from task_expiry import init_bot_settings_table, start_expiry_cleanup_scheduler
+    init_bot_settings_table()
     start_expiry_cleanup_scheduler(application)
     
     # 命令处理器
@@ -2648,6 +2704,7 @@ def main():
     application.add_handler(CommandHandler("check_invitation", check_invitation_command))
     application.add_handler(CommandHandler("manual_reward", manual_reward_command))
     application.add_handler(CommandHandler("clear_pending", clear_pending_command))
+    application.add_handler(CommandHandler("set_expiry", set_expiry_command))
     
     # 回调查询处理器
     application.add_handler(CallbackQueryHandler(get_tasks_callback, pattern='^get_tasks$'))
