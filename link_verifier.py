@@ -182,7 +182,8 @@ class LinkVerifier:
                         
                         result['success'] = True
                     else:
-                        logger.error(f"❌ oEmbed API 返回错误: {response.status}")
+                        logger.error(f"❌ oEmbed API 返回错误: {response.status}, URL: {url}")
+                        logger.error(f"❌ oEmbed 请求 URL: {oembed_url}")
                         result['error'] = f"API 返回错误: {response.status}"
                         
         except aiohttp.ClientError as e:
