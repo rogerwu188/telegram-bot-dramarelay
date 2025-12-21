@@ -146,9 +146,14 @@ class LinkVerifier:
             oembed_url = f"https://www.tiktok.com/oembed?url={quote(url)}"
             logger.info(f"📡 调用 TikTok oEmbed API: {oembed_url}")
             
-            # 发送 HTTP GET 请求
-            async with aiohttp.ClientSession() as session:
-                async with session.get(oembed_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+            # 发送 HTTP GET 请求（添加 User-Agent 头，避免被 TikTok 拒绝）
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.get(oembed_url, timeout=aiohttp.ClientTimeout(total=15)) as response:
                     if response.status == 200:
                         data = await response.json()
                         logger.info(f"✅ oEmbed API 返回成功")
