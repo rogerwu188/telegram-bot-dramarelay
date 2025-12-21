@@ -1313,6 +1313,69 @@ def search_tasks():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/verification/queue-status', methods=['GET'])
+def get_verification_queue_status():
+    """
+    获取TikTok验证队列状态
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询待验证的任务数量
+        cur.execute("""
+            SELECT COUNT(*) as pending_count
+            FROM pending_verifications
+            WHERE status = 'pending'
+        """)
+        pending_count = cur.fetchone()['pending_count']
+        
+        # 查询正在处理的任务数量
+        cur.execute("""
+            SELECT COUNT(*) as processing_count
+            FROM pending_verifications
+            WHERE status = 'processing'
+        """)
+        processing_count = cur.fetchone()['processing_count']
+        
+        # 查询最近完成的任务数量（24小时内）
+        cur.execute("""
+            SELECT COUNT(*) as completed_count
+            FROM pending_verifications
+            WHERE status = 'completed'
+              AND completed_at >= NOW() - INTERVAL '24 hours'
+        """)
+        completed_count = cur.fetchone()['completed_count']
+        
+        # 查询最近失败的任务数量（24小时内）
+        cur.execute("""
+            SELECT COUNT(*) as failed_count
+            FROM pending_verifications
+            WHERE status = 'failed'
+              AND updated_at >= NOW() - INTERVAL '24 hours'
+        """)
+        failed_count = cur.fetchone()['failed_count']
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'pending': pending_count,
+                'processing': processing_count,
+                'completed_24h': completed_count,
+                'failed_24h': failed_count,
+                'total_queue': pending_count + processing_count
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/logs/clear-all', methods=['POST'])
 def clear_all_logs():
     """

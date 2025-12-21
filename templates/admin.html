@@ -533,6 +533,38 @@
                         💡 所有Webhook回调都将使用此地址，保存后立即生效
                     </small>
                 </div>
+                
+                <!-- TikTok 验证队列状态 -->
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ffc107;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404;">
+                        📤 TikTok 链接验证队列状态
+                    </label>
+                    <div id="queue-status" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="background: #fff3cd; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">⏳</span>
+                            <span style="font-weight: 500; color: #856404;">排队中:</span>
+                            <span id="queue-pending" style="font-weight: bold; color: #856404; font-size: 16px;">-</span>
+                        </div>
+                        <div style="background: #cce5ff; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">⚡</span>
+                            <span style="font-weight: 500; color: #004085;">处理中:</span>
+                            <span id="queue-processing" style="font-weight: bold; color: #004085; font-size: 16px;">-</span>
+                        </div>
+                        <div style="background: #d4edda; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">✅</span>
+                            <span style="font-weight: 500; color: #155724;">24h完成:</span>
+                            <span id="queue-completed" style="font-weight: bold; color: #155724; font-size: 16px;">-</span>
+                        </div>
+                        <div style="background: #f8d7da; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">❌</span>
+                            <span style="font-weight: 500; color: #721c24;">24h失败:</span>
+                            <span id="queue-failed" style="font-weight: bold; color: #721c24; font-size: 16px;">-</span>
+                        </div>
+                    </div>
+                    <small style="color: #856404; display: block; margin-top: 8px;">
+                        💡 每个验证任务间隔 3-8 秒执行，避免触发反爬虫机制
+                    </small>
+                </div>
             </div>
         </div>
         
@@ -1135,6 +1167,7 @@
             loadWebhooks();
             loadCompletions();
             loadTasks();
+            loadQueueStatus();
         }
         
         // 清空所有日志
@@ -1227,6 +1260,10 @@
             refreshData();
             loadApiKey();
             loadCallbackUrl();
+            loadQueueStatus();
+            
+            // 每 10 秒自动刷新队列状态
+            setInterval(loadQueueStatus, 10000);
         });
         
         // 显示回调数据弹窗
@@ -1363,6 +1400,23 @@
                 console.error('加载 Callback URL 失败:', error);
                 document.getElementById('callback-url-input').value = '';
                 document.getElementById('callback-url-input').placeholder = '加载失败，请手动输入';
+            }
+        }
+        
+        // 加载验证队列状态
+        async function loadQueueStatus() {
+            try {
+                const response = await fetch('/api/verification/queue-status');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('queue-pending').textContent = result.data.pending;
+                    document.getElementById('queue-processing').textContent = result.data.processing;
+                    document.getElementById('queue-completed').textContent = result.data.completed_24h;
+                    document.getElementById('queue-failed').textContent = result.data.failed_24h;
+                }
+            } catch (error) {
+                console.error('加载队列状态失败:', error);
             }
         }
         
