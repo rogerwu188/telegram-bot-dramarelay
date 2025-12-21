@@ -889,6 +889,11 @@ def admin_errors():
     """错误日志 API"""
     return admin_api.get_error_logs()
 
+@app.route('/api/verification/queue-status')
+def verification_queue_status():
+    """获取TikTok验证队列状态"""
+    return admin_api.get_verification_queue_status()
+
 @app.route('/api/config/api-key')
 def admin_api_key():
     """获取 API Key"""
