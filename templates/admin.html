@@ -1140,7 +1140,7 @@
         // 清空所有日志
         async function clearAllLogs() {
             // 第一次确认
-            const firstConfirm = confirm('⚠️ 警告\n\n您即将清空以下所有日志数据：\n\n• 回传X2C Pool任务状态数据日志\n• X2C Pool下发任务接收日志\n• X2C Pool下发任务完成日志\n• 回传X2C Pool任务数据错误日志\n\n此操作不可撤销！\n\n确定要继续吗？');
+            const firstConfirm = confirm('⚠️ 警告\n\n您即将清空以下日志数据：\n\n• 回传X2C Pool任务状态数据日志 (Webhook回调日志)\n• 回传X2C Pool任务数据错误日志\n\n注意：任务接收记录和任务完成记录不会被删除\n\n此操作不可撤销！\n\n确定要继续吗？');
             
             if (!firstConfirm) {
                 return;
