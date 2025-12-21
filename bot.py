@@ -1314,6 +1314,79 @@ async def clear_pending_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(f"❌ 清理失败: {str(e)}")
 
 
+async def debug_pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """调试命令：查看 pending_verifications 表中的记录"""
+    user_id = update.effective_user.id
+    
+    # 仅允许管理员使用
+    if user_id != 5156570084:
+        await update.message.reply_text("❌ 此命令仅供管理员使用")
+        return
+    
+    await update.message.reply_text("🔍 正在查询 pending_verifications 表...")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询所有记录（最近 20 条）
+        cur.execute("""
+            SELECT pv.id, pv.user_id, pv.task_id, pv.video_url, pv.platform, 
+                   pv.status, pv.retry_count, pv.error_message, pv.created_at,
+                   dt.title as task_title
+            FROM pending_verifications pv
+            LEFT JOIN drama_tasks dt ON pv.task_id = dt.task_id
+            ORDER BY pv.created_at DESC
+            LIMIT 20
+        """)
+        
+        records = cur.fetchall()
+        
+        if not records:
+            await update.message.reply_text("✅ pending_verifications 表中没有记录")
+            return
+        
+        # 构建消息
+        message_parts = [f"📊 找到 {len(records)} 条记录\n"]
+        
+        for r in records:
+            record = dict(r)
+            status_emoji = {
+                'pending': '⏳',
+                'completed': '✅',
+                'failed': '❌'
+            }.get(record['status'], '❓')
+            
+            # 显示完整的 video_url
+            video_url = record['video_url'] or 'N/A'
+            
+            message_parts.append(
+                f"\n{status_emoji} ID: {record['id']}\n"
+                f"用户: {record['user_id']}\n"
+                f"任务: {record['task_id']} - {record.get('task_title', 'N/A')}\n"
+                f"链接: {video_url}\n"
+                f"状态: {record['status']} (重试: {record['retry_count']})\n"
+                f"错误: {record.get('error_message', 'N/A')}\n"
+                f"时间: {record['created_at']}\n"
+                f"{'='*40}"
+            )
+        
+        # 如果消息太长，分段发送
+        full_message = '\n'.join(message_parts)
+        if len(full_message) > 4000:
+            # 发送前 4000 个字符
+            await update.message.reply_text(full_message[:4000] + "\n\n... (截断)")
+        else:
+            await update.message.reply_text(full_message)
+        
+        cur.close()
+        conn.close()
+        
+    except Exception as e:
+        logger.error(f"❌ 查询 pending_verifications 失败: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ 查询失败: {str(e)}")
+
+
 async def set_expiry_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """设置任务有效期（小时）
     
@@ -2742,6 +2815,7 @@ def main():
     application.add_handler(CommandHandler("check_invitation", check_invitation_command))
     application.add_handler(CommandHandler("manual_reward", manual_reward_command))
     application.add_handler(CommandHandler("clear_pending", clear_pending_command))
+    application.add_handler(CommandHandler("debug_pending", debug_pending_command))
     application.add_handler(CommandHandler("set_expiry", set_expiry_command))
     
     # 回调查询处理器
