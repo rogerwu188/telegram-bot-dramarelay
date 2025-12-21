@@ -1615,51 +1615,65 @@ to receive 🎉 {reward} X2C"""
             drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
             
             if user_lang.startswith('zh'):
-                final_msg = f"""🔗 视频链接：{video_url}
+                final_msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📥 视频已下载，请选择任意平台发布内容，即可获得对应奖励：
+🆕 <b>【新任务】</b>
 
-━━━━━━━━━━━━━━━━━━
+📤 <b>提交任务</b>
+🎬 {title}
+💰 完成可获得：{reward} X2C
+🔗 视频链接：{video_url}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋【一键复制内容】
 💡 请复制到 TikTok 或 YouTube
 
+<pre>
 {plot_keyword} | {drama_name}
+Clip from @X2CDramaOfficial
+
 {description}
 {hashtags}
+</pre>
 
-━━━━━━━━━━━━━━━━━━
-💰【奖励说明】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-完成以上任务，点击下方的"提交链接"按钮，机器人验证通过你发布后的视频链接  
-即可获得 🎉 {reward} X2C"""
+📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）"""
                 
                 # 创建 inline keyboard 按钮
                 keyboard = [
-                    [InlineKeyboardButton("📎 提交链接", callback_data=f"submit_link_{task_id}")]
+                    [InlineKeyboardButton("« 返回", callback_data='back_to_menu')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
             else:
-                final_msg = f"""🔗 Video Link: {video_url}
+                final_msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📥 Please download the video and upload to any platform to receive rewards:
+🆕 <b>【New Task】</b>
 
-━━━━━━━━━━━━━━━━━━
+📤 <b>Submit Task</b>
+🎬 {title}
+💰 Reward: {reward} X2C
+🔗 Video Link: {video_url}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋【One-Click Copy Content】
 💡 Please copy to TikTok or YouTube
 
+<pre>
 {title}
+Clip from @X2CDramaOfficial
+
 {description}
 {hashtags}
+</pre>
 
-━━━━━━━━━━━━━━━━━━
-💰【Reward】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Complete the task above and submit your published video link in this bot  
-to receive 🎉 {reward} X2C"""
+📝 Please paste your uploaded video link (TikTok, YouTube, Instagram, etc.)"""
                 
                 # 创建 inline keyboard 按钮
                 keyboard = [
-                    [InlineKeyboardButton("📎 Submit Link", callback_data=f"submit_link_{task_id}")]
+                    [InlineKeyboardButton("« Back", callback_data='back_to_menu')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -1668,7 +1682,7 @@ to receive 🎉 {reward} X2C"""
                 chat_id=query.message.chat_id,
                 text=final_msg,
                 reply_markup=reply_markup,
-                parse_mode=None,
+                parse_mode='HTML',
                 disable_web_page_preview=True
             )
             
@@ -1677,9 +1691,17 @@ to receive 🎉 {reward} X2C"""
                 context.user_data['task_hint_messages'] = {}
             context.user_data['task_hint_messages'][task_id] = hint_msg.message_id
             
+            # 保存任务ID和消息ID，以便用户直接输入链接
+            context.user_data['submit_task_id'] = task_id
+            context.user_data['task_card_message_id'] = hint_msg.message_id
+            context.user_data['task_card_chat_id'] = query.message.chat_id
+            
             # 标记任务为已领取
             claim_result = claim_task(user_id, task_id)
             logger.info(f"✅ Video sent successfully, task claimed: {claim_result}, waiting for user to submit link")
+            
+            # 返回 SUBMIT_LINK 状态，让用户可以直接输入链接
+            return SUBMIT_LINK
             
         except Exception as e:
             logger.error(f"Error downloading video: {e}")
