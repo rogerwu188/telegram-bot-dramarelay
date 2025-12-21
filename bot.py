@@ -2783,23 +2783,40 @@ def main():
     application = Application.builder().token(BOT_TOKEN).build()
     
     # 启动异步验证 Worker
+    verification_worker_task = None
+    
     async def start_verification_worker(app):
         """启动验证 Worker 作为后台任务"""
+        nonlocal verification_worker_task
         from async_verification_worker import run_verification_worker
         logger.info("🔧 Starting async verification worker...")
         
         async def worker_wrapper():
             try:
                 await run_verification_worker(app.bot, link_verifier, interval=5)
+            except asyncio.CancelledError:
+                logger.info("🛑 Verification Worker 已取消")
             except Exception as e:
                 logger.error(f"❌ Verification Worker 崩溃: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
         
-        asyncio.create_task(worker_wrapper())
+        verification_worker_task = asyncio.create_task(worker_wrapper())
         logger.info("✅ Verification Worker 任务已创建")
     
+    async def stop_verification_worker(app):
+        """停止验证 Worker"""
+        nonlocal verification_worker_task
+        if verification_worker_task and not verification_worker_task.done():
+            verification_worker_task.cancel()
+            try:
+                await verification_worker_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("✅ Verification Worker 已停止")
+    
     application.post_init = start_verification_worker
+    application.post_shutdown = stop_verification_worker
     
     # 启动分类同步调度器
     from category_sync_scheduler import start_category_sync_scheduler
