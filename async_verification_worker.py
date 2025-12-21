@@ -326,8 +326,14 @@ async def run_verification_worker(bot, link_verifier, interval: int = 5):
     """
     logger.info(f"🚀 验证 Worker 启动，检查间隔: {interval}秒")
     
+    check_count = 0
     while True:
         try:
+            check_count += 1
+            # 每10次输出一次心跳日志
+            if check_count % 10 == 0:
+                logger.info(f"💓 Worker 心跳: 已检查 {check_count} 次")
+            
             # 获取待验证记录
             pending_records = get_pending_verifications(limit=5)
             
@@ -336,15 +342,21 @@ async def run_verification_worker(bot, link_verifier, interval: int = 5):
                 
                 for record in pending_records:
                     try:
+                        logger.info(f"🔄 开始处理: id={record['id']}, task={record['task_id']}")
                         await process_single_verification(record, bot, link_verifier)
+                        logger.info(f"✅ 处理完成: id={record['id']}")
                     except Exception as e:
                         logger.error(f"❌ 处理验证任务失败: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
                     
                     # 每个任务之间稍微间隔，避免过于频繁
                     await asyncio.sleep(1)
             
         except Exception as e:
             logger.error(f"❌ Worker 循环异常: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
         
         # 等待下一次检查
         await asyncio.sleep(interval)

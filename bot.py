@@ -2562,7 +2562,17 @@ def main():
         """启动验证 Worker 作为后台任务"""
         from async_verification_worker import run_verification_worker
         logger.info("🔧 Starting async verification worker...")
-        asyncio.create_task(run_verification_worker(app.bot, link_verifier, interval=5))
+        
+        async def worker_wrapper():
+            try:
+                await run_verification_worker(app.bot, link_verifier, interval=5)
+            except Exception as e:
+                logger.error(f"❌ Verification Worker 崩溃: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+        
+        asyncio.create_task(worker_wrapper())
+        logger.info("✅ Verification Worker 任务已创建")
     
     application.post_init = start_verification_worker
     
