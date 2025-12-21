@@ -530,9 +530,27 @@ def stop_broadcaster():
         return False
     
     broadcaster_running = False
+    
+    # 根据 broadcaster_task 的类型选择正确的停止方式
     if broadcaster_task:
-        broadcaster_task.cancel()
-    logger.info("✅ 分发数据回传服务停止成功")
+        import threading
+        import asyncio
+        
+        if isinstance(broadcaster_task, threading.Thread):
+            # 线程模式：设置 broadcaster_running = False 后，线程会自动退出
+            # 等待线程结束（最多等待 5 秒）
+            broadcaster_task.join(timeout=5)
+            logger.info("✅ 分发数据回传服务停止成功（线程模式）")
+        elif isinstance(broadcaster_task, asyncio.Task):
+            # 异步任务模式：取消任务
+            broadcaster_task.cancel()
+            logger.info("✅ 分发数据回传服务停止成功（异步模式）")
+        else:
+            logger.info("✅ 分发数据回传服务停止成功")
+    else:
+        logger.info("✅ 分发数据回传服务停止成功")
+    
+    broadcaster_task = None
     return True
 
 def get_broadcaster_status():
