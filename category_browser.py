@@ -7,7 +7,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from x2c_category_sync import get_all_categories_for_bot
-from category_classifier import get_category_name
 import logging
 
 logger = logging.getLogger(__name__)
@@ -185,7 +184,10 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
     
     # 构建消息文本
-    category_name = get_category_name(category, user_lang)
+    # 使用 categories 字典获取分类名称（从 X2C API 同步的分类）
+    category_name = categories.get(category, category)
+    if category == 'latest':
+        category_name = '最新' if user_lang.startswith('zh') else 'Latest'
     if user_lang.startswith('zh'):
         message_text = f"📂 剧集分类：{category_name}\n\n📋 选择你想要领取的任务："
     else:
