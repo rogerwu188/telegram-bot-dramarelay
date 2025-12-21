@@ -1286,6 +1286,34 @@ async def manual_reward_command(update: Update, context: ContextTypes.DEFAULT_TY
             conn.rollback()
             conn.close()
 
+async def clear_pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """清理所有 pending 状态的验证任务"""
+    user_id = update.effective_user.id
+    
+    # 仅允许管理员使用
+    if user_id != 5156570084:
+        await update.message.reply_text("❌ 此命令仅供管理员使用")
+        return
+    
+    await update.message.reply_text("🧹 正在清理所有 pending 状态的验证任务...")
+    
+    try:
+        from async_verification_worker import force_fail_all_pending
+        cleaned_count = force_fail_all_pending()
+        
+        await update.message.reply_text(
+            f"✅ 清理完成！\n\n"
+            f"🧹 已将 {cleaned_count} 条 pending 任务标记为失败\n\n"
+            f"用户现在可以重新提交链接了。"
+        )
+        
+        logger.info(f"🧹 管理员 {user_id} 清理了 {cleaned_count} 条 pending 任务")
+        
+    except Exception as e:
+        logger.error(f"❌ 清理 pending 任务失败: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ 清理失败: {str(e)}")
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理 /start 命令"""
     user = update.effective_user
@@ -2584,6 +2612,7 @@ def main():
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("check_invitation", check_invitation_command))
     application.add_handler(CommandHandler("manual_reward", manual_reward_command))
+    application.add_handler(CommandHandler("clear_pending", clear_pending_command))
     
     # 回调查询处理器
     application.add_handler(CallbackQueryHandler(get_tasks_callback, pattern='^get_tasks$'))

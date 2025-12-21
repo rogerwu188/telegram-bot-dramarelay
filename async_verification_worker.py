@@ -127,6 +127,74 @@ def add_to_verification_queue(user_id: int, task_id: int, video_url: str, platfo
         conn.close()
 
 
+def cleanup_stale_pending_verifications(timeout_minutes: int = 5) -> int:
+    """
+    清理超时的 pending 任务
+    将超过 timeout_minutes 分钟的 pending 任务标记为 failed
+    返回清理的记录数
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            UPDATE pending_verifications 
+            SET status = 'failed', 
+                error_message = '验证超时，请重新提交',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE status = 'pending' 
+            AND created_at < NOW() - INTERVAL '%s minutes'
+            RETURNING id
+        """, (timeout_minutes,))
+        
+        cleaned = cur.fetchall()
+        conn.commit()
+        
+        if cleaned:
+            logger.info(f"🧹 清理了 {len(cleaned)} 条超时的 pending 任务")
+        
+        return len(cleaned)
+    except Exception as e:
+        logger.error(f"❌ 清理超时任务失败: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        cur.close()
+        conn.close()
+
+
+def force_fail_all_pending() -> int:
+    """
+    强制将所有 pending 任务标记为 failed
+    用于管理员手动清理
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            UPDATE pending_verifications 
+            SET status = 'failed', 
+                error_message = '管理员手动清理，请重新提交',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE status = 'pending'
+            RETURNING id, user_id, task_id
+        """)
+        
+        cleaned = cur.fetchall()
+        conn.commit()
+        
+        logger.info(f"🧹 强制清理了 {len(cleaned)} 条 pending 任务")
+        return len(cleaned)
+    except Exception as e:
+        logger.error(f"❌ 强制清理失败: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        cur.close()
+        conn.close()
+
+
 def get_pending_verifications(limit: int = 10) -> list:
     """获取待验证的记录"""
     conn = get_db_connection()
@@ -333,6 +401,9 @@ async def run_verification_worker(bot, link_verifier, interval: int = 5):
             # 每10次输出一次心跳日志
             if check_count % 10 == 0:
                 logger.info(f"💓 Worker 心跳: 已检查 {check_count} 次")
+            
+            # 每次循环先清理超时的任务（5分钟超时）
+            cleanup_stale_pending_verifications(timeout_minutes=5)
             
             # 获取待验证记录
             pending_records = get_pending_verifications(limit=5)
