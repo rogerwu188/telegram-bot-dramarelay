@@ -153,10 +153,10 @@ class LinkVerifier:
             'Accept-Language': 'en-US,en;q=0.9'
         }
         
-        # 自动重试机制：最多重试 3 次，每次间隔 60 秒
-        # TikTok oEmbed API 有时会随机返回 400 错误，较长的重试间隔可以提高成功率
+        # 自动重试机制：最多重试 3 次，每次间隔 10 秒
+        # TikTok oEmbed API 有时会随机返回 400 错误
         max_retries = 3
-        retry_delay = 60
+        retry_delay = 10
         last_error = None
         
         for attempt in range(max_retries):

@@ -273,13 +273,14 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
     
     try:
         # 调用验证器
+        # 超时时间设置为 90 秒，以容纳 3 次重试（每次间隔 10 秒 + 请求时间）
         verify_result = await asyncio.wait_for(
             link_verifier.verify_link(
                 url=video_url,
                 task_title=task_title,
                 task_description=task_description
             ),
-            timeout=45.0
+            timeout=90.0
         )
         
         if verify_result.get('success') and verify_result.get('matched'):
