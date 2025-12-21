@@ -2639,7 +2639,7 @@ def main():
     # 回调查询处理器
     application.add_handler(CallbackQueryHandler(get_tasks_callback, pattern='^get_tasks$'))
     application.add_handler(CallbackQueryHandler(task_detail_callback, pattern='^task_\\d+$'))
-    application.add_handler(CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$'))
+    # claim_task_callback 现在由 ConversationHandler 处理，不需要全局 handler
     application.add_handler(CallbackQueryHandler(submit_link_callback, pattern='^submit_link$'))
     application.add_handler(CallbackQueryHandler(my_power_callback, pattern='^my_power$'))
     application.add_handler(CallbackQueryHandler(ranking_callback, pattern='^ranking$'))
@@ -2657,7 +2657,8 @@ def main():
     submit_conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(submit_task_select_callback, pattern='^submit_task_\\d+$'),
-            CallbackQueryHandler(submit_task_select_callback, pattern='^submit_link_\\d+$')  # 支持从下载消息直接提交
+            CallbackQueryHandler(submit_task_select_callback, pattern='^submit_link_\\d+$'),  # 支持从下载消息直接提交
+            CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$')  # 领取任务后直接进入提交状态
         ],
         states={
             SUBMIT_LINK: [
