@@ -1645,6 +1645,9 @@
                         
                         // 更新统计显示
                         await updateBroadcastStats();
+                        
+                        // 自动刷新所有数据
+                        refreshData();
                     }
                 } else {
                     alert('❌ 回传失败: ' + (result.error || '未知错误'));
@@ -1740,8 +1743,8 @@
                     message += `跳过: ${result.skip_count || 0}`;
                     alert(message);
                     
-                    // 刷新任务完成日志以显示最新播放量
-                    loadCompletions();
+                    // 刷新所有数据以显示最新播放量
+                    refreshData();
                 } else {
                     alert('❌ 抓取失败: ' + (result.error || '未知错误'));
                 }
