@@ -236,22 +236,23 @@ def start_expiry_cleanup_scheduler(application):
     Args:
         application: Telegram Application 对象
     """
-    import asyncio
+    from telegram.ext import ContextTypes
     
-    async def cleanup_loop():
-        logger.info("🕐 任务过期清理调度器已启动")
-        
-        while True:
-            try:
-                result = cleanup_expired_tasks()
-                if result['expired_tasks'] > 0 or result['cleaned_user_tasks'] > 0:
-                    logger.info(f"🧹 过期任务清理完成: {result}")
-            except Exception as e:
-                logger.error(f"❌ 过期任务清理失败: {e}", exc_info=True)
-            
-            # 每小时执行一次
-            await asyncio.sleep(3600)
+    async def cleanup_job(context: ContextTypes.DEFAULT_TYPE):
+        """定时清理任务"""
+        try:
+            result = cleanup_expired_tasks()
+            if result['expired_tasks'] > 0 or result['cleaned_user_tasks'] > 0:
+                logger.info(f"🧹 过期任务清理完成: {result}")
+        except Exception as e:
+            logger.error(f"❌ 过期任务清理失败: {e}", exc_info=True)
     
-    # 创建后台任务
-    asyncio.create_task(cleanup_loop())
-    logger.info("✅ 任务过期清理调度器已注册")
+    # 使用 application 的 job_queue 注册定时任务
+    # 每小时执行一次，首次执行在 60 秒后
+    application.job_queue.run_repeating(
+        cleanup_job,
+        interval=3600,  # 每小时
+        first=60,  # 首次执行在 60 秒后
+        name='expiry_cleanup'
+    )
+    logger.info("✅ 任务过期清理调度器已注册（每小时执行一次）")
