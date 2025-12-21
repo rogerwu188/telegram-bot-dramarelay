@@ -1810,10 +1810,11 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
     
-    # 获取用户所有 pending 状态的任务
-    from check_pending_status import get_user_pending_tasks
+    # 获取用户所有 pending 和 failed 状态的任务
+    from check_pending_status import get_user_pending_tasks, get_user_failed_tasks
     conn = get_db_connection()
     pending_task_ids = get_user_pending_tasks(conn, user_id)
+    failed_tasks = get_user_failed_tasks(conn, user_id)  # {task_id: error_message}
     conn.close()
     
     # 显示进行中的任务列表
@@ -1825,15 +1826,28 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             button_text = f"⏳ {task['title']} (核验中...)" if user_lang.startswith('zh') else f"⏳ {task['title']} (Verifying...)"
             # 使用 noop 回调，点击时显示提示
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"pending_task_{task_id}")])
+        elif task_id in failed_tasks:
+            # failed 状态：显示失败标记，可以重新提交
+            button_text = f"❌ {task['title']} (请重新提交)" if user_lang.startswith('zh') else f"❌ {task['title']} (Please resubmit)"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task_id}")])
         else:
             # 可以提交
             button_text = f"📤 {task['title']} ({task['node_power_reward']} X2C)"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task_id}")])
     
+    # 如果有失败的任务，在消息中添加提示
+    has_failed = len(failed_tasks) > 0
+    
     keyboard.append([InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')])
     
+    # 构建消息文本
+    message_text = get_message(user_lang, 'select_task_to_submit')
+    if has_failed:
+        failed_hint = "\n\n⚠️ 标记为 ❌ 的任务验证失败，请重新提交链接" if user_lang.startswith('zh') else "\n\n⚠️ Tasks marked with ❌ failed verification, please resubmit"
+        message_text += failed_hint
+    
     await query.edit_message_text(
-        get_message(user_lang, 'select_task_to_submit'),
+        message_text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 

@@ -47,3 +47,30 @@ def get_user_pending_tasks(conn, user_id: int) -> list:
         return [r['task_id'] for r in results]
     finally:
         cur.close()
+
+
+def get_user_failed_tasks(conn, user_id: int) -> dict:
+    """
+    获取用户所有 failed 状态的任务
+    
+    Returns:
+        dict: {task_id: error_message, ...}
+    """
+    cur = conn.cursor()
+    try:
+        # 获取每个任务最新的失败记录
+        cur.execute("""
+            SELECT pv.task_id, pv.error_message 
+            FROM pending_verifications pv
+            INNER JOIN (
+                SELECT task_id, MAX(created_at) as max_created
+                FROM pending_verifications
+                WHERE user_id = %s
+                GROUP BY task_id
+            ) latest ON pv.task_id = latest.task_id AND pv.created_at = latest.max_created
+            WHERE pv.user_id = %s AND pv.status = 'failed'
+        """, (user_id, user_id))
+        results = cur.fetchall()
+        return {r['task_id']: r.get('error_message', '验证失败') for r in results}
+    finally:
+        cur.close()
