@@ -164,10 +164,10 @@ def cleanup_expired_tasks() -> dict:
     
     try:
         # 1. 查找并标记过期的任务
+        # 注意：drama_tasks 表可能没有 updated_at 字段，所以只更新 status
         cur.execute("""
             UPDATE drama_tasks
-            SET status = 'expired',
-                updated_at = CURRENT_TIMESTAMP
+            SET status = 'expired'
             WHERE status = 'active'
             AND created_at < NOW() - INTERVAL '%s hours'
             RETURNING task_id
