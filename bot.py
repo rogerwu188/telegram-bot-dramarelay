@@ -1418,6 +1418,15 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
     
+    # 检查任务是否已过期（48小时）
+    from task_expiry import is_task_expired
+    if is_task_expired(task):
+        await query.edit_message_text(
+            "❌ 该任务已过期，请选择其他任务" if user_lang.startswith('zh') else "❌ This task has expired, please select another task",
+            reply_markup=get_main_menu_keyboard(user_lang)
+        )
+        return
+    
     # 先检查是否已经领取
     conn = get_db_connection()
     cur = conn.cursor()
@@ -2629,6 +2638,10 @@ def main():
     # 启动分类同步调度器
     from category_sync_scheduler import start_category_sync_scheduler
     start_category_sync_scheduler(application)
+    
+    # 启动任务过期清理调度器（48小时过期）
+    from task_expiry import start_expiry_cleanup_scheduler
+    start_expiry_cleanup_scheduler(application)
     
     # 命令处理器
     application.add_handler(CommandHandler("start", start_command))

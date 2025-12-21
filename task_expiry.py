@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+任务过期清理模块
+- 任务分发后超过48小时自动过期
+- 过期的任务不再允许领取
+"""
+
+import logging
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
+
+# 任务过期时间（小时）
+TASK_EXPIRY_HOURS = 48
+
+
+def get_db_connection():
+    """获取数据库连接"""
+    from bot import get_db_connection as _get_db_connection
+    return _get_db_connection()
+
+
+def is_task_expired(task: dict) -> bool:
+    """
+    检查任务是否已过期
+    
+    Args:
+        task: 任务字典，需要包含 created_at 字段
+        
+    Returns:
+        bool: True 表示已过期，False 表示未过期
+    """
+    if not task:
+        return True
+    
+    created_at = task.get('created_at')
+    if not created_at:
+        return False  # 没有创建时间的任务不过期
+    
+    # 计算过期时间
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    
+    expiry_time = created_at + timedelta(hours=TASK_EXPIRY_HOURS)
+    
+    return datetime.now(created_at.tzinfo if created_at.tzinfo else None) > expiry_time
+
+
+def cleanup_expired_tasks() -> dict:
+    """
+    清理过期的任务
+    - 将超过48小时的活跃任务标记为 inactive
+    - 清理相关的用户领取记录
+    
+    Returns:
+        dict: 清理结果统计
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    result = {
+        'expired_tasks': 0,
+        'cleaned_user_tasks': 0
+    }
+    
+    try:
+        # 1. 查找并标记过期的任务
+        cur.execute("""
+            UPDATE drama_tasks
+            SET status = 'expired',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE status = 'active'
+            AND created_at < NOW() - INTERVAL '%s hours'
+            RETURNING task_id
+        """, (TASK_EXPIRY_HOURS,))
+        
+        expired_tasks = cur.fetchall()
+        result['expired_tasks'] = len(expired_tasks)
+        
+        if expired_tasks:
+            expired_task_ids = [t['task_id'] for t in expired_tasks]
+            logger.info(f"🕐 发现 {len(expired_task_ids)} 个过期任务: {expired_task_ids}")
+            
+            # 2. 清理这些任务的用户领取记录（仅清理未完成的）
+            cur.execute("""
+                DELETE FROM user_tasks
+                WHERE task_id = ANY(%s)
+                AND status IN ('in_progress', 'claimed')
+                RETURNING id
+            """, (expired_task_ids,))
+            
+            cleaned_records = cur.fetchall()
+            result['cleaned_user_tasks'] = len(cleaned_records)
+            
+            logger.info(f"🧹 清理了 {len(cleaned_records)} 条未完成的用户任务记录")
+        
+        conn.commit()
+        
+    except Exception as e:
+        logger.error(f"❌ 清理过期任务失败: {e}", exc_info=True)
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+    
+    return result
+
+
+def get_active_non_expired_tasks_query() -> str:
+    """
+    获取查询活跃且未过期任务的 SQL 条件
+    
+    Returns:
+        str: SQL WHERE 条件片段
+    """
+    return f"status = 'active' AND created_at > NOW() - INTERVAL '{TASK_EXPIRY_HOURS} hours'"
+
+
+def filter_expired_tasks(tasks: list) -> list:
+    """
+    过滤掉已过期的任务
+    
+    Args:
+        tasks: 任务列表
+        
+    Returns:
+        list: 过滤后的未过期任务列表
+    """
+    return [task for task in tasks if not is_task_expired(task)]
+
+
+def start_expiry_cleanup_scheduler(application):
+    """
+    启动过期任务清理调度器
+    每小时执行一次清理
+    
+    Args:
+        application: Telegram Application 对象
+    """
+    import asyncio
+    
+    async def cleanup_loop():
+        logger.info("🕐 任务过期清理调度器已启动")
+        
+        while True:
+            try:
+                result = cleanup_expired_tasks()
+                if result['expired_tasks'] > 0 or result['cleaned_user_tasks'] > 0:
+                    logger.info(f"🧹 过期任务清理完成: {result}")
+            except Exception as e:
+                logger.error(f"❌ 过期任务清理失败: {e}", exc_info=True)
+            
+            # 每小时执行一次
+            await asyncio.sleep(3600)
+    
+    # 创建后台任务
+    asyncio.create_task(cleanup_loop())
+    logger.info("✅ 任务过期清理调度器已注册")
