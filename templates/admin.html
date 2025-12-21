@@ -602,14 +602,14 @@
         <div class="section">
             <div class="section-header">
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('webhooks')">📤 Webhook 回调日志</button>
-                    <button class="tab-btn" onclick="switchTab('tasks')">📥 任务接收日志</button>
-                    <button class="tab-btn" onclick="switchTab('completions')">✅ 任务完成日志</button>
-                    <button class="tab-btn" onclick="switchTab('errors')">❌ 回传错误日志</button>
+                    <button class="tab-btn active" onclick="switchTab('webhooks')">📤 回传X2C Pool任务状态数据日志</button>
+                    <button class="tab-btn" onclick="switchTab('tasks')">📥 X2C Pool下发任务接收日志</button>
+                    <button class="tab-btn" onclick="switchTab('completions')">✅ X2C Pool下发任务完成日志</button>
+                    <button class="tab-btn" onclick="switchTab('errors')">❌ 回传X2C Pool任务数据错误日志</button>
                 </div>
             </div>
             
-            <!-- Webhook 回调日志 Tab -->
+            <!-- 回传X2C Pool任务状态数据日志 Tab -->
             <div id="tab-webhooks" class="tab-content active">
                 <div class="section-content">
                     <div id="webhooks-loading" class="loading">加载中...</div>
@@ -641,7 +641,7 @@
                 </div>
             </div>
             
-            <!-- 任务接收日志 Tab -->
+            <!-- X2C Pool下发任务接收日志 Tab -->
             <div id="tab-tasks" class="tab-content">
                 <div class="section-content">
                     <div id="tasks-loading" class="loading">加载中...</div>
@@ -670,7 +670,7 @@
                 </div>
             </div>
             
-            <!-- 任务完成日志 Tab -->
+            <!-- X2C Pool下发任务完成日志 Tab -->
             <div id="tab-completions" class="tab-content">
                 <div class="section-content">
                     <div id="completions-loading" class="loading">加载中...</div>
@@ -701,7 +701,7 @@
                 </div>
             </div>
             
-            <!-- 回传错误日志 Tab -->
+            <!-- 回传X2C Pool任务数据错误日志 Tab -->
             <div id="tab-errors" class="tab-content">
                 <div class="section-content">
                     <div id="errors-loading" class="loading">加载中...</div>
