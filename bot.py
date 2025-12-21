@@ -1454,12 +1454,20 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理领取任务"""
     query = update.callback_query
-    await query.answer()
+    
+    try:
+        await query.answer()
+    except Exception as e:
+        logger.warning(f"⚠️ query.answer() failed in claim_task_callback: {e}")
     
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
-    task_id = int(query.data.split('_')[1])
+    try:
+        task_id = int(query.data.split('_')[1])
+    except (IndexError, ValueError) as e:
+        logger.error(f"❌ Failed to parse task_id from callback_data: {query.data}, error: {e}")
+        return
     
     logger.info(f"🔔 claim_task_callback triggered! user_id={user_id}, task_id={task_id}, callback_data={query.data}")
     
@@ -2776,6 +2784,9 @@ def main():
     
     # 全局 back_to_menu handler（放在 ConversationHandler 之后）
     application.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern='^back_to_menu$'))
+    
+    # 全局 claim_task handler（作为备用，当 ConversationHandler 未匹配时触发）
+    application.add_handler(CallbackQueryHandler(claim_task_callback, pattern='^claim_\\d+$'))
     
     # 重试提交 handler
     application.add_handler(CallbackQueryHandler(retry_submit_callback, pattern='^retry_submit_\d+$'))
