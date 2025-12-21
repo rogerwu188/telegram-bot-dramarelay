@@ -1299,6 +1299,80 @@ def search_tasks():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/api/logs/clear-all', methods=['POST'])
+def clear_all_logs():
+    """
+    清空所有日志数据（webhook_logs, broadcaster_error_logs, user_tasks中的submitted记录, drama_tasks）
+    需要确认才能执行
+    """
+    try:
+        # 获取确认参数
+        data = request.get_json() or {}
+        confirm = data.get('confirm', False)
+        
+        if not confirm:
+            return jsonify({
+                'success': False,
+                'error': '需要确认才能清空日志，请设置 confirm: true'
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        deleted_counts = {}
+        
+        # 1. 清空 webhook_logs 表
+        cur.execute("DELETE FROM webhook_logs")
+        deleted_counts['webhook_logs'] = cur.rowcount
+        
+        # 2. 清空 broadcaster_error_logs 表
+        cur.execute("DELETE FROM broadcaster_error_logs")
+        deleted_counts['broadcaster_error_logs'] = cur.rowcount
+        
+        # 3. 清空 user_tasks 表（任务完成日志）
+        cur.execute("DELETE FROM user_tasks")
+        deleted_counts['user_tasks'] = cur.rowcount
+        
+        # 4. 清空 drama_tasks 表（任务接收日志）
+        cur.execute("DELETE FROM drama_tasks")
+        deleted_counts['drama_tasks'] = cur.rowcount
+        
+        # 5. 清空 task_daily_stats 表（如果存在）
+        try:
+            cur.execute("DELETE FROM task_daily_stats")
+            deleted_counts['task_daily_stats'] = cur.rowcount
+        except:
+            deleted_counts['task_daily_stats'] = 0
+        
+        # 6. 清空 referral_rewards 表（如果存在）
+        try:
+            cur.execute("DELETE FROM referral_rewards")
+            deleted_counts['referral_rewards'] = cur.rowcount
+        except:
+            deleted_counts['referral_rewards'] = 0
+        
+        # 提交事务
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        
+        total_deleted = sum(deleted_counts.values())
+        
+        return jsonify({
+            'success': True,
+            'message': f'已清空所有日志，共删除 {total_deleted} 条记录',
+            'deleted': deleted_counts
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)

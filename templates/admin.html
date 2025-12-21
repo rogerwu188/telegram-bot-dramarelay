@@ -570,6 +570,9 @@
             <button onclick="triggerViewCounter()" style="background: #fd7e14;" id="view-counter-trigger-btn">
                 🔄 立即抓取播放量
             </button>
+            <button onclick="clearAllLogs()" style="background: #dc3545;" id="clear-logs-btn">
+                🗑️ 清空所有日志
+            </button>
         </div>
         
         <!-- 进度条和倒计时显示区域 -->
@@ -1132,6 +1135,46 @@
             loadWebhooks();
             loadCompletions();
             loadTasks();
+        }
+        
+        // 清空所有日志
+        async function clearAllLogs() {
+            // 第一次确认
+            const firstConfirm = confirm('⚠️ 警告\n\n您即将清空以下所有日志数据：\n\n• 回传X2C Pool任务状态数据日志\n• X2C Pool下发任务接收日志\n• X2C Pool下发任务完成日志\n• 回传X2C Pool任务数据错误日志\n\n此操作不可撤销！\n\n确定要继续吗？');
+            
+            if (!firstConfirm) {
+                return;
+            }
+            
+            // 第二次确认
+            const secondConfirm = confirm('❗ 最后确认\n\n请再次确认您要清空所有日志数据。\n\n点击"确定"将永久删除所有记录！');
+            
+            if (!secondConfirm) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/logs/clear-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ confirm: true })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 清空成功\n\n${result.message}\n\n删除详情：\n• Webhook日志: ${result.deleted.webhook_logs} 条\n• 错误日志: ${result.deleted.broadcaster_error_logs} 条\n• 任务完成: ${result.deleted.user_tasks} 条\n• 任务接收: ${result.deleted.drama_tasks} 条`);
+                    // 刷新数据
+                    refreshData();
+                    loadErrorLogs();
+                } else {
+                    alert('❌ 清空失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ 请求失败: ' + error.message);
+            }
         }
         
         // 自动刷新
