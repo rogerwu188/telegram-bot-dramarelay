@@ -92,10 +92,13 @@ def add_to_verification_queue(user_id: int, task_id: int, video_url: str, platfo
                 return existing['id']
             elif existing['status'] == 'failed':
                 # 如果之前失败了，重置状态重新验证
+                # 注意：同时更新 created_at，避免被超时清理误删
                 cur.execute("""
                     UPDATE pending_verifications 
                     SET status = 'pending', retry_count = retry_count + 1, 
-                        updated_at = CURRENT_TIMESTAMP, error_message = NULL
+                        updated_at = CURRENT_TIMESTAMP, 
+                        created_at = CURRENT_TIMESTAMP,
+                        error_message = NULL
                     WHERE id = %s
                 """, (existing['id'],))
                 conn.commit()
