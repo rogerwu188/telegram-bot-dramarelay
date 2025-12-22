@@ -559,24 +559,31 @@ https://solscan.io/tx/{tx_hash}
 • 提交链接须真实有效且为本人发布
 • 建议分发到 多个平台，可获得更高算力收益
 • 请遵守各平台发布规范，避免违规内容""",
-        'invite_friends': """👥 邀请好友奖励机制
+        'invite_friends': """🤝 <b>邀请躺赚 | 建立你的流量税收局</b>
 
-你邀请的好友完成首次任务验证后：
+别再单打独斗了！组建你的搬运工会，享受永久管道收入。
 
-🔸 你将获得：对方每次任务奖励的「10% 永久算力加成」
-🔸 对方不会损失任何奖励（平台额外发放）
-🔸 好友首次任务完成，你还可额外领取 +5 X2C 新人奖励
+💎 <b>双重裂变福利 (Win-Win):</b>
 
-📈 多邀好友 = 多条长期算力通道
-🔥 邀得越多，挖得越快
+1️⃣ <b>给好友发钱 (新人福利):</b>
+通过你的链接加入，好友可额外获得 <b>+2 X2C 新手启动金</b>。
+<i>(仅限邀请链接有效，直接搜索无奖励！)</i>
 
-🔗 你的邀请链接：
+2️⃣ <b>向好友收租 (你的收益):</b>
+• <b>赏金:</b> 好友完成首单，你立得 <b>+5 X2C</b>。
+• <b>收租:</b> 永久获得好友每次产出的 <b>10% 佣金</b>。
+<i>(好友赚 100，平台额外发你 10，好友收入不减少)</i>
+
+🔥 <b>裂变公式:</b>
+邀请 10 个活跃好友 ≈ 你拥有了一台 <b>永动机矿机</b> ⛏️
+
+🔗 <b>你的专属福利链接:</b>
 {invite_link}
 
-📊 邀请统计：
-• 已邀请人数：{invited_count} 人
-• 有效邀请：{active_count} 人
-• 累计推荐奖励：{total_rewards} X2C""",
+📊 <b>邀请统计:</b>
+• 已邀请人数: {invited_count} 人
+• 有效激活: {active_count} 人
+• 累计躺赚: {total_rewards} X2C""",
         'back_to_menu': '« 返回主菜单',
         'cancel': '取消',
         'copy_link': '📋 复制邀请链接',
@@ -749,24 +756,31 @@ Users who accumulate 100+ X2C can automatically qualify for the monthly X2C aird
 • Submitted links must be real, valid, and published by yourself
 • It is recommended to distribute to multiple platforms for higher computing power rewards
 • Please follow the publishing rules of each platform and avoid violating content""",
-        'invite_friends': """👥 Invite Friends Rewards
+        'invite_friends': """🤝 <b>Invite & Earn | Build Your Traffic Tax Bureau</b>
 
-When your invited friend completes their first task:
+Stop working alone! Build your mining guild and enjoy permanent passive income.
 
-🔸 You get: 10% permanent power bonus from every task they complete
-🔸 They don't lose any rewards (platform bonus)
-🔸 You also get +5 X2C bonus when they complete first task
+💎 <b>Win-Win Referral Bonus:</b>
 
-📈 More invites = More passive income channels
-🔥 Invite more, earn more
+1️⃣ <b>Gift Your Friends (New User Bonus):</b>
+Friends who join via your link get <b>+2 X2C Starter Bonus</b>.
+<i>(Only valid through invite link, no bonus for direct search!)</i>
 
-🔗 Your invitation link:
+2️⃣ <b>Earn From Friends (Your Rewards):</b>
+• <b>Bounty:</b> Get <b>+5 X2C</b> when friend completes first task.
+• <b>Royalty:</b> Earn <b>10% commission</b> from every friend's output forever.
+<i>(Friend earns 100, platform pays you 10 extra, friend's income unchanged)</i>
+
+🔥 <b>Viral Formula:</b>
+Invite 10 active friends ≈ You own a <b>perpetual mining machine</b> ⛏️
+
+🔗 <b>Your Exclusive Referral Link:</b>
 {invite_link}
 
-📊 Invitation Stats:
-• Total invites: {invited_count}
-• Active invites: {active_count}
-• Total referral rewards: {total_rewards} X2C""",
+📊 <b>Invitation Stats:</b>
+• Total Invites: {invited_count}
+• Active Users: {active_count}
+• Total Passive Earnings: {total_rewards} X2C""",
         'back_to_menu': '« Back to Menu',
         'cancel': 'Cancel',
         'copy_link': '📋 Copy Invite Link',
