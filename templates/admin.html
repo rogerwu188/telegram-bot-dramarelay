@@ -1944,8 +1944,8 @@
                         <td>${w.user_id}</td>
                         <td>${w.username || w.first_name || '-'}</td>
                         <td><strong>${w.amount} X2C</strong></td>
-                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${w.sol_address}">
-                            <code>${w.sol_address}</code>
+                        <td>
+                            <code style="word-break: break-all; font-size: 12px; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; display: inline-block; cursor: pointer; user-select: all;" onclick="copyToClipboard('${w.sol_address}')" title="点击复制">${w.sol_address}</code>
                         </td>
                         <td>${statusBadge}</td>
                         <td>${formatTime(w.created_at)}</td>
@@ -2038,6 +2038,22 @@
             } catch (error) {
                 alert('❌ 操作失败: ' + error.message);
             }
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 已复制到剪贴板: ' + text);
+            }).catch(err => {
+                // 备用方法
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ 已复制到剪贴板: ' + text);
+            });
         }
     </script>
     
