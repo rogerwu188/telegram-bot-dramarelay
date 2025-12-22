@@ -1576,18 +1576,20 @@ def approve_withdrawal(withdrawal_id):
             conn.close()
             return jsonify({'success': False, 'error': '提现申请不存在'}), 404
         
-        if withdrawal['status'] != 'pending':
+        # 支持 pending 和 processing 状态的审批
+        if withdrawal['status'] not in ('pending', 'processing'):
             cur.close()
             conn.close()
             return jsonify({'success': False, 'error': f'提现申请状态不正确，当前状态: {withdrawal["status"]}'}), 400
         
-        # 更新状态为处理中
-        cur.execute("""
-            UPDATE withdrawals
-            SET status = 'processing'
-            WHERE withdrawal_id = %s
-        """, (withdrawal_id,))
-        conn.commit()
+        # 如果状态是 pending，更新为 processing
+        if withdrawal['status'] == 'pending':
+            cur.execute("""
+                UPDATE withdrawals
+                SET status = 'processing'
+                WHERE withdrawal_id = %s
+            """, (withdrawal_id,))
+            conn.commit()
         
         cur.close()
         conn.close()
