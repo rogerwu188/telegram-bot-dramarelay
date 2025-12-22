@@ -1801,7 +1801,7 @@ to receive 🎉 {reward} X2C"""
 <b>2️⃣ 一键复制文案</b>
 💡 <i>点击下方文字框，发布时直接粘贴到标题和简介：</i>
 
-<code>{copy_content}</code>
+<pre>{copy_content}</pre>
 
 <b>3️⃣ 提交任务</b>
 📝 请在下方粘贴你发布后的 <b>TikTok/YouTube 链接</b>：
