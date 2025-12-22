@@ -84,11 +84,11 @@ async def process_withdrawal(withdrawal_id: int) -> dict:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 获取提现请求信息
+        # 获取提现请求信息 (支持 pending 或 processing 状态)
         cur.execute("""
-            SELECT withdrawal_id, user_id, sol_address, amount
+            SELECT withdrawal_id, user_id, sol_address, amount, status
             FROM withdrawals
-            WHERE withdrawal_id = %s AND status = 'pending'
+            WHERE withdrawal_id = %s AND status IN ('pending', 'processing')
         """, (withdrawal_id,))
         
         withdrawal = cur.fetchone()
@@ -98,13 +98,14 @@ async def process_withdrawal(withdrawal_id: int) -> dict:
             conn.close()
             return {'success': False, 'error': 'Withdrawal request not found or already processed'}
         
-        # 更新状态为处理中
-        cur.execute("""
-            UPDATE withdrawals
-            SET status = 'processing'
-            WHERE withdrawal_id = %s
-        """, (withdrawal_id,))
-        conn.commit()
+        # 如果状态是 pending，更新为 processing
+        if withdrawal['status'] == 'pending':
+            cur.execute("""
+                UPDATE withdrawals
+                SET status = 'processing'
+                WHERE withdrawal_id = %s
+            """, (withdrawal_id,))
+            conn.commit()
         
         cur.close()
         conn.close()
