@@ -13,6 +13,7 @@ from typing import Optional, List, Dict
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Forbidden
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -2869,6 +2870,69 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     
     return ConversationHandler.END
 
+async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """官方群新成员欢迎逻辑：群组发送简洁消息，私聊发送详细教程"""
+    for new_user in update.message.new_chat_members:
+        if new_user.id == context.bot.id:
+            continue
+        
+        # --- PART 1: 群组发送简洁双语欢迎消息 ---
+        keyboard = [
+            [InlineKeyboardButton("🚀 Start Mining / 开始挖矿", url=f"https://t.me/{context.bot.username}?start=tutorial")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        group_msg = f"👋 Welcome {new_user.first_name} / 欢迎 {new_user.first_name}!"
+        
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=group_msg,
+            reply_markup=reply_markup
+        )
+        
+        # --- PART 2: 准备详细教程（多语言） ---
+        lang_code = new_user.language_code or 'en'
+        
+        # 中文内容
+        msg_cn = (
+            f"👋 <b>{new_user.first_name}</b>，欢迎来到 X2C Alpha Signals！\n"
+            "这里是你的新手引导：\n\n"
+            "🚀 <b>新手必做三件事：</b>\n"
+            "1. 查看置顶消息里的群规。\n"
+            "2. 输入 /start 激活账户，开始流量挖矿。\n"
+            "3. 关注群里的 <b>#Alpha</b> 信号。\n\n"
+            "遇到问题请输入 '客服'。"
+        )
+        
+        # 英文内容
+        msg_en = (
+            f"👋 Welcome <b>{new_user.first_name}</b> to X2C Alpha Signals!\n"
+            "Here is your getting started guide:\n\n"
+            "🚀 <b>3 Steps to Get Started:</b>\n"
+            "1. Check the Pinned Message for rules.\n"
+            "2. Type /start to activate your account and start Traffic Mining.\n"
+            "3. Watch out for <b>#Alpha</b> signals.\n\n"
+            "Need help? Type 'support'."
+        )
+        
+        final_dm_msg = msg_cn if str(lang_code).startswith('zh') else msg_en
+        
+        # --- PART 3: 尝试私信用户 ---
+        try:
+            await context.bot.send_message(
+                chat_id=new_user.id,
+                text=final_dm_msg,
+                parse_mode='HTML'
+            )
+            logger.info(f"✅ Sent welcome DM to user {new_user.id}")
+        except Forbidden:
+            # 用户还没有启动 Bot，无法发送私信
+            # 群组消息中的按钮会处理这种情况
+            logger.info(f"⚠️ Cannot DM user {new_user.id} (Bot not started by user)")
+        except Exception as e:
+            logger.error(f"❌ Error sending welcome DM to {new_user.id}: {e}")
+
+
 async def pending_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理点击 pending 状态的任务"""
     query = update.callback_query
@@ -2959,6 +3023,9 @@ def main():
     from task_expiry import init_bot_settings_table, start_expiry_cleanup_scheduler
     init_bot_settings_table()
     start_expiry_cleanup_scheduler(application)
+    
+    # 新成员欢迎处理器（群组）
+    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_new_member))
     
     # 命令处理器
     application.add_handler(CommandHandler("start", start_command))
