@@ -1500,10 +1500,12 @@ async def set_expiry_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理 /start 命令"""
+    """处理 /start 命令 - 支持多语言检测"""
     user = update.effective_user
     get_or_create_user(user.id, user.username, user.first_name)
-    user_lang = get_user_language(user.id)
+    
+    # 检测用户 Telegram 客户端语言
+    lang_code = user.language_code or 'en'
     
     # 处理邀请链接参数
     if context.args and len(context.args) > 0:
@@ -1516,16 +1518,89 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     success = record_invitation(inviter_id, user.id)
                     if success:
                         logger.info(f"✅ User {user.id} was invited by {inviter_id}")
-                        # 可以在这里发送欢迎消息提示被邀请
             except ValueError:
                 logger.warning(f"⚠️ Invalid invite parameter: {arg}")
     
-    # 格式化欢迎消息，替换用户名
+    # 用户名
     username = user.username or user.first_name or f"User{user.id}"
-    welcome_message = get_message(user_lang, 'welcome', username=username)
-    keyboard = get_main_menu_keyboard(user_lang)
     
-    await update.message.reply_text(welcome_message, reply_markup=keyboard, parse_mode='HTML')
+    # --- 中文配置 ---
+    text_cn = (
+        f"👋 欢迎加入 X2C 流量矿池，@{username}！\n"
+        "你的 TikTok / Shorts 账号就是你的印钞机！💸\n\n"
+        "📊 <b>矿机面板 (Live Status):</b>\n"
+        "• 当前身份: 流量合伙人 (Level 1)\n"
+        "• 实时币价: $0.002 / X2C 📈\n"
+        "• 全网爆率: 🔥 极高 (单条视频最高产出 10,000 X2C)\n"
+        "• 创世空投: 💎 <b>5% 社区池正在挖掘中...</b>\n\n"
+        "🚀 <b>怎么躺赚 (Post-to-Earn)?</b>\n"
+        "1️⃣ <b>领素材</b>: 机器人一键下发爆款短剧切片。\n"
+        "2️⃣ <b>发视频</b>: 上传到 TikTok 或 Shorts。\n"
+        "3️⃣ <b>填链接</b>: 只要有播放量，睡觉都在自动挖矿！\n\n"
+        "👇 立即点击下方按钮，启动你的第一台流量矿机！"
+    )
+    keyboard_cn = [
+        [
+            InlineKeyboardButton("🎬 开始挖矿 (领取视频)", callback_data='get_tasks'),
+            InlineKeyboardButton("📝 提交链接 (结算收益)", callback_data='submit_link'),
+        ],
+        [
+            InlineKeyboardButton("⚡ 我的算力", callback_data='my_power'),
+            InlineKeyboardButton("🏆 暴富排行榜", callback_data='ranking'),
+        ],
+        [
+            InlineKeyboardButton("🤝 邀请躺赚 (+10%)", callback_data='invite_friends'),
+            InlineKeyboardButton("💸 资产提现", callback_data='bind_wallet'),
+        ],
+        [
+            InlineKeyboardButton("💰 赚钱攻略", callback_data='tutorial'),
+            InlineKeyboardButton("🌐 语言 / Language", callback_data='language'),
+        ],
+    ]
+    
+    # --- 英文配置 ---
+    text_en = (
+        f"👋 Welcome to X2C Traffic Pool, @{username}!\n"
+        "Turn your TikTok / Shorts account into a money printer! 💸\n\n"
+        "📊 <b>Miner Dashboard (Live Status):</b>\n"
+        "• Status: Traffic Partner (Level 1)\n"
+        "• Price: $0.002 / X2C 📈\n"
+        "• Network Rate: 🔥 Very High (Max 10,000 X2C per video)\n"
+        "• Genesis Airdrop: 💎 <b>5% Community Pool Mining...</b>\n\n"
+        "🚀 <b>How to Earn (Post-to-Earn)?</b>\n"
+        "1️⃣ <b>Get Clip</b>: One-click to get viral drama clips.\n"
+        "2️⃣ <b>Post It</b>: Upload to TikTok or Shorts.\n"
+        "3️⃣ <b>Submit Link</b>: Earn mining rewards for every view!\n\n"
+        "👇 Tap below to start your first mining node!"
+    )
+    keyboard_en = [
+        [
+            InlineKeyboardButton("🎬 Start Mining (Get Video)", callback_data='get_tasks'),
+            InlineKeyboardButton("📝 Submit Link", callback_data='submit_link'),
+        ],
+        [
+            InlineKeyboardButton("⚡ My Hashrate", callback_data='my_power'),
+            InlineKeyboardButton("🏆 Leaderboard", callback_data='ranking'),
+        ],
+        [
+            InlineKeyboardButton("🤝 Invite (+10%)", callback_data='invite_friends'),
+            InlineKeyboardButton("💸 Withdraw", callback_data='bind_wallet'),
+        ],
+        [
+            InlineKeyboardButton("💰 Tutorial", callback_data='tutorial'),
+            InlineKeyboardButton("🌐 语言 / Language", callback_data='language'),
+        ],
+    ]
+    
+    # --- 根据语言选择并发送 ---
+    if str(lang_code).startswith('zh'):
+        final_text = text_cn
+        final_kb = InlineKeyboardMarkup(keyboard_cn)
+    else:
+        final_text = text_en
+        final_kb = InlineKeyboardMarkup(keyboard_en)
+    
+    await update.message.reply_text(final_text, reply_markup=final_kb, parse_mode='HTML')
 
 async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理领取任务按钮 - 默认显示 latest 分类"""
