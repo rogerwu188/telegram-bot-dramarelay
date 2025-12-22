@@ -36,7 +36,7 @@ class LinkVerifier:
         platform_lower = platform.lower()  # 转换为小写
         
         platform_patterns = {
-            'tiktok': ['tiktok.com'],
+            'tiktok': ['tiktok.com', 'vm.tiktok.com'],
             'douyin': ['douyin.com', 'v.douyin.com'],
             'youtube': ['youtube.com', 'youtu.be'],
             'instagram': ['instagram.com'],

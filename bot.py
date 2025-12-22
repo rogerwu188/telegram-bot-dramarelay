@@ -1057,7 +1057,7 @@ def bind_wallet(user_id: int, wallet_address: str):
 def detect_platform(link: str) -> Optional[str]:
     """自动识别平台"""
     patterns = {
-        'TikTok': r'https?://(www\.)?tiktok\.com',
+        'TikTok': r'https?://(www\.|vm\.)?tiktok\.com',
         'YouTube': r'https?://(www\.)?(youtube\.com|youtu\.be)',
         'Instagram': r'https?://(www\.)?instagram\.com',
         'Facebook': r'https?://(www\.)?facebook\.com',
@@ -1073,7 +1073,7 @@ def detect_platform(link: str) -> Optional[str]:
 def validate_link(platform: str, link: str) -> bool:
     """验证链接格式"""
     patterns = {
-        'TikTok': r'https?://(www\.)?tiktok\.com/@[\w.-]+/video/\d+',
+        'TikTok': r'https?://(www\.)?tiktok\.com/@[\w.-]+/video/\d+|https?://vm\.tiktok\.com/[\w]+/?',
         'YouTube': r'https?://(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+',
         'Instagram': r'https?://(www\.)?instagram\.com/(p|reel)/[\w-]+',
         'Facebook': r'https?://(www\.)?facebook\.com/.*',
