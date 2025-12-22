@@ -1772,26 +1772,19 @@ to receive 🎉 {reward} X2C"""
                 keywords = ''
             
             # 发送最终提示消息
-            # 格式化关键词为 #tag 格式
+            # 格式化关键词为 #tag 格式，限制最多4个标签
             keywords_list = [kw.strip() for kw in keywords.replace(',', ' ').split() if kw.strip()]
-            hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:11]])  # 限制11个标签
-            
-            # 提取剧情关键词（从 keywords_list 中取第一个）
-            plot_keyword = keywords_list[0] if keywords_list else "剧情关键词"
+            hashtags = ' '.join([f'#{kw}' for kw in keywords_list[:4]])  # 限制4个标签
             
             # 提取剧名（从 title 中提取《》中的内容）
             import re
             drama_name_match = re.search(r'《(.+?)》', title)
-            drama_name = drama_name_match.group(1) if drama_name_match else "剧名"
-            drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
+            drama_name = drama_name_match.group(1) if drama_name_match else title
             
             if user_lang.startswith('zh'):
-                # 构建复制文案内容
-                copy_content = f"""{plot_keyword} | {drama_name}
-Clip from @X2CDramaOfficial
-
-{description}
-{hashtags}"""
+                # 构建复制文案内容 - 只保留标题和剧情描述
+                copy_content = f"""{drama_name}
+{description}"""
                 
                 final_msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🆕 <b>【新任务发布】</b>
