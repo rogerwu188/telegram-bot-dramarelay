@@ -2506,7 +2506,8 @@ async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         get_message(user_lang, 'withdraw_prompt'),
-        reply_markup=keyboard
+        reply_markup=keyboard,
+        parse_mode='HTML'
     )
     
     return WITHDRAW_ADDRESS
