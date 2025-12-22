@@ -2574,7 +2574,7 @@ async def withdraw_amount_handler(update: Update, context: ContextTypes.DEFAULT_
     return WITHDRAW_CONFIRM
 
 async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """确认提现 - Step 4: 执行转账"""
+    """确认提现 - Step 4: 提交申请等待审批"""
     query = update.callback_query
     await query.answer()
     
@@ -2596,11 +2596,11 @@ async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAUL
     
     # 显示处理中消息
     await query.edit_message_text(
-        get_message(user_lang, 'withdraw_processing', amount=amount, address=address)
+        "⏳ 正在提交提现申请..." if user_lang.startswith('zh') else "⏳ Submitting withdrawal request..."
     )
     
-    # 创建提现请求
-    from withdrawal_system import create_withdrawal_request, process_withdrawal
+    # 创建提现申请（不立即转账，等待管理员审批）
+    from withdrawal_system import create_withdrawal_request
     withdrawal_id = create_withdrawal_request(user_id, address, amount)
     
     if not withdrawal_id:
@@ -2613,29 +2613,39 @@ async def confirm_withdraw_callback(update: Update, context: ContextTypes.DEFAUL
         )
         return ConversationHandler.END
     
-    # 异步处理转账
-    result = await process_withdrawal(withdrawal_id)
-    
-    # 显示结果
+    # 显示申请已提交的消息
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
     ]])
     
-    if result['success']:
-        await query.edit_message_text(
-            get_message(user_lang, 'withdraw_success',
-                amount=amount,
-                address=address,
-                tx_hash=result['tx_hash']
-            ),
-            reply_markup=keyboard,
-            disable_web_page_preview=True
-        )
+    if user_lang.startswith('zh'):
+        success_msg = f"""✅ <b>提现申请已提交</b>
+
+📋 申请编号：<code>#{withdrawal_id}</code>
+💰 提现金额：{amount} X2C
+📥 收款地址：<code>{address}</code>
+
+⏳ <b>状态：</b>等待审批
+
+💡 管理员将在 24 小时内审核您的申请。
+审批通过后，资产将自动转入您的钱包。"""
     else:
-        await query.edit_message_text(
-            get_message(user_lang, 'withdraw_failed', error=result.get('error', 'Unknown error')),
-            reply_markup=keyboard
-        )
+        success_msg = f"""✅ <b>Withdrawal Request Submitted</b>
+
+📋 Request ID: <code>#{withdrawal_id}</code>
+💰 Amount: {amount} X2C
+📥 Address: <code>{address}</code>
+
+⏳ <b>Status:</b> Pending Approval
+
+💡 Admin will review your request within 24 hours.
+Once approved, assets will be transferred to your wallet automatically."""
+    
+    await query.edit_message_text(
+        success_msg,
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     
     # 清理 context
     context.user_data.pop('withdraw_address', None)
