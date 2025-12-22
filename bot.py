@@ -449,14 +449,20 @@ MESSAGES = {
 ✅ 已完成任务：{completed_tasks}
 🔄 进行中任务：{in_progress_tasks}
 📈 本周排名：#{rank}""",
-        'ranking': """🏆 全球排行榜
+        'ranking': """🏆 <b>全球算力榜 (Global Leaderboard)</b>
 
-👥 总参与人数：{total_participants}
+💎 <b>5% 创世空投池追踪:</b>
+<i>当前 Top 节点正在瓜分创世治理代币</i>
+➖➖➖➖➖➖➖➖➖➖
+
+👥 <b>总参与人数:</b> {total_participants}
 
 {ranking_list}
 
-你的排名：#{your_rank}
-你的算力：{your_power} X2C""",
+➖➖➖➖➖➖➖➖➖➖
+你的排名: #{your_rank}
+你的算力: {your_power} X2C
+<i>💡 提示: 冲进前 100 名可解锁空投加成！</i>""",
         'airdrop_status': """🎁 空投状态
 
 📅 当前轮次：第 {round} 轮
@@ -633,14 +639,20 @@ Viral videos can mine 10,000+ x2c
 ✅ Completed Tasks: {completed_tasks}
 🔄 In Progress: {in_progress_tasks}
 📈 This Week Rank: #{rank}""",
-        'ranking': """🏆 Global Ranking
+        'ranking': """🏆 <b>Global Hashrate Board (Leaderboard)</b>
 
-👥 Total Participants: {total_participants}
+💎 <b>5% Genesis Airdrop Pool Tracking:</b>
+<i>Top nodes are sharing genesis governance tokens</i>
+➖➖➖➖➖➖➖➖➖➖
+
+👥 <b>Total Participants:</b> {total_participants}
 
 {ranking_list}
 
+➖➖➖➖➖➖➖➖➖➖
 Your Rank: #{your_rank}
-Your Power: {your_power} X2C""",
+Your Power: {your_power} X2C
+<i>💡 Tip: Reach Top 100 to unlock airdrop bonus!</i>""",
         'airdrop_status': """🎁 Airdrop Status
 
 📅 Current Round: Round {round}
@@ -2386,7 +2398,7 @@ async def ranking_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
     ]])
     
-    await query.edit_message_text(message, reply_markup=keyboard)
+    await query.edit_message_text(message, reply_markup=keyboard, parse_mode='HTML')
 
 async def airdrop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理空投状态"""

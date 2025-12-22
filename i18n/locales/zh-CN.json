@@ -1,5 +1,5 @@
 {
-  "welcome": "🎬 欢迎加入 X2C 流量矿池，@{username}！\n你的 TikTok / Shorts 账号就是你的印钞机！💸\n\n📊 矿机面板 (Live Status):\n• 当前身份: 流量合伙人 (Level 1)\n• 实时币价: $0.002 / X2C 📈\n• 全网爆率: 🔥 极高 (单条视频最高产出 10,000 X2C)\n\n🚀 怎么躺赚 (Post-to-Earn)?\n1️⃣ 领素材: 机器人一键下发爆款短剧切片。\n2️⃣ 发视频: 上传到TikTok或Shorts平台（0粉也能跑！）。\n3️⃣ 填链接: 只要有播放量，睡觉都在自动挖矿！\n\n👇 立即点击下方按钮，启动你的第一台流量矿机！",
+  "welcome": "🎬 欢迎加入 X2C 流量矿池，@{username}！\n你的 TikTok / Shorts 账号就是你的印钞机！💸\n\n📊 矿机面板 (Live Status):\n• 当前身份: 流量合伙人 (Level 1)\n• 实时币价: $0.002 / X2C 📈\n• 全网爆率: 🔥 极高 (单条视频最高产出 10,000 X2C)\n• 创世空投: 💎 5% 社区池正在挖掘中...\n\n🚀 怎么躺赚 (Post-to-Earn)?\n1️⃣ 领素材: 机器人一键下发爆款短剧切片。\n2️⃣ 发视频: 上传到TikTok或Shorts平台（0粉也能跑！）。\n3️⃣ 填链接: 只要有播放量，睡觉都在自动挖矿！\n\n👇 立即点击下方按钮，启动你的第一台流量矿机！",
   "menu": {
     "get_tasks": "🎬 开始挖矿 (领取视频)",
     "submit_link": "📝 提交链接 (结算收益)",
@@ -27,7 +27,7 @@
   },
   "stats": {
     "my_power": "📊 我的任务记录\n\n💰 累计获得 X2C 奖励：{total_power}\n✅ 已完成任务：{completed_tasks}\n🔄 进行中任务：{in_progress_tasks}\n📈 本周排名：#{rank}",
-    "ranking": "🏆 暴富排行榜\n\n{ranking_list}\n\n你的排名：#{your_rank}\n你的算力：{your_power} X2C"
+    "ranking": "🏆 <b>全球算力榜 (Global Leaderboard)</b>\n\n💎 <b>5% 创世空投池追踪:</b>\n<i>当前 Top 节点正在瓜分创世治理代币</i>\n➖➖➖➖➖➖➖➖➖➖\n\n👥 <b>总参与人数:</b> {total_participants}\n\n{ranking_list}\n\n➖➖➖➖➖➖➖➖➖➖\n你的排名: #{your_rank}\n你的算力: {your_power} X2C\n<i>💡 提示: 冲进前 100 名可解锁空投加成！</i>"
   },
   "airdrop": {
     "status": "🎁 空投状态\n\n📅 当前轮次：第 {round} 轮\n✅ 空投资格：{eligible}\n💰 预计空投：{estimated} X2C\n⏰ 下次快照：{next_snapshot}\n\n最低要求：100 X2C"
