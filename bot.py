@@ -1494,7 +1494,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = get_message(user_lang, 'welcome', username=username)
     keyboard = get_main_menu_keyboard(user_lang)
     
-    await update.message.reply_text(welcome_message, reply_markup=keyboard)
+    await update.message.reply_text(welcome_message, reply_markup=keyboard, parse_mode='HTML')
 
 async def get_tasks_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理领取任务按钮 - 默认显示 latest 分类"""
@@ -2787,7 +2787,8 @@ async def set_language_callback(update: Update, context: ContextTypes.DEFAULT_TY
     # 直接编辑消息，而不是删除后发送新消息
     await query.edit_message_text(
         text=welcome_message,
-        reply_markup=keyboard
+        reply_markup=keyboard,
+        parse_mode='HTML'
     )
 
 async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2809,7 +2810,7 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
     keyboard = get_main_menu_keyboard(user_lang)
     
     try:
-        await query.edit_message_text(welcome_message, reply_markup=keyboard)
+        await query.edit_message_text(welcome_message, reply_markup=keyboard, parse_mode='HTML')
     except Exception as e:
         logger.warning(f"⚠️ edit_message_text failed: {e}, trying send_message")
         # 如果编辑失败，尝试发送新消息
@@ -2817,7 +2818,8 @@ async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await context.bot.send_message(
                 chat_id=query.message.chat_id,
                 text=welcome_message,
-                reply_markup=keyboard
+                reply_markup=keyboard,
+                parse_mode='HTML'
             )
         except Exception as e2:
             logger.error(f"❌ send_message also failed: {e2}")
