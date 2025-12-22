@@ -45,7 +45,7 @@
     "confirm_button": "✅ 确认提现",
     "cancel_button": "❌ 取消并返回主菜单"
   },
-  "tutorial": "📘 <b>X2C 流量挖矿 · 新手速通卡</b>\n\n只需要 3 步，把流量变现为 X2C 资产：\n\n1️⃣ <b>领素材 (Get):</b> 点击 <code>🎬 开始挖矿</code>，系统下发爆款短剧切片。\n2️⃣ <b>发视频 (Post):</b> 上传到 TikTok / Reels / Shorts (0粉也能跑！)。\n3️⃣ <b>填链接 (Earn):</b> 点击 <code>📝 提交链接</code>，回填视频地址，坐等收益到账！\n\n➖➖➖➖➖➖➖➖➖➖\n\n<b>🆘 遇到问题？想看大佬作业？</b>\n\n👥 <b>加入官方社群 (Community):</b>\n👉 <a href='https://t.me/+aYBZImXzKgE4MTI1'>点击加入官方群</a>\n<i>(交流流量密码，获取预测市场信号)</i>\n\n🛠 <b>联系人工客服 (Support):</b>\n👉 <a href='https://t.me/X2C_Support_bot'>点击联系客服</a>\n<i>(解决提现/任务审核问题)</i>",
+  "tutorial": "💰 <b>X2C 流量挖矿 · 新手速通卡</b>\n\n只需要 3 步，把流量变现为 X2C 资产：\n\n1️⃣ <b>领素材 (Get):</b> 点击下方「开始挖矿」按钮，系统下发爆款短剧切片。\n2️⃣ <b>发视频 (Post):</b> 上传到 TikTok / Reels / Shorts (0粉也能跑！)。\n3️⃣ <b>填链接 (Earn):</b> 点击下方「提交链接」按钮，回填视频地址，坐等收益到账！\n\n➖➖➖➖➖➖➖➖➖➖\n\n<b>🆘 遇到问题？想看大佬作业？</b>\n\n👥 <b>加入官方社群 (Community):</b>\n👉 <a href='https://t.me/+aYBZImXzKgE4MTI1'>点击加入官方群</a>\n<i>(交流流量密码，获取预测市场信号)</i>\n\n🛠 <b>联系人工客服 (Support):</b>\n👉 <a href='https://t.me/X2C_Support_bot'>点击联系客服</a>\n<i>(解决提现/任务审核问题)</i>",
   "invite": {
     "message": "🤝 邀请躺赚机制\n\n你邀请的好友完成首次任务验证后：\n\n🔸 你将获得：对方每次任务奖励的「10% 永久加成」\n🔸 对方不会损失任何奖励（平台额外发放）\n🔸 好友首次任务完成，你还可额外领取 +5 X2C 新人奖励\n\n📈 多邀好友 = 多条长期躺赚通道\n🔥 邀得越多，赚得越快\n\n🔗 你的邀请链接：\n{invite_link}\n\n📊 邀请统计：\n• 已邀请人数：{invited_count} 人\n• 有效邀请：{active_count} 人\n• 累计推荐奖励：{total_rewards} X2C",
     "copy_link": "📋 复制邀请链接",

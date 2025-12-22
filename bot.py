@@ -2721,9 +2721,17 @@ async def tutorial_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_lang = get_user_language(user_id)
     
     message = get_message(user_lang, 'tutorial')
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
-    ]])
+    
+    # 添加快捷按钮：开始挖矿、提交链接、返回主菜单
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(t('menu.get_tasks', user_lang), callback_data='get_tasks'),
+            InlineKeyboardButton(t('menu.submit_link', user_lang), callback_data='submit_link'),
+        ],
+        [
+            InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
+        ]
+    ])
     
     await query.edit_message_text(
         message, 
