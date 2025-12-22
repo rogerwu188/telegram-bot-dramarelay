@@ -365,6 +365,22 @@ def init_database():
         )
     """)
     
+    # 提现申请表
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS withdrawals (
+            withdrawal_id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
+            amount DECIMAL(18, 2) NOT NULL,
+            sol_address VARCHAR(255) NOT NULL,
+            status VARCHAR(20) DEFAULT 'pending',
+            tx_hash VARCHAR(255),
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )
+    """)
+    
     conn.commit()
     cur.close()
     conn.close()
