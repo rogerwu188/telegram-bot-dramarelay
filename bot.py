@@ -2713,7 +2713,7 @@ Once approved, assets will be transferred to your wallet automatically."""
     return ConversationHandler.END
 
 async def tutorial_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理使用教程"""
+    """处理赚钱攻略/新手教程"""
     query = update.callback_query
     await query.answer()
     
@@ -2725,7 +2725,12 @@ async def tutorial_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
     ]])
     
-    await query.edit_message_text(message, reply_markup=keyboard)
+    await query.edit_message_text(
+        message, 
+        reply_markup=keyboard,
+        parse_mode='HTML',
+        disable_web_page_preview=True
+    )
 
 async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理语言切换"""

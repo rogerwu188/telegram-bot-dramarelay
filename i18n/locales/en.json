@@ -7,7 +7,7 @@
     "ranking": "🏆 Rich Leaderboard",
     "airdrop": "🤝 Invite & Earn (+10%)",
     "bind_wallet": "💸 Withdraw Assets",
-    "tutorial": "📘 3-Min Tutorial",
+    "tutorial": "💰 Earning Guide",
     "language": "🌐 Language / 语言"
   },
   "task": {
@@ -45,7 +45,7 @@
     "confirm_button": "✅ Confirm Withdrawal",
     "cancel_button": "❌ Cancel and Return to Menu"
   },
-  "tutorial": "📘 X2C · 3-Minute Tutorial\n\n1️⃣ Claim Tasks\n\nGo to \"🎬 Start Mining\" and select viral drama clips to distribute.\n\n2️⃣ Download Materials\n\nAfter clicking \"Confirm Claim\", you can download the video materials for this task.\n\n3️⃣ Publish to Platforms\n\nPublish the materials to TikTok / YouTube Shorts, 0 followers OK!\n\n4️⃣ Submit Content Link\n\nIn \"📝 Submit Link\", select the task, fill in the publishing platform and corresponding link for automatic system verification.\n\n5️⃣ Get X2C Rewards\n\nAfter content verification passes, the system will immediately distribute the corresponding X2C to your account.\n\n6️⃣ Join Monthly Airdrop\n\nUsers who accumulate 100+ X2C can automatically qualify for the monthly X2C airdrop.\n\n───\n\n💡 Usage Instructions\n• Each task can only be submitted once\n• Submitted links must be real, valid, and published by yourself\n• It is recommended to distribute to multiple platforms for higher rewards\n• Please follow the publishing rules of each platform and avoid violating content",
+  "tutorial": "💰 <b>X2C Traffic Mining · Quick Start Guide</b>\n\nJust 3 steps to turn traffic into X2C assets:\n\n1️⃣ <b>Get Content:</b> Click <code>🎬 Start Mining</code>, system delivers viral drama clips.\n2️⃣ <b>Post Video:</b> Upload to TikTok / Reels / Shorts (0 followers OK!).\n3️⃣ <b>Submit Link:</b> Click <code>📝 Submit Link</code>, fill in video URL, wait for earnings!\n\n➖➖➖➖➖➖➖➖➖➖\n\n<b>🆘 Need Help? Want to See Pro Tips?</b>\n\n👥 <b>Join Official Community:</b>\n👉 <a href='https://t.me/+aYBZImXzKgE4MTI1'>Click to Join Group</a>\n<i>(Share traffic secrets, get market signals)</i>\n\n🛠 <b>Contact Support:</b>\n👉 <a href='https://t.me/X2C_Support_bot'>Click to Contact</a>\n<i>(Resolve withdrawal/task review issues)</i>",
   "invite": {
     "message": "🤝 Invite & Earn Mechanism\n\nWhen your invited friend completes their first task:\n\n🔸 You get: 10% permanent bonus from every task they complete\n🔸 They don't lose any rewards (platform bonus)\n🔸 You also get +5 X2C bonus when they complete first task\n\n📈 More invites = More passive income channels\n🔥 Invite more, earn more\n\n🔗 Your invitation link:\n{invite_link}\n\n📊 Invitation Stats:\n• Total invites: {invited_count}\n• Active invites: {active_count}\n• Total referral rewards: {total_rewards} X2C",
     "copy_link": "📋 Copy Invite Link",
