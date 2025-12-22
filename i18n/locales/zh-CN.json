@@ -33,7 +33,7 @@
     "status": "🎁 空投状态\n\n📅 当前轮次：第 {round} 轮\n✅ 空投资格：{eligible}\n💰 预计空投：{estimated} X2C\n⏰ 下次快照：{next_snapshot}\n\n最低要求：100 X2C"
   },
   "withdraw": {
-    "prompt": "💰 X2C 钱包提现\n\n请输入你要提取的 SOL 地址（支持 Phantom、OKX、Bybit 等钱包）：\n\n📌 请直接粘贴你的 SOL 地址（以 4 开头或长度 44 字符）\n⚠️ 地址一旦提交无法撤回，请务必确认正确无误。",
+    "prompt": "💰 <b>发起资产提现 (Withdraw)</b>\n\n请回复以下 <b>任意一种</b> 收款账户：\n\n1️⃣ <b>SOL 链上钱包地址</b>\n<i>(支持 Phantom, OKX, Bybit 等，以 4 开头)</i>\n\n2️⃣ <b>X2C Pool 账户邮箱</b>\n<i>(用于平台内转账，免 Gas 费，即时到账)</i>\n\n⚠️ <b>注意：</b> 请直接发送地址或邮箱，不要附带其他文字。系统将自动识别格式。",
     "amount_prompt": "📥 已收到你的提现地址：\n\n`{address}`\n\n现在请输入你要提取的 X2C 数量：\n\n💡 可提现余额：{balance} X2C",
     "confirm": "📤 提现确认\n\n你正在提现：\n\n🔹 数量：{amount} X2C\n🔹 地址：{address}\n\n是否确认提交提现请求？",
     "processing": "⏳ 正在处理你的提现请求…\n\n我们正在将 {amount} X2C 转账至：\n\n`{address}`\n\n请稍候，大约需要 5–20 秒。",

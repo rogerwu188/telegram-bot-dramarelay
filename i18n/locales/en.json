@@ -33,7 +33,7 @@
     "status": "🎁 Airdrop Status\n\n📅 Current Round: Round {round}\n✅ Eligibility: {eligible}\n💰 Estimated Airdrop: {estimated} X2C\n⏰ Next Snapshot: {next_snapshot}\n\nMinimum Requirement: 100 X2C"
   },
   "withdraw": {
-    "prompt": "💰 X2C Wallet Withdrawal\n\nPlease enter your SOL address (supports Phantom, OKX, Bybit, etc.):\n\n📌 Paste your SOL address (starts with 4 or 44 characters long)\n⚠️ Address cannot be changed once submitted. Please confirm carefully.",
+    "prompt": "💰 <b>Withdraw Assets</b>\n\nPlease reply with <b>either</b> of the following:\n\n1️⃣ <b>SOL Wallet Address</b>\n<i>(Phantom, OKX, Bybit, etc., starts with 4)</i>\n\n2️⃣ <b>X2C Pool Account Email</b>\n<i>(Internal transfer, Gas-free, Instant)</i>\n\n⚠️ <b>Note:</b> Send address or email only, no extra text. System will auto-detect format.",
     "amount_prompt": "📥 Received your withdrawal address:\n\n`{address}`\n\nNow please enter the amount of X2C you want to withdraw:\n\n💡 Available balance: {balance} X2C",
     "confirm": "📤 Withdrawal Confirmation\n\nYou are withdrawing:\n\n🔹 Amount: {amount} X2C\n🔹 Address: {address}\n\nConfirm withdrawal request?",
     "processing": "⏳ Processing your withdrawal request…\n\nTransferring {amount} X2C to:\n\n`{address}`\n\nPlease wait, this may take 5–20 seconds.",
