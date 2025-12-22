@@ -134,7 +134,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     
     # 每行显示 3 个分类按钮
     row = []
-    for cat_code, cat_name in list(categories.items())[:12]:  # 只显示前 12 个分类
+    for cat_code, cat_name in list(categories.items())[:15]:  # 显示前 15 个分类（包括 latest + 13 个 API 分类 + 预留）
         # 当前分类用 ✓ 标记，并显示任务数量
         count = category_counts.get(cat_code, 0)
         if cat_code == category:
