@@ -158,16 +158,16 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         for task in available_tasks:
             title = get_task_title(task, user_lang)
             claim_count = task.get('claim_count', 0)
-            # 显示领取人数
-            if user_lang.startswith('zh'):
-                claim_info = f"👥{claim_count}人已领取" if claim_count > 0 else "🌟新任务"
+            # 只有有人领取时才显示领取人数，合并到同一行
+            if claim_count > 0:
+                if user_lang.startswith('zh'):
+                    claim_info = f" | 👥{claim_count}"
+                else:
+                    claim_info = f" | 👥{claim_count}"
             else:
-                claim_info = f"👥{claim_count} claimed" if claim_count > 0 else "🌟New"
-            button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
-            # 添加任务按钮
+                claim_info = ""
+            button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C{claim_info}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
-            # 添加领取人数显示（作为第二行）
-            keyboard.append([InlineKeyboardButton(f"    {claim_info}", callback_data="noop")])
         
         # 添加分页按钮
         pagination_row = []
