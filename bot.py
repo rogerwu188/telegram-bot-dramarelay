@@ -2498,7 +2498,7 @@ async def invite_friends_callback(update: Update, context: ContextTypes.DEFAULT_
     
     keyboard = InlineKeyboardMarkup(keyboard_rows)
     
-    await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True)
+    await query.edit_message_text(message, reply_markup=keyboard, disable_web_page_preview=True, parse_mode='HTML')
 
 
 async def invite_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
