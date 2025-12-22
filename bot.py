@@ -447,12 +447,17 @@ MESSAGES = {
 ⏰ 下次快照：{next_snapshot}
 
 最低要求：100 X2C""",
-        'withdraw_prompt': """💰 X2C 钱包提现
+        'withdraw_prompt': """💰 <b>发起资产提现 (Withdraw)</b>
 
-请输入你要提取的 SOL 地址（支持 Phantom、OKX、Bybit 等钱包）：
+请回复以下 <b>任意一种</b> 收款账户：
 
-📌 请直接粘贴你的 SOL 地址（以 4 开头或长度 44 字符）
-⚠️ 地址一旦提交无法撤回，请务必确认正确无误。""",
+1️⃣ <b>SOL 链上钱包地址</b>
+<i>(支持 Phantom, OKX, Bybit 等，以 4 开头)</i>
+
+2️⃣ <b>X2C Pool 账户邮箱</b>
+<i>(用于平台内转账，免 Gas 费，即时到账)</i>
+
+⚠️ <b>注意：</b> 请直接发送地址或邮箱，不要附带其他文字。系统将自动识别格式。""",
         'withdraw_amount_prompt': """📥 已收到你的提现地址：
 
 `{address}`
@@ -624,12 +629,17 @@ Your Power: {your_power} X2C""",
 ⏰ Next Snapshot: {next_snapshot}
 
 Minimum Requirement: 100 X2C""",
-        'withdraw_prompt': """💰 X2C Wallet Withdrawal
+        'withdraw_prompt': """💰 <b>Withdraw Assets</b>
 
-Please enter your SOL address (supports Phantom, OKX, Bybit, etc.):
+Please reply with <b>either</b> of the following receiving accounts:
 
-📌 Paste your SOL address (starts with 4 or 44 characters long)
-⚠️ Address cannot be changed once submitted. Please confirm carefully.""",
+1️⃣ <b>SOL Wallet Address</b>
+<i>(Supports Phantom, OKX, Bybit, etc., starts with 4)</i>
+
+2️⃣ <b>X2C Pool Account Email</b>
+<i>(For in-platform transfer, no Gas fee, instant arrival)</i>
+
+⚠️ <b>Note:</b> Please send address or email only, without any other text. System will auto-detect the format.""",
         'withdraw_amount_prompt': """📥 Received your withdrawal address:
 
 `{address}`
@@ -1760,30 +1770,33 @@ to receive 🎉 {reward} X2C"""
             drama_name_with_brackets = f"《{drama_name}》"  # 带书名号的剧名
             
             if user_lang.startswith('zh'):
-                final_msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🆕 <b>【新任务】</b>
-
-📤 <b>提交任务</b>
-🎬 {title}
-💰 完成可获得：{reward} X2C
-🔗 视频链接：{video_url}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋【一键复制内容】
-💡 请复制到 TikTok 或 YouTube
-
-<pre>
-{plot_keyword} | {drama_name}
+                # 构建复制文案内容
+                copy_content = f"""{plot_keyword} | {drama_name}
 Clip from @X2CDramaOfficial
 
 {description}
-{hashtags}
-</pre>
+{hashtags}"""
+                
+                final_msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆕 <b>【新任务发布】</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>奖励：</b>{reward} X2C
+🎬 <b>剧集：</b>{title}
 
-📝 请粘贴你上传的视频链接（支持 TikTok、YouTube、Instagram 等平台）"""
+<b>👇 请按以下步骤操作：</b>
+
+<b>1️⃣ 下载视频素材</b>
+🔗 <a href="{video_url}">点击这里下载视频</a>
+<i>(如无法下载，请复制链接到浏览器打开)</i>
+
+<b>2️⃣ 一键复制文案</b>
+💡 <i>点击下方文字框，发布时直接粘贴到标题和简介：</i>
+
+<code>{copy_content}</code>
+
+<b>3️⃣ 提交任务</b>
+📝 请在下方粘贴你发布后的 <b>TikTok/YouTube 链接</b>：
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
                 
                 # 创建 inline keyboard 按钮
                 keyboard = [
