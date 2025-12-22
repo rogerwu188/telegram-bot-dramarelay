@@ -1450,6 +1450,249 @@ def clear_all_logs():
             'traceback': traceback.format_exc()
         }), 500
 
+def get_withdrawal_requests():
+    """
+    获取提现申请列表
+    """
+    try:
+        status = request.args.get('status', 'pending')  # pending, approved, rejected, completed, all
+        limit = int(request.args.get('limit', 50))
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        if status == 'all':
+            cur.execute("""
+                SELECT 
+                    w.withdrawal_id,
+                    w.user_id,
+                    w.sol_address,
+                    w.amount,
+                    w.status,
+                    w.tx_hash,
+                    w.error_message,
+                    w.created_at,
+                    w.processed_at,
+                    u.username,
+                    u.first_name,
+                    u.total_node_power as current_balance
+                FROM withdrawals w
+                LEFT JOIN users u ON w.user_id = u.user_id
+                ORDER BY w.created_at DESC
+                LIMIT %s
+            """, (limit,))
+        else:
+            cur.execute("""
+                SELECT 
+                    w.withdrawal_id,
+                    w.user_id,
+                    w.sol_address,
+                    w.amount,
+                    w.status,
+                    w.tx_hash,
+                    w.error_message,
+                    w.created_at,
+                    w.processed_at,
+                    u.username,
+                    u.first_name,
+                    u.total_node_power as current_balance
+                FROM withdrawals w
+                LEFT JOIN users u ON w.user_id = u.user_id
+                WHERE w.status = %s
+                ORDER BY w.created_at DESC
+                LIMIT %s
+            """, (status, limit))
+        
+        withdrawals = cur.fetchall()
+        
+        # 获取各状态的统计
+        cur.execute("""
+            SELECT 
+                status,
+                COUNT(*) as count,
+                COALESCE(SUM(amount), 0) as total_amount
+            FROM withdrawals
+            GROUP BY status
+        """)
+        stats_rows = cur.fetchall()
+        stats = {row['status']: {'count': row['count'], 'total_amount': float(row['total_amount'])} for row in stats_rows}
+        
+        cur.close()
+        conn.close()
+        
+        # 转换为列表
+        result = []
+        for w in withdrawals:
+            result.append({
+                'withdrawal_id': w['withdrawal_id'],
+                'user_id': w['user_id'],
+                'username': w['username'] or '',
+                'first_name': w['first_name'] or '',
+                'sol_address': w['sol_address'],
+                'amount': float(w['amount']),
+                'status': w['status'],
+                'tx_hash': w['tx_hash'] or '',
+                'error_message': w['error_message'] or '',
+                'created_at': w['created_at'].isoformat() if w['created_at'] else '',
+                'processed_at': w['processed_at'].isoformat() if w['processed_at'] else '',
+                'current_balance': float(w['current_balance']) if w['current_balance'] else 0
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': result,
+            'count': len(result),
+            'stats': stats
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to get withdrawal requests: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+def approve_withdrawal(withdrawal_id):
+    """
+    审批提现申请（执行转账）
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 获取提现请求信息
+        cur.execute("""
+            SELECT withdrawal_id, user_id, sol_address, amount, status
+            FROM withdrawals
+            WHERE withdrawal_id = %s
+        """, (withdrawal_id,))
+        
+        withdrawal = cur.fetchone()
+        
+        if not withdrawal:
+            cur.close()
+            conn.close()
+            return jsonify({'success': False, 'error': '提现申请不存在'}), 404
+        
+        if withdrawal['status'] != 'pending':
+            cur.close()
+            conn.close()
+            return jsonify({'success': False, 'error': f'提现申请状态不正确，当前状态: {withdrawal["status"]}'}), 400
+        
+        # 更新状态为处理中
+        cur.execute("""
+            UPDATE withdrawals
+            SET status = 'processing'
+            WHERE withdrawal_id = %s
+        """, (withdrawal_id,))
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        
+        # 异步执行转账
+        import asyncio
+        from withdrawal_system import process_withdrawal
+        
+        # 在新的事件循环中执行异步操作
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(process_withdrawal(withdrawal_id))
+        finally:
+            loop.close()
+        
+        if result['success']:
+            logger.info(f"✅ Withdrawal approved and processed: withdrawal_id={withdrawal_id}, tx_hash={result['tx_hash']}")
+            return jsonify({
+                'success': True,
+                'message': '提现已审批并转账成功',
+                'tx_hash': result['tx_hash']
+            })
+        else:
+            logger.error(f"❌ Withdrawal processing failed: withdrawal_id={withdrawal_id}, error={result['error']}")
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to approve withdrawal: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+def reject_withdrawal(withdrawal_id):
+    """
+    拒绝提现申请（退还余额）
+    """
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', '管理员拒绝')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 获取提现请求信息
+        cur.execute("""
+            SELECT withdrawal_id, user_id, sol_address, amount, status
+            FROM withdrawals
+            WHERE withdrawal_id = %s
+        """, (withdrawal_id,))
+        
+        withdrawal = cur.fetchone()
+        
+        if not withdrawal:
+            cur.close()
+            conn.close()
+            return jsonify({'success': False, 'error': '提现申请不存在'}), 404
+        
+        if withdrawal['status'] != 'pending':
+            cur.close()
+            conn.close()
+            return jsonify({'success': False, 'error': f'提现申请状态不正确，当前状态: {withdrawal["status"]}'}), 400
+        
+        # 更新状态为拒绝
+        cur.execute("""
+            UPDATE withdrawals
+            SET status = 'rejected',
+                error_message = %s,
+                processed_at = CURRENT_TIMESTAMP
+            WHERE withdrawal_id = %s
+        """, (reason, withdrawal_id))
+        
+        # 退还用户余额
+        cur.execute("""
+            UPDATE users
+            SET total_node_power = total_node_power + %s
+            WHERE user_id = %s
+        """, (withdrawal['amount'], withdrawal['user_id']))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"❌ Withdrawal rejected: withdrawal_id={withdrawal_id}, reason={reason}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'提现申请已拒绝，已退还 {withdrawal["amount"]} X2C 到用户账户'
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to reject withdrawal: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)

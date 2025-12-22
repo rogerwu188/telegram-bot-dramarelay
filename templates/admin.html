@@ -671,6 +671,10 @@
                         <span>❌ 回传X2C Pool任务数据错误日志</span>
                         <small id="errors-count" class="tab-count">0 条</small>
                     </button>
+                    <button class="tab-btn" onclick="switchTab('withdrawals')">
+                        <span>💰 提现申请管理</span>
+                        <small id="withdrawals-count" class="tab-count">0 条</small>
+                    </button>
                 </div>
             </div>
             
@@ -788,6 +792,68 @@
                                 </tr>
                             </thead>
                             <tbody id="errors-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 提现申请管理 Tab -->
+            <div id="tab-withdrawals" class="tab-content">
+                <div class="section-content">
+                    <!-- 提现状态筛选 -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                        <label>状态筛选：</label>
+                        <select id="withdrawal-status-filter" onchange="loadWithdrawals()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
+                            <option value="pending">✅ 待审批</option>
+                            <option value="processing">⏳ 处理中</option>
+                            <option value="completed">✅ 已完成</option>
+                            <option value="rejected">❌ 已拒绝</option>
+                            <option value="failed">⚠️ 失败</option>
+                            <option value="all">📊 全部</option>
+                        </select>
+                        <button onclick="loadWithdrawals()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                    </div>
+                    
+                    <!-- 提现统计 -->
+                    <div id="withdrawal-stats" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <div style="background: #fff3cd; padding: 10px 20px; border-radius: 8px;">
+                            <span>⏳ 待审批：</span>
+                            <strong id="stat-pending">0</strong> 笔
+                        </div>
+                        <div style="background: #cce5ff; padding: 10px 20px; border-radius: 8px;">
+                            <span>⚡ 处理中：</span>
+                            <strong id="stat-processing">0</strong> 笔
+                        </div>
+                        <div style="background: #d4edda; padding: 10px 20px; border-radius: 8px;">
+                            <span>✅ 已完成：</span>
+                            <strong id="stat-completed">0</strong> 笔
+                        </div>
+                        <div style="background: #f8d7da; padding: 10px 20px; border-radius: 8px;">
+                            <span>❌ 已拒绝：</span>
+                            <strong id="stat-rejected">0</strong> 笔
+                        </div>
+                    </div>
+                    
+                    <div id="withdrawals-loading" class="loading">加载中...</div>
+                    <div id="withdrawals-error" class="error" style="display: none;"></div>
+                    <div id="withdrawals-empty" class="empty" style="display: none;">暂无提现记录</div>
+                    <div id="withdrawals-table" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>申请ID</th>
+                                    <th>用户ID</th>
+                                    <th>用户名</th>
+                                    <th>提现金额</th>
+                                    <th>收款地址/邮箱</th>
+                                    <th>状态</th>
+                                    <th>申请时间</th>
+                                    <th>处理时间</th>
+                                    <th>交易哈希/备注</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawals-body"></tbody>
                         </table>
                     </div>
                 </div>
@@ -1248,6 +1314,10 @@
             // 如果切换到任务完成日志，加载数据
             if (tabName === 'completions') {
                 loadCompletions();
+            }
+            // 如果切换到提现管理，加载数据
+            if (tabName === 'withdrawals') {
+                loadWithdrawals();
             }
         }
         
@@ -1815,6 +1885,160 @@
             checkBroadcasterStatus();
             checkViewCounterStatus();
         });
+        
+        // ============================================================
+        // 提现管理相关函数
+        // ============================================================
+        
+        // 加载提现申请列表
+        async function loadWithdrawals() {
+            const status = document.getElementById('withdrawal-status-filter').value;
+            const loadingEl = document.getElementById('withdrawals-loading');
+            const errorEl = document.getElementById('withdrawals-error');
+            const emptyEl = document.getElementById('withdrawals-empty');
+            const tableEl = document.getElementById('withdrawals-table');
+            const bodyEl = document.getElementById('withdrawals-body');
+            
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            emptyEl.style.display = 'none';
+            tableEl.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/withdrawals?status=${status}&limit=50`);
+                const result = await response.json();
+                
+                loadingEl.style.display = 'none';
+                
+                if (!result.success) {
+                    errorEl.textContent = result.error || '加载失败';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+                
+                // 更新统计
+                const stats = result.stats || {};
+                document.getElementById('stat-pending').textContent = stats.pending?.count || 0;
+                document.getElementById('stat-processing').textContent = stats.processing?.count || 0;
+                document.getElementById('stat-completed').textContent = stats.completed?.count || 0;
+                document.getElementById('stat-rejected').textContent = stats.rejected?.count || 0;
+                
+                // 更新标签页计数
+                const pendingCount = stats.pending?.count || 0;
+                document.getElementById('withdrawals-count').textContent = pendingCount + ' 条';
+                
+                if (!result.data || result.data.length === 0) {
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+                
+                // 渲染表格
+                bodyEl.innerHTML = '';
+                result.data.forEach(w => {
+                    const statusBadge = getWithdrawalStatusBadge(w.status);
+                    const actions = getWithdrawalActions(w);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>#${w.withdrawal_id}</td>
+                        <td>${w.user_id}</td>
+                        <td>${w.username || w.first_name || '-'}</td>
+                        <td><strong>${w.amount} X2C</strong></td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${w.sol_address}">
+                            <code>${w.sol_address}</code>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${formatTime(w.created_at)}</td>
+                        <td>${w.processed_at ? formatTime(w.processed_at) : '-'}</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${w.tx_hash || w.error_message || ''}">
+                            ${w.tx_hash ? `<code>${w.tx_hash.substring(0, 16)}...</code>` : (w.error_message || '-')}
+                        </td>
+                        <td>${actions}</td>
+                    `;
+                    bodyEl.appendChild(row);
+                });
+                
+                tableEl.style.display = 'block';
+                
+            } catch (error) {
+                loadingEl.style.display = 'none';
+                errorEl.textContent = '加载失败: ' + error.message;
+                errorEl.style.display = 'block';
+            }
+        }
+        
+        // 获取提现状态标签
+        function getWithdrawalStatusBadge(status) {
+            const badges = {
+                'pending': '<span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 4px;">⏳ 待审批</span>',
+                'processing': '<span style="background: #cce5ff; color: #004085; padding: 3px 8px; border-radius: 4px;">⚡ 处理中</span>',
+                'completed': '<span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 4px;">✅ 已完成</span>',
+                'rejected': '<span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 4px;">❌ 已拒绝</span>',
+                'failed': '<span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 4px;">⚠️ 失败</span>'
+            };
+            return badges[status] || status;
+        }
+        
+        // 获取提现操作按钮
+        function getWithdrawalActions(w) {
+            if (w.status === 'pending') {
+                return `
+                    <button onclick="approveWithdrawal(${w.withdrawal_id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px;">✅ 审批</button>
+                    <button onclick="rejectWithdrawal(${w.withdrawal_id})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">❌ 拒绝</button>
+                `;
+            }
+            return '-';
+        }
+        
+        // 审批提现
+        async function approveWithdrawal(withdrawalId) {
+            if (!confirm(`确认审批提现申请 #${withdrawalId}？\n\n审批后将立即执行转账操作。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/withdrawals/${withdrawalId}/approve`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 提现已审批并转账成功\n\n交易哈希: ${result.tx_hash || 'N/A'}`);
+                    loadWithdrawals();
+                } else {
+                    alert('❌ 审批失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('❌ 操作失败: ' + error.message);
+            }
+        }
+        
+        // 拒绝提现
+        async function rejectWithdrawal(withdrawalId) {
+            const reason = prompt(`请输入拒绝提现申请 #${withdrawalId} 的原因：`, '审核未通过');
+            
+            if (reason === null) {
+                return; // 用户取消
+            }
+            
+            try {
+                const response = await fetch(`/api/withdrawals/${withdrawalId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ ' + result.message);
+                    loadWithdrawals();
+                } else {
+                    alert('❌ 拒绝失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('❌ 操作失败: ' + error.message);
+            }
+        }
     </script>
     
     <!-- 回调数据弹窗 -->

@@ -1562,6 +1562,28 @@ def clear_all_logs():
         }), 500
 
 # ============================================================
+# 提现管理 API
+# ============================================================
+
+@app.route('/api/withdrawals', methods=['GET'])
+def get_withdrawals():
+    """获取提现申请列表"""
+    from admin_api import get_withdrawal_requests
+    return get_withdrawal_requests()
+
+@app.route('/api/withdrawals/<int:withdrawal_id>/approve', methods=['POST'])
+def approve_withdrawal_route(withdrawal_id):
+    """审批提现申请"""
+    from admin_api import approve_withdrawal
+    return approve_withdrawal(withdrawal_id)
+
+@app.route('/api/withdrawals/<int:withdrawal_id>/reject', methods=['POST'])
+def reject_withdrawal_route(withdrawal_id):
+    """拒绝提现申请"""
+    from admin_api import reject_withdrawal
+    return reject_withdrawal(withdrawal_id)
+
+# ============================================================
 # 启动服务器
 # ============================================================
 if __name__ == '__main__':
