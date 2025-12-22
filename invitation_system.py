@@ -44,11 +44,18 @@ def record_invitation(inviter_id: int, invitee_id: int) -> bool:
             ON CONFLICT (invitee_id) DO NOTHING
         """, (inviter_id, invitee_id))
         
+        # 给被邀请人发放新人启动金 +2 X2C
+        cur.execute("""
+            UPDATE users
+            SET total_node_power = total_node_power + 2
+            WHERE user_id = %s
+        """, (invitee_id,))
+        
         conn.commit()
         cur.close()
         conn.close()
         
-        logger.info(f"✅ Invitation recorded: {inviter_id} invited {invitee_id}")
+        logger.info(f"✅ Invitation recorded: {inviter_id} invited {invitee_id}, invitee got +2 X2C starter bonus")
         return True
         
     except Exception as e:
@@ -148,7 +155,7 @@ def process_referral_reward(invitee_id: int, task_id: int, original_reward: floa
             WHERE invitee_id = %s
         """, (referral_reward, invitee_id))
         
-        # 如果是首次任务，标记并给被邀请人新人奖励
+        # 如果是首次任务，标记并给邀请人首单赏金
         if is_first_task:
             # 标记首次任务完成
             cur.execute("""
@@ -158,22 +165,21 @@ def process_referral_reward(invitee_id: int, task_id: int, original_reward: floa
                 WHERE invitee_id = %s
             """, (invitee_id,))
             
-            # 给被邀请人新人奖励 +5 X2C
+            # 给邀请人首单赏金 +5 X2C
             cur.execute("""
                 UPDATE users
                 SET total_node_power = total_node_power + 5
                 WHERE user_id = %s
-            """, (invitee_id,))
+            """, (inviter_id,))
             
-            # 标记新人奖励已领取
+            # 更新邀请记录的累计奖励（加上首单赏金）
             cur.execute("""
-                UPDATE users
-                SET invitation_reward_received = TRUE,
-                    invitation_reward_received_at = CURRENT_TIMESTAMP
-                WHERE user_id = %s
+                UPDATE user_invitations
+                SET total_referral_rewards = total_referral_rewards + 5
+                WHERE invitee_id = %s
             """, (invitee_id,))
             
-            logger.info(f"🎁 First task bonus: invitee {invitee_id} got +5 X2C, inviter {inviter_id} got +{referral_reward} X2C")
+            logger.info(f"🎁 First task bonus: inviter {inviter_id} got +5 X2C bounty + {referral_reward} X2C commission")
         else:
             logger.info(f"💰 Referral reward: inviter {inviter_id} got +{referral_reward} X2C from invitee {invitee_id}")
         
