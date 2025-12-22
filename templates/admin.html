@@ -590,15 +590,21 @@
             
             <button onclick="refreshData()">🔄 刷新数据</button>
             <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
-            <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
-                📡 启动分发数据回传
-            </button>
+            <div style="display: inline-flex; flex-direction: column; align-items: center; margin-right: 5px;">
+                <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
+                    📡 启动分发数据回传
+                </button>
+                <small style="color: #666; font-size: 11px; margin-top: 3px;">⏰ 每 3 分钟回传一次</small>
+            </div>
             <button onclick="triggerBroadcast()" style="background: #17a2b8;" id="trigger-btn">
                 🚀 立即回传一次
             </button>
-            <button onclick="toggleViewCounter()" id="view-counter-btn" style="background: #6f42c1;">
-                👁 启动播放量抓取
-            </button>
+            <div style="display: inline-flex; flex-direction: column; align-items: center; margin-right: 5px;">
+                <button onclick="toggleViewCounter()" id="view-counter-btn" style="background: #6f42c1;">
+                    👁 启动播放量抓取
+                </button>
+                <small style="color: #666; font-size: 11px; margin-top: 3px;">⏰ 每 10 分钟抓取一次</small>
+            </div>
             <button onclick="triggerViewCounter()" style="background: #fd7e14;" id="view-counter-trigger-btn">
                 🔄 立即抓取播放量
             </button>
