@@ -1100,7 +1100,7 @@ def detect_platform(link: str) -> Optional[str]:
 def validate_link(platform: str, link: str) -> bool:
     """验证链接格式"""
     patterns = {
-        'TikTok': r'https?://(www\.)?tiktok\.com/@[\w.-]+/video/\d+|https?://vm\.tiktok\.com/[\w]+/?',
+        'TikTok': r'https?://(www\.)?tiktok\.com/@[\w.-]+/video/\d+|https?://(www\.)?tiktok\.com/t/[\w]+/?|https?://vm\.tiktok\.com/[\w]+/?',
         'YouTube': r'https?://(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+[\w?=&-]*',
         'Instagram': r'https?://(www\.)?instagram\.com/(p|reel)/[\w-]+',
         'Facebook': r'https?://(www\.)?facebook\.com/.*',
