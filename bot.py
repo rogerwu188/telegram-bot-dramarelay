@@ -451,6 +451,8 @@ MESSAGES = {
 📈 本周排名：#{rank}""",
         'ranking': """🏆 全球排行榜
 
+👥 总参与人数：{total_participants}
+
 {ranking_list}
 
 你的排名：#{your_rank}
@@ -632,6 +634,8 @@ Viral videos can mine 10,000+ x2c
 🔄 In Progress: {in_progress_tasks}
 📈 This Week Rank: #{rank}""",
         'ranking': """🏆 Global Ranking
+
+👥 Total Participants: {total_participants}
 
 {ranking_list}
 
@@ -2357,6 +2361,15 @@ async def ranking_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ranking = get_ranking(20)
     stats = get_user_stats(user_id)
     
+    # 获取总参与人数
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(DISTINCT user_id) as total FROM user_tasks WHERE status = 'submitted'")
+    result = cur.fetchone()
+    total_participants = result['total'] if result else 0
+    cur.close()
+    conn.close()
+    
     ranking_list = []
     for r in ranking:
         name = r['first_name'] or r['username'] or f"User {r['user_id']}"
@@ -2365,7 +2378,8 @@ async def ranking_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = get_message(user_lang, 'ranking',
         ranking_list='\n'.join(ranking_list),
         your_rank=stats['rank'],
-        your_power=stats['total_power']
+        your_power=stats['total_power'],
+        total_participants=total_participants
     )
     
     keyboard = InlineKeyboardMarkup([[
