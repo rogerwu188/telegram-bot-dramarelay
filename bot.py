@@ -2500,12 +2500,54 @@ async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     user_lang = get_user_language(user_id)
     
+    # 获取用户余额
+    from withdrawal_system import get_user_balance, get_user_withdrawals
+    balance = get_user_balance(user_id)
+    
+    # 获取用户提现记录
+    withdrawals = get_user_withdrawals(user_id, limit=5)
+    
+    # 构建提现记录文本
+    history_text = ""
+    if withdrawals:
+        history_text = "\n\n📜 <b>最近提现记录</b>\n" if user_lang == 'zh-CN' else "\n\n📜 <b>Recent Withdrawals</b>\n"
+        history_text += "─" * 20 + "\n"
+        
+        status_map = {
+            'pending': ('⏳ 待审批', '⏳ Pending'),
+            'processing': ('⚡ 处理中', '⚡ Processing'),
+            'completed': ('✅ 已完成', '✅ Completed'),
+            'rejected': ('❌ 已拒绝', '❌ Rejected'),
+            'failed': ('⚠️ 失败', '⚠️ Failed')
+        }
+        
+        for w in withdrawals:
+            status_text = status_map.get(w['status'], (w['status'], w['status']))
+            status_display = status_text[0] if user_lang == 'zh-CN' else status_text[1]
+            
+            # 格式化时间
+            created_time = w['created_at'].strftime('%m/%d %H:%M') if w['created_at'] else '-'
+            
+            # 截取地址显示
+            addr = w['sol_address']
+            addr_display = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 12 else addr
+            
+            history_text += f"• <code>{w['amount']:.0f}</code> X2C → <code>{addr_display}</code>\n"
+            history_text += f"  {status_display} | {created_time}\n"
+    else:
+        history_text = "\n\n💭 " + ("暂无提现记录" if user_lang == 'zh-CN' else "No withdrawal history")
+    
+    # 构建完整消息
+    balance_text = f"\n\n💰 <b>可提现余额: {balance:.0f} X2C</b>" if user_lang == 'zh-CN' else f"\n\n💰 <b>Available Balance: {balance:.0f} X2C</b>"
+    
+    full_message = get_message(user_lang, 'withdraw_prompt') + balance_text + history_text
+    
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton(get_message(user_lang, 'back_to_menu'), callback_data='back_to_menu')
     ]])
     
     await query.edit_message_text(
-        get_message(user_lang, 'withdraw_prompt'),
+        full_message,
         reply_markup=keyboard,
         parse_mode='HTML'
     )

@@ -257,3 +257,54 @@ def get_user_balance(user_id: int) -> float:
     except Exception as e:
         logger.error(f"❌ Failed to get user balance: {e}", exc_info=True)
         return 0.0
+
+
+def get_user_withdrawals(user_id: int, limit: int = 10) -> list:
+    """
+    获取用户的提现记录
+    
+    Args:
+        user_id: 用户ID
+        limit: 返回记录数量限制
+    
+    Returns:
+        提现记录列表，每条记录包含:
+        - withdrawal_id: 提现ID
+        - amount: 提现金额
+        - sol_address: 收款地址
+        - status: 状态 (pending/processing/completed/rejected/failed)
+        - created_at: 创建时间
+        - processed_at: 处理时间
+        - tx_hash: 交易哈希
+        - error_message: 错误信息
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT 
+                withdrawal_id,
+                amount,
+                sol_address,
+                status,
+                created_at,
+                processed_at,
+                tx_hash,
+                error_message
+            FROM withdrawals
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (user_id, limit))
+        
+        withdrawals = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return [dict(w) for w in withdrawals]
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get user withdrawals: {e}", exc_info=True)
+        return []
