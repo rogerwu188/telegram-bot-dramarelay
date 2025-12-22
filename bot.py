@@ -2496,11 +2496,14 @@ async def withdraw_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return WITHDRAW_ADDRESS
 
 async def withdraw_address_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """处理 SOL 地址输入 - Step 2: 输入提现数量"""
+    """处理 SOL 地址/邮箱输入 - Step 2: 输入提现数量"""
     user_id = update.effective_user.id
     user_lang = get_user_language(user_id)
     
     address = update.message.text.strip()
+    
+    # 📝 记录提现请求日志
+    logger.info(f"💰 [提现请求] user_id={user_id}, 提现地址/邮箱={address}")
     
     # 验证 SOL 地址
     from withdrawal_system import validate_sol_address
