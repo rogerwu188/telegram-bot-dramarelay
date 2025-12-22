@@ -44,29 +44,42 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     
     # 查询该分类的活跃任务（直接在 SQL 中过滤已领取的任务，并过滤超过有效期的任务）
     # 任务超过有效期自动过期，不再允许领取
+    # 同时统计每个任务被领取的人数
     if category == 'latest':
         # latest 分类显示所有类型的最新任务（包括 category 为 NULL 的任务）
         cur.execute("""
-            SELECT * FROM drama_tasks
-            WHERE status = 'active' 
-            AND created_at > NOW() - INTERVAL '%s hours'
-            AND task_id NOT IN (
+            SELECT dt.*, COALESCE(claim_counts.claim_count, 0) as claim_count
+            FROM drama_tasks dt
+            LEFT JOIN (
+                SELECT task_id, COUNT(DISTINCT user_id) as claim_count
+                FROM user_tasks
+                GROUP BY task_id
+            ) claim_counts ON dt.task_id = claim_counts.task_id
+            WHERE dt.status = 'active' 
+            AND dt.created_at > NOW() - INTERVAL '%s hours'
+            AND dt.task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
-            ORDER BY created_at DESC
+            ORDER BY dt.created_at DESC
             LIMIT %s OFFSET %s
         """, (expiry_hours, user_id, page_size, offset))
     else:
         # 其他分类只显示该分类的任务
         cur.execute("""
-            SELECT * FROM drama_tasks
-            WHERE status = 'active' 
-            AND category = %s 
-            AND created_at > NOW() - INTERVAL '%s hours'
-            AND task_id NOT IN (
+            SELECT dt.*, COALESCE(claim_counts.claim_count, 0) as claim_count
+            FROM drama_tasks dt
+            LEFT JOIN (
+                SELECT task_id, COUNT(DISTINCT user_id) as claim_count
+                FROM user_tasks
+                GROUP BY task_id
+            ) claim_counts ON dt.task_id = claim_counts.task_id
+            WHERE dt.status = 'active' 
+            AND dt.category = %s 
+            AND dt.created_at > NOW() - INTERVAL '%s hours'
+            AND dt.task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
-            ORDER BY created_at DESC
+            ORDER BY dt.created_at DESC
             LIMIT %s OFFSET %s
         """, (category, expiry_hours, user_id, page_size, offset))
     
@@ -144,8 +157,17 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         # 添加任务按钮
         for task in available_tasks:
             title = get_task_title(task, user_lang)
+            claim_count = task.get('claim_count', 0)
+            # 显示领取人数
+            if user_lang.startswith('zh'):
+                claim_info = f"👥{claim_count}人已领取" if claim_count > 0 else "🌟新任务"
+            else:
+                claim_info = f"👥{claim_count} claimed" if claim_count > 0 else "🌟New"
             button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C"
+            # 添加任务按钮
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
+            # 添加领取人数显示（作为第二行）
+            keyboard.append([InlineKeyboardButton(f"    {claim_info}", callback_data="noop")])
         
         # 添加分页按钮
         pagination_row = []
