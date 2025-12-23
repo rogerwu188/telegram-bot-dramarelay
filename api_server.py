@@ -1584,6 +1584,28 @@ def reject_withdrawal_route(withdrawal_id):
     return reject_withdrawal(withdrawal_id)
 
 # ============================================================
+# 用户增长和任务统计 API
+# ============================================================
+
+@app.route('/api/stats/user-growth', methods=['GET'])
+def user_growth_stats():
+    """获取用户增长统计数据"""
+    from admin_api import get_user_growth_stats
+    return get_user_growth_stats()
+
+@app.route('/api/stats/task-stats', methods=['GET'])
+def task_stats():
+    """获取任务数据统计"""
+    from admin_api import get_task_stats
+    return get_task_stats()
+
+@app.route('/api/stats/overview', methods=['GET'])
+def stats_overview():
+    """获取综合统计概览"""
+    from admin_api import get_stats_overview
+    return get_stats_overview()
+
+# ============================================================
 # 启动服务器
 # ============================================================
 if __name__ == '__main__':

@@ -491,6 +491,64 @@
             </div>
         </div>
         
+        <!-- 用户增长统计卡片 -->
+        <div style="margin-bottom: 30px;">
+            <h2 style="font-size: 1.3em; color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                📈 用户增长统计
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card" style="border-left: 4px solid #0088cc;">
+                    <div class="number" id="stat-tg-total" style="color: #0088cc;">-</div>
+                    <div class="label">🤖 TG Bot 用户总数</div>
+                    <small style="color: #999; font-size: 0.8em;">今日: <span id="stat-tg-today">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #28a745;">
+                    <div class="number" id="stat-web-total" style="color: #28a745;">-</div>
+                    <div class="label">🌐 Web 用户总数</div>
+                    <small style="color: #999; font-size: 0.8em;">今日: <span id="stat-web-today">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #667eea;">
+                    <div class="number" id="stat-all-users" style="color: #667eea;">-</div>
+                    <div class="label">👥 全平台用户总数</div>
+                    <small style="color: #999; font-size: 0.8em;">今日: <span id="stat-all-today">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #ffc107;">
+                    <div class="number" id="stat-7d-users" style="color: #ffc107;">-</div>
+                    <div class="label">📅 近 7 天新增</div>
+                    <small style="color: #999; font-size: 0.8em;">TG: <span id="stat-tg-7d">-</span> | Web: <span id="stat-web-7d">-</span></small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 任务数据统计卡片 -->
+        <div style="margin-bottom: 30px;">
+            <h2 style="font-size: 1.3em; color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                📊 任务数据统计
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card" style="border-left: 4px solid #17a2b8;">
+                    <div class="number" id="stat-task-claimed" style="color: #17a2b8;">-</div>
+                    <div class="label">📋 任务领取总数</div>
+                    <small style="color: #999; font-size: 0.8em;">今日: <span id="stat-task-claimed-today">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #28a745;">
+                    <div class="number" id="stat-task-completed" style="color: #28a745;">-</div>
+                    <div class="label">✅ 任务完成总数</div>
+                    <small style="color: #999; font-size: 0.8em;">今日: <span id="stat-task-completed-today">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #fd7e14;">
+                    <div class="number" id="stat-completion-rate" style="color: #fd7e14;">-</div>
+                    <div class="label">🎯 任务完成率</div>
+                    <small style="color: #999; font-size: 0.8em;">待处理: <span id="stat-task-pending">-</span></small>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #e83e8c;">
+                    <div class="number" id="stat-rewards-total" style="color: #e83e8c;">-</div>
+                    <div class="label">💰 奖励发放总量 (X2C)</div>
+                    <small style="color: #999; font-size: 0.8em;">≈ $<span id="stat-rewards-usd">-</span></small>
+                </div>
+            </div>
+        </div>
+        
         <!-- API Key 配置 -->
         <div class="controls" style="margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
             <div style="flex: 1;">
@@ -916,6 +974,63 @@
                 }
             } catch (error) {
                 console.error('加载统计数据失败:', error);
+            }
+            
+            // 加载用户增长和任务统计
+            loadUserGrowthStats();
+            loadTaskStats();
+        }
+        
+        // 加载用户增长统计数据
+        async function loadUserGrowthStats() {
+            try {
+                const response = await fetch('/api/stats/overview');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // 用户统计
+                    document.getElementById('stat-tg-total').textContent = data.users.tg_bot || 0;
+                    document.getElementById('stat-web-total').textContent = data.users.web || 0;
+                    document.getElementById('stat-all-users').textContent = data.users.total || 0;
+                    document.getElementById('stat-tg-today').textContent = data.users.tg_today || 0;
+                    document.getElementById('stat-web-today').textContent = data.users.web_today || 0;
+                    document.getElementById('stat-all-today').textContent = data.users.today_total || 0;
+                    
+                    // 任务统计
+                    document.getElementById('stat-task-claimed').textContent = data.tasks.total_claimed || 0;
+                    document.getElementById('stat-task-completed').textContent = data.tasks.total_completed || 0;
+                    document.getElementById('stat-completion-rate').textContent = (data.tasks.completion_rate || 0) + '%';
+                    document.getElementById('stat-task-pending').textContent = (data.tasks.total_claimed - data.tasks.total_completed) || 0;
+                    document.getElementById('stat-task-claimed-today').textContent = data.tasks.claimed_today || 0;
+                    document.getElementById('stat-task-completed-today').textContent = data.tasks.completed_today || 0;
+                    
+                    // 奖励统计
+                    document.getElementById('stat-rewards-total').textContent = (data.rewards.total_distributed || 0).toLocaleString();
+                    document.getElementById('stat-rewards-usd').textContent = (data.rewards.total_usd || 0).toFixed(2);
+                }
+            } catch (error) {
+                console.error('加载用户增长统计失败:', error);
+            }
+        }
+        
+        // 加载任务统计数据（近 7 天明细）
+        async function loadTaskStats() {
+            try {
+                const response = await fetch('/api/stats/user-growth?days=7');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // 近 7 天新增用户
+                    document.getElementById('stat-7d-users').textContent = data.combined.last_7_days || 0;
+                    document.getElementById('stat-tg-7d').textContent = data.tg_bot.last_7_days || 0;
+                    document.getElementById('stat-web-7d').textContent = data.web.last_7_days || 0;
+                }
+            } catch (error) {
+                console.error('加载任务统计失败:', error);
             }
         }
         

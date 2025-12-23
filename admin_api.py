@@ -1696,6 +1696,363 @@ def reject_withdrawal(withdrawal_id):
             'traceback': traceback.format_exc()
         }), 500
 
+# ==================== 用户增长和任务统计 API ====================
+
+@app.route('/api/stats/user-growth', methods=['GET'])
+def get_user_growth_stats():
+    """
+    获取用户增长统计数据
+    区分 TG Bot 用户和 Web 用户
+    支持按天/周/月统计
+    """
+    try:
+        days = int(request.args.get('days', 30))  # 默认查询最近 30 天
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. TG Bot 用户每日增长
+        cur.execute("""
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as new_users
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        """, (days,))
+        tg_daily = cur.fetchall()
+        
+        # 2. Web 用户每日增长
+        cur.execute("""
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as new_users
+            FROM web_users
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        """, (days,))
+        web_daily = cur.fetchall()
+        
+        # 3. 用户总数统计
+        cur.execute("SELECT COUNT(*) as total FROM users")
+        tg_total = cur.fetchone()['total']
+        
+        cur.execute("SELECT COUNT(*) as total FROM web_users")
+        web_total = cur.fetchone()['total']
+        
+        # 4. 最近 7 天新增用户
+        cur.execute("""
+            SELECT COUNT(*) as count FROM users 
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+        """)
+        tg_7d = cur.fetchone()['count']
+        
+        cur.execute("""
+            SELECT COUNT(*) as count FROM web_users 
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+        """)
+        web_7d = cur.fetchone()['count']
+        
+        # 5. 最近 30 天新增用户
+        cur.execute("""
+            SELECT COUNT(*) as count FROM users 
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+        """)
+        tg_30d = cur.fetchone()['count']
+        
+        cur.execute("""
+            SELECT COUNT(*) as count FROM web_users 
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+        """)
+        web_30d = cur.fetchone()['count']
+        
+        cur.close()
+        conn.close()
+        
+        # 转换日期格式
+        for item in tg_daily:
+            item['date'] = item['date'].isoformat() if item['date'] else None
+        for item in web_daily:
+            item['date'] = item['date'].isoformat() if item['date'] else None
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'tg_bot': {
+                    'total': tg_total,
+                    'last_7_days': tg_7d,
+                    'last_30_days': tg_30d,
+                    'daily': list(tg_daily)
+                },
+                'web': {
+                    'total': web_total,
+                    'last_7_days': web_7d,
+                    'last_30_days': web_30d,
+                    'daily': list(web_daily)
+                },
+                'combined': {
+                    'total': tg_total + web_total,
+                    'last_7_days': tg_7d + web_7d,
+                    'last_30_days': tg_30d + web_30d
+                }
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to get user growth stats: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/stats/task-stats', methods=['GET'])
+def get_task_stats():
+    """
+    获取任务数据统计
+    包括任务领取、完成、奖励发放等
+    """
+    try:
+        days = int(request.args.get('days', 30))
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. 任务每日领取统计
+        cur.execute("""
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as claimed_count
+            FROM user_tasks
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        """, (days,))
+        daily_claimed = cur.fetchall()
+        
+        # 2. 任务每日完成统计
+        cur.execute("""
+            SELECT 
+                DATE(submitted_at) as date,
+                COUNT(*) as completed_count
+            FROM user_tasks
+            WHERE submitted_at IS NOT NULL
+            AND submitted_at >= NOW() - INTERVAL '%s days'
+            GROUP BY DATE(submitted_at)
+            ORDER BY date ASC
+        """, (days,))
+        daily_completed = cur.fetchall()
+        
+        # 3. 任务总体统计
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total_claimed,
+                COUNT(CASE WHEN status IN ('submitted', 'approved', 'completed') THEN 1 END) as total_completed,
+                COUNT(CASE WHEN status = 'rejected' THEN 1 END) as total_rejected,
+                COUNT(CASE WHEN status IN ('claimed', 'pending') THEN 1 END) as total_pending,
+                COALESCE(SUM(node_power_earned), 0) as total_rewards
+            FROM user_tasks
+        """)
+        task_totals = cur.fetchone()
+        
+        # 4. 最近 7 天任务统计
+        cur.execute("""
+            SELECT 
+                COUNT(*) as claimed,
+                COUNT(CASE WHEN status IN ('submitted', 'approved', 'completed') THEN 1 END) as completed,
+                COALESCE(SUM(node_power_earned), 0) as rewards
+            FROM user_tasks
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+        """)
+        task_7d = cur.fetchone()
+        
+        # 5. 最近 30 天任务统计
+        cur.execute("""
+            SELECT 
+                COUNT(*) as claimed,
+                COUNT(CASE WHEN status IN ('submitted', 'approved', 'completed') THEN 1 END) as completed,
+                COALESCE(SUM(node_power_earned), 0) as rewards
+            FROM user_tasks
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+        """)
+        task_30d = cur.fetchone()
+        
+        # 6. 按状态分布
+        cur.execute("""
+            SELECT 
+                status,
+                COUNT(*) as count
+            FROM user_tasks
+            GROUP BY status
+            ORDER BY count DESC
+        """)
+        status_distribution = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 转换日期格式
+        for item in daily_claimed:
+            item['date'] = item['date'].isoformat() if item['date'] else None
+        for item in daily_completed:
+            item['date'] = item['date'].isoformat() if item['date'] else None
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'totals': {
+                    'claimed': task_totals['total_claimed'],
+                    'completed': task_totals['total_completed'],
+                    'rejected': task_totals['total_rejected'],
+                    'pending': task_totals['total_pending'],
+                    'rewards_distributed': int(task_totals['total_rewards'])
+                },
+                'last_7_days': {
+                    'claimed': task_7d['claimed'],
+                    'completed': task_7d['completed'],
+                    'rewards': int(task_7d['rewards'])
+                },
+                'last_30_days': {
+                    'claimed': task_30d['claimed'],
+                    'completed': task_30d['completed'],
+                    'rewards': int(task_30d['rewards'])
+                },
+                'daily_claimed': list(daily_claimed),
+                'daily_completed': list(daily_completed),
+                'status_distribution': list(status_distribution)
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to get task stats: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/stats/overview', methods=['GET'])
+def get_stats_overview():
+    """
+    获取综合统计概览
+    包括用户、任务、奖励等核心指标
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. 用户统计
+        cur.execute("SELECT COUNT(*) as total FROM users")
+        tg_users = cur.fetchone()['total']
+        
+        cur.execute("SELECT COUNT(*) as total FROM web_users")
+        web_users = cur.fetchone()['total']
+        
+        # 2. 任务统计
+        cur.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE status = 'active'")
+        active_tasks = cur.fetchone()['total']
+        
+        cur.execute("SELECT COUNT(*) as total FROM user_tasks")
+        total_claimed = cur.fetchone()['total']
+        
+        cur.execute("""
+            SELECT COUNT(*) as total FROM user_tasks 
+            WHERE status IN ('submitted', 'approved', 'completed')
+        """)
+        total_completed = cur.fetchone()['total']
+        
+        # 3. 奖励统计
+        cur.execute("SELECT COALESCE(SUM(node_power_earned), 0) as total FROM user_tasks")
+        total_rewards = int(cur.fetchone()['total'])
+        
+        # 4. 今日统计
+        cur.execute("""
+            SELECT COUNT(*) as count FROM users 
+            WHERE DATE(created_at) = CURRENT_DATE
+        """)
+        tg_today = cur.fetchone()['count']
+        
+        cur.execute("""
+            SELECT COUNT(*) as count FROM web_users 
+            WHERE DATE(created_at) = CURRENT_DATE
+        """)
+        web_today = cur.fetchone()['count']
+        
+        cur.execute("""
+            SELECT COUNT(*) as count FROM user_tasks 
+            WHERE DATE(created_at) = CURRENT_DATE
+        """)
+        tasks_today = cur.fetchone()['count']
+        
+        cur.execute("""
+            SELECT COUNT(*) as count FROM user_tasks 
+            WHERE DATE(submitted_at) = CURRENT_DATE
+            AND status IN ('submitted', 'approved', 'completed')
+        """)
+        completed_today = cur.fetchone()['count']
+        
+        # 5. 提现统计
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN amount END), 0) as total_amount
+            FROM withdrawals
+        """)
+        withdrawal_stats = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'users': {
+                    'tg_bot': tg_users,
+                    'web': web_users,
+                    'total': tg_users + web_users,
+                    'tg_today': tg_today,
+                    'web_today': web_today,
+                    'today_total': tg_today + web_today
+                },
+                'tasks': {
+                    'active': active_tasks,
+                    'total_claimed': total_claimed,
+                    'total_completed': total_completed,
+                    'completion_rate': round(total_completed / total_claimed * 100, 1) if total_claimed > 0 else 0,
+                    'claimed_today': tasks_today,
+                    'completed_today': completed_today
+                },
+                'rewards': {
+                    'total_distributed': total_rewards,
+                    'total_usd': round(total_rewards * 0.02, 2)  # X2C 价格 $0.02
+                },
+                'withdrawals': {
+                    'total': withdrawal_stats['total'],
+                    'completed': withdrawal_stats['completed'],
+                    'pending': withdrawal_stats['pending'],
+                    'total_amount': int(withdrawal_stats['total_amount'])
+                }
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to get stats overview: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
