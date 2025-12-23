@@ -318,14 +318,18 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
                 )
                 
                 # 发送成功通知并附带主菜单
-                from bot import get_main_menu_keyboard
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=success_msg,
-                    parse_mode='HTML',
-                    disable_web_page_preview=True,
-                    reply_markup=get_main_menu_keyboard(user_lang)
-                )
+                # 只对 Bot 端用户发送 Telegram 通知（Web 端用户 ID >= 9000000000）
+                if user_id < 9000000000:
+                    from bot import get_main_menu_keyboard
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=success_msg,
+                        parse_mode='HTML',
+                        disable_web_page_preview=True,
+                        reply_markup=get_main_menu_keyboard(user_lang)
+                    )
+                else:
+                    logger.info(f"⏭️ 跳过 Telegram 通知（Web 端用户验证成功）: user_id={user_id}, task_id={task_id}")
                 
                 # 发送 Webhook 回调
                 try:
@@ -372,14 +376,18 @@ async def process_single_verification(record: dict, bot, link_verifier) -> bool:
             )
             
             # 发送失败通知并附带主菜单
-            from bot import get_main_menu_keyboard
-            await bot.send_message(
-                chat_id=user_id,
-                text=fail_msg,
-                parse_mode='HTML',
-                disable_web_page_preview=True,
-                reply_markup=get_main_menu_keyboard(user_lang)
-            )
+            # 只对 Bot 端用户发送 Telegram 通知（Web 端用户 ID >= 9000000000）
+            if user_id < 9000000000:
+                from bot import get_main_menu_keyboard
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=fail_msg,
+                    parse_mode='HTML',
+                    disable_web_page_preview=True,
+                    reply_markup=get_main_menu_keyboard(user_lang)
+                )
+            else:
+                logger.info(f"⏭️ 跳过 Telegram 通知（Web 端用户验证失败）: user_id={user_id}, task_id={task_id}, error={error_reason}")
             
             return False
             
