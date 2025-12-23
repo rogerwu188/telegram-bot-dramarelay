@@ -497,9 +497,9 @@ def delete_task(task_id):
 # 统计数据 API
 # ============================================================
 
-@app.route('/api/stats/overview', methods=['GET'])
+@app.route('/api/stats/overview-external', methods=['GET'])
 @require_api_key
-def get_stats_overview():
+def get_stats_overview_external():
     """获取总体统计数据"""
     try:
         conn = get_db_connection()
