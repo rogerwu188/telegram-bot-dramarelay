@@ -1466,6 +1466,12 @@
             
             // 每 10 秒自动刷新队列状态
             setInterval(loadQueueStatus, 10000);
+            
+            // 每分钟自动刷新页面数据
+            setInterval(() => {
+                refreshData();
+                console.log('✅ 自动刷新页面数据 (1分钟间隔)');
+            }, 60000);
         });
         
         // 显示回调数据弹窗
