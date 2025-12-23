@@ -715,6 +715,17 @@
             </div>
         </div>
         
+        <!-- 播放量抓取倒计时显示 -->
+        <div id="view-counter-countdown-area" style="margin: 15px 0; display: none;">
+            <div style="background: #f3e7ff; padding: 15px 20px; border-radius: 8px; border: 1px solid #d9b3ff;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">👁</span>
+                    <span style="font-weight: 500; color: #6f42c1;">下次自动抓取播放量倒计时：</span>
+                    <span id="view-counter-countdown-timer" style="font-weight: bold; font-size: 18px; color: #6f42c1;">10:00</span>
+                </div>
+            </div>
+        </div>
+        
         <!-- 任务日志 Tab 页 -->
         <div class="section">
             <div class="section-header">
@@ -1722,8 +1733,10 @@
                 
                 if (countdownSeconds <= 0) {
                     countdownSeconds = 180; // 重置为3分钟
-                    // 回传完成后，获取最新的回传统计
+                    // 回传完成后，获取最新的回传统计并刷新页面数据
                     await updateBroadcastStats();
+                    refreshData(); // 自动刷新页面数据
+                    console.log('✅ 回传完成，自动刷新页面数据');
                 }
                 
                 const minutes = Math.floor(countdownSeconds / 60);
@@ -1923,6 +1936,11 @@
                 if (result.success) {
                     viewCounterRunning = result.running;
                     updateViewCounterButton();
+                    
+                    // 如果服务正在运行，启动倒计时
+                    if (viewCounterRunning) {
+                        startViewCounterCountdown();
+                    }
                 }
             } catch (error) {
                 console.error('检查播放量抓取服务状态失败:', error);
@@ -1941,6 +1959,52 @@
             }
         }
         
+        // 播放量抓取倒计时相关变量
+        let viewCounterCountdownInterval = null;
+        let viewCounterCountdownSeconds = 600; // 10分钟 = 600秒
+        
+        // 启动播放量抓取倒计时
+        function startViewCounterCountdown() {
+            const countdownArea = document.getElementById('view-counter-countdown-area');
+            const countdownTimer = document.getElementById('view-counter-countdown-timer');
+            
+            if (countdownArea) countdownArea.style.display = 'block';
+            viewCounterCountdownSeconds = 600;
+            
+            if (viewCounterCountdownInterval) {
+                clearInterval(viewCounterCountdownInterval);
+            }
+            
+            viewCounterCountdownInterval = setInterval(async () => {
+                viewCounterCountdownSeconds--;
+                
+                if (viewCounterCountdownSeconds <= 0) {
+                    viewCounterCountdownSeconds = 600; // 重置为10分钟
+                    // 抓取完成后，自动刷新页面数据
+                    refreshData();
+                    console.log('✅ 播放量抓取完成，自动刷新页面数据');
+                }
+                
+                const minutes = Math.floor(viewCounterCountdownSeconds / 60);
+                const seconds = viewCounterCountdownSeconds % 60;
+                if (countdownTimer) {
+                    countdownTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+        
+        // 停止播放量抓取倒计时
+        function stopViewCounterCountdown() {
+            const countdownArea = document.getElementById('view-counter-countdown-area');
+            
+            if (viewCounterCountdownInterval) {
+                clearInterval(viewCounterCountdownInterval);
+                viewCounterCountdownInterval = null;
+            }
+            
+            if (countdownArea) countdownArea.style.display = 'none';
+        }
+        
         // 切换播放量抓取服务
         async function toggleViewCounter() {
             const btn = document.getElementById('view-counter-btn');
@@ -1954,6 +2018,14 @@
                 if (result.success) {
                     viewCounterRunning = !viewCounterRunning;
                     updateViewCounterButton();
+                    
+                    // 启动/停止播放量抓取倒计时
+                    if (viewCounterRunning) {
+                        startViewCounterCountdown();
+                    } else {
+                        stopViewCounterCountdown();
+                    }
+                    
                     alert('✅ ' + result.message);
                 } else {
                     const errorMsg = result.message || result.error || '未知错误';
