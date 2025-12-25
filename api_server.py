@@ -1606,6 +1606,28 @@ def stats_overview():
     return get_stats_overview()
 
 # ============================================================
+# 奖励设置 API
+# ============================================================
+
+@app.route('/api/settings/reward', methods=['GET'])
+def get_reward_settings_route():
+    """获取任务完成奖励设置"""
+    from admin_api import get_reward_settings
+    return get_reward_settings()
+
+@app.route('/api/settings/reward', methods=['POST'])
+def update_reward_settings_route():
+    """更新任务完成奖励设置"""
+    from admin_api import update_reward_settings
+    return update_reward_settings()
+
+@app.route('/api/settings/all', methods=['GET'])
+def get_all_settings_route():
+    """获取所有系统设置"""
+    from admin_api import get_all_settings
+    return get_all_settings()
+
+# ============================================================
 # 启动服务器
 # ============================================================
 if __name__ == '__main__':
