@@ -22,7 +22,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
         category: 分类代码（默认 latest）
         page: 页码（默认 1）
     """
-    from bot import get_db_connection, get_user_language, get_task_title, get_message
+    from bot import get_db_connection, get_user_language, get_task_title, get_message, get_display_reward
     
     query = update.callback_query
     user_id = query.from_user.id
@@ -166,7 +166,9 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
                     claim_info = f" | 👥{claim_count}"
             else:
                 claim_info = ""
-            button_text = f"🎬 {title} ({task['duration']}s) - {task['node_power_reward']} X2C{claim_info}"
+            # 使用全局配置的奖励金额
+            display_reward = get_display_reward(user_id)
+            button_text = f"🎬 {title} ({task['duration']}s) - {display_reward} X2C{claim_info}"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"claim_{task['task_id']}")])
         
         # 添加分页按钮
