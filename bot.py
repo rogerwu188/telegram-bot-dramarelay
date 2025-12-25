@@ -220,6 +220,19 @@ def get_task_reward(task_id: int = None, is_newcomer: bool = False) -> int:
     
     return base_reward
 
+def get_display_reward(user_id: int = None) -> int:
+    """获取用于显示的奖励金额（根据用户是否为新手）"""
+    config = get_reward_config()
+    base_reward = config['task_reward_x2c']
+    
+    # 如果提供了 user_id，检查是否是新手
+    if user_id:
+        is_newcomer = is_user_newcomer(user_id)
+        if is_newcomer and config['newcomer_bonus_enabled']:
+            return base_reward * config['newcomer_bonus_multiplier']
+    
+    return base_reward
+
 def is_user_newcomer(user_id: int) -> bool:
     """检查用户是否是新手（从未完成过任务）"""
     try:
@@ -1745,11 +1758,14 @@ async def task_detail_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     title = get_task_title(task, user_lang)
     description = get_task_description(task, user_lang)
     
+    # 使用全局配置的奖励金额
+    display_reward = get_display_reward(user_id)
+    
     message = get_message(user_lang, 'task_details',
         title=title,
         description=description or 'N/A',
         duration=task['duration'],
-        reward=task['node_power_reward'],
+        reward=display_reward,
         platforms=task['platform_requirements']
     )
     
@@ -1858,7 +1874,8 @@ async def claim_task_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             title = task.get('title', '')
             description = task.get('description', '')
             keywords_raw = task.get('keywords_template', '')
-            reward = task.get('node_power_reward', 0)
+            # 使用全局配置的奖励金额
+            reward = get_display_reward(user_id)
             
             # 清理 keywords_template
             keywords_lines = keywords_raw.split('\n')
@@ -1972,7 +1989,8 @@ to receive 🎉 {reward} X2C"""
             title = task.get('title', '')
             description = task.get('description', '')
             keywords_raw = task.get('keywords_template', '') or ''
-            reward = task.get('node_power_reward', 0)
+            # 使用全局配置的奖励金额
+            reward = get_display_reward(user_id)
             
             # 清理 keywords_template
             if keywords_raw:
@@ -2131,6 +2149,9 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     failed_tasks = get_user_failed_tasks(conn, user_id)  # {task_id: error_message}
     conn.close()
     
+    # 获取全局配置的奖励金额
+    display_reward = get_display_reward(user_id)
+    
     # 显示进行中的任务列表
     keyboard = []
     for task in tasks:
@@ -2145,8 +2166,9 @@ async def submit_link_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             button_text = f"❌ {task['title']} (请重新提交)" if user_lang.startswith('zh') else f"❌ {task['title']} (Please resubmit)"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task_id}")])
         else:
-            # 可以提交
-            button_text = f"📤 {task['title']} ({task['node_power_reward']} X2C)"
+            # 可以提交 - 使用全局配置的奖励金额
+            display_reward = get_display_reward(user_id)
+            button_text = f"📤 {task['title']} ({display_reward} X2C)"
             keyboard.append([InlineKeyboardButton(button_text, callback_data=f"submit_task_{task_id}")])
     
     # 如果有失败的任务，在消息中添加提示
@@ -2210,7 +2232,8 @@ async def submit_task_select_callback(update: Update, context: ContextTypes.DEFA
     description = task.get('description') or task.get('task_template', '') or ''
     # 兼容不同的字段名：keywords 或 keywords_template
     keywords_raw = task.get('keywords') or task.get('keywords_template', '') or ''
-    reward = task.get('node_power_reward', 0)
+    # 使用全局配置的奖励金额
+    reward = get_display_reward(user_id)
     # 获取视频链接
     video_url = task.get('video_url', '')
     
@@ -2509,18 +2532,21 @@ async def link_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
         return ConversationHandler.END
     
+    # 使用全局配置的奖励金额
+    display_reward = get_display_reward(user_id)
+    
     # 立即返回"已接收"消息
     received_msg = (
         f"✅ <b>链接已接收！</b>\n\n"
         f"🎬 任务：{task['title']}\n"
-        f"💰 奖励：{task['node_power_reward']} X2C\n\n"
+        f"💰 奖励：{display_reward} X2C\n\n"
         f"🔍 系统正在后台核验中，请稍候...\n"
         f"核验完成后会自动通知您结果。\n\n"
         f"💡 您现在可以继续领取其他任务！"
     ) if user_lang.startswith('zh') else (
         f"✅ <b>Link Received!</b>\n\n"
         f"🎬 Task: {task['title']}\n"
-        f"💰 Reward: {task['node_power_reward']} X2C\n\n"
+        f"💰 Reward: {display_reward} X2C\n\n"
         f"🔍 System is verifying in background...\n"
         f"You will be notified when verification is complete.\n\n"
         f"💡 You can continue to claim other tasks!"
