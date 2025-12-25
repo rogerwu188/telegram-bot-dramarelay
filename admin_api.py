@@ -1615,6 +1615,31 @@ def approve_withdrawal(withdrawal_id):
         conn.close()
         
         logger.info(f"✅ Withdrawal approved and processed: withdrawal_id={withdrawal_id}, tx_hash={mock_tx_hash}")
+        
+        # 通知 X2C Web 更新提现状态
+        try:
+            import requests as http_requests
+            x2c_web_url = os.environ.get('X2C_WEB_WEBHOOK_URL', 'https://x2c-web.manus.space/api/webhook/withdrawal-status')
+            x2c_web_api_key = os.environ.get('X2C_WEB_API_KEY', '')
+            if x2c_web_api_key:
+                http_requests.post(
+                    x2c_web_url,
+                    json={
+                        'withdrawalId': withdrawal_id,
+                        'status': 'completed',
+                        'txHash': mock_tx_hash,
+                        'processedAt': datetime.now().isoformat()
+                    },
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {x2c_web_api_key}'
+                    },
+                    timeout=5
+                )
+                logger.info(f"✅ Notified X2C Web about withdrawal status update: withdrawal_id={withdrawal_id}")
+        except Exception as webhook_error:
+            logger.warning(f"⚠️ Failed to notify X2C Web: {webhook_error}")
+        
         return jsonify({
             'success': True,
             'message': '提现已审批并转账成功',
@@ -1681,6 +1706,30 @@ def reject_withdrawal(withdrawal_id):
         conn.close()
         
         logger.info(f"❌ Withdrawal rejected: withdrawal_id={withdrawal_id}, reason={reason}")
+        
+        # 通知 X2C Web 更新提现状态
+        try:
+            import requests as http_requests
+            x2c_web_url = os.environ.get('X2C_WEB_WEBHOOK_URL', 'https://x2c-web.manus.space/api/webhook/withdrawal-status')
+            x2c_web_api_key = os.environ.get('X2C_WEB_API_KEY', '')
+            if x2c_web_api_key:
+                http_requests.post(
+                    x2c_web_url,
+                    json={
+                        'withdrawalId': withdrawal_id,
+                        'status': 'rejected',
+                        'errorMessage': reason,
+                        'processedAt': datetime.now().isoformat()
+                    },
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {x2c_web_api_key}'
+                    },
+                    timeout=5
+                )
+                logger.info(f"✅ Notified X2C Web about withdrawal rejection: withdrawal_id={withdrawal_id}")
+        except Exception as webhook_error:
+            logger.warning(f"⚠️ Failed to notify X2C Web: {webhook_error}")
         
         return jsonify({
             'success': True,
