@@ -592,6 +592,63 @@
                     </small>
                 </div>
                 
+                <!-- 任务完成奖励设置 -->
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ffc107;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404;">
+                        🎁 任务完成奖励设置
+                    </label>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+                        <!-- 基础奖励 -->
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #666;">
+                                基础奖励 (X2C/任务)
+                            </label>
+                            <input type="number" id="task-reward-x2c" 
+                                   style="width: 100%; padding: 10px; border: 2px solid #ffc107; border-radius: 5px; font-size: 16px; font-weight: bold;"
+                                   min="1" max="1000" value="10">
+                        </div>
+                        <!-- 新手奖励倍数 -->
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #666;">
+                                新手首单奖励倍数
+                            </label>
+                            <input type="number" id="newcomer-bonus-multiplier" 
+                                   style="width: 100%; padding: 10px; border: 2px solid #ffc107; border-radius: 5px; font-size: 16px; font-weight: bold;"
+                                   min="1" max="100" value="50">
+                        </div>
+                        <!-- 新手奖励开关 -->
+                        <div style="flex: 0 0 auto;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #666;">
+                                新手奖励
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #fff; border: 2px solid #ffc107; border-radius: 5px;">
+                                <input type="checkbox" id="newcomer-bonus-enabled" checked
+                                       style="width: 18px; height: 18px; cursor: pointer;">
+                                <span id="newcomer-bonus-status" style="font-weight: 500;">已开启</span>
+                            </label>
+                        </div>
+                        <!-- 保存按钮 -->
+                        <div style="flex: 0 0 auto;">
+                            <button onclick="saveRewardSettings()" 
+                                    style="padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                                💾 保存设置
+                            </button>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 20px; flex-wrap: wrap;">
+                        <small style="color: #856404;">
+                            💡 基础奖励: 每个任务完成后用户获得的 X2C 数量
+                        </small>
+                        <small style="color: #856404;">
+                            🌟 新手首单: 新用户首次完成任务可获得 基础奖励 × 倍数 的 X2C
+                        </small>
+                    </div>
+                    <div id="reward-settings-preview" style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 5px; display: none;">
+                        <span style="color: #2e7d32; font-weight: 500;">预览: </span>
+                        <span id="reward-preview-text" style="color: #2e7d32;"></span>
+                    </div>
+                </div>
+                
                 <!-- TikTok 验证队列状态 -->
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ffc107;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404;">
@@ -2238,6 +2295,116 @@
                 alert('❌ 操作失败: ' + error.message);
             }
         }
+        
+        // ==================== 奖励设置相关函数 ====================
+        
+        // 加载奖励设置
+        async function loadRewardSettings() {
+            try {
+                const response = await fetch('/api/settings/reward');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // 填充表单
+                    document.getElementById('task-reward-x2c').value = data.task_reward_x2c || 10;
+                    document.getElementById('newcomer-bonus-multiplier').value = data.newcomer_bonus_multiplier || 50;
+                    document.getElementById('newcomer-bonus-enabled').checked = data.newcomer_bonus_enabled !== false;
+                    
+                    // 更新状态文本
+                    updateNewcomerBonusStatus();
+                    updateRewardPreview();
+                }
+            } catch (error) {
+                console.error('加载奖励设置失败:', error);
+            }
+        }
+        
+        // 保存奖励设置
+        async function saveRewardSettings() {
+            const taskReward = parseInt(document.getElementById('task-reward-x2c').value);
+            const multiplier = parseInt(document.getElementById('newcomer-bonus-multiplier').value);
+            const enabled = document.getElementById('newcomer-bonus-enabled').checked;
+            
+            // 验证
+            if (taskReward < 1 || taskReward > 1000) {
+                alert('❌ 基础奖励必须在 1-1000 X2C 之间');
+                return;
+            }
+            if (multiplier < 1 || multiplier > 100) {
+                alert('❌ 新手奖励倍数必须在 1-100 之间');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/settings/reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        task_reward_x2c: taskReward,
+                        newcomer_bonus_multiplier: multiplier,
+                        newcomer_bonus_enabled: enabled
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 奖励设置已保存\n\n' + 
+                          '基础奖励: ' + taskReward + ' X2C\n' +
+                          '新手倍数: ' + multiplier + '倍\n' +
+                          '新手奖励: ' + (enabled ? '已开启' : '已关闭'));
+                    updateRewardPreview();
+                } else {
+                    alert('❌ 保存失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('❌ 保存失败: ' + error.message);
+            }
+        }
+        
+        // 更新新手奖励状态文本
+        function updateNewcomerBonusStatus() {
+            const enabled = document.getElementById('newcomer-bonus-enabled').checked;
+            const statusEl = document.getElementById('newcomer-bonus-status');
+            statusEl.textContent = enabled ? '已开启' : '已关闭';
+            statusEl.style.color = enabled ? '#28a745' : '#dc3545';
+        }
+        
+        // 更新奖励预览
+        function updateRewardPreview() {
+            const taskReward = parseInt(document.getElementById('task-reward-x2c').value) || 10;
+            const multiplier = parseInt(document.getElementById('newcomer-bonus-multiplier').value) || 50;
+            const enabled = document.getElementById('newcomer-bonus-enabled').checked;
+            
+            const previewEl = document.getElementById('reward-settings-preview');
+            const textEl = document.getElementById('reward-preview-text');
+            
+            let previewText = `普通用户完成任务获得 ${taskReward} X2C`;
+            if (enabled) {
+                const newcomerReward = taskReward * multiplier;
+                previewText += `，新手首单获得 ${newcomerReward} X2C (${taskReward} × ${multiplier})`;
+            }
+            
+            textEl.textContent = previewText;
+            previewEl.style.display = 'block';
+        }
+        
+        // 监听输入变化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载奖励设置
+            loadRewardSettings();
+            
+            // 监听输入变化
+            document.getElementById('task-reward-x2c').addEventListener('input', updateRewardPreview);
+            document.getElementById('newcomer-bonus-multiplier').addEventListener('input', updateRewardPreview);
+            document.getElementById('newcomer-bonus-enabled').addEventListener('change', function() {
+                updateNewcomerBonusStatus();
+                updateRewardPreview();
+            });
+        });
+        
+        // ==================== 其他函数 ====================
         
         // 复制到剪贴板
         function copyToClipboard(text) {

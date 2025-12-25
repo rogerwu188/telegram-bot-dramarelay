@@ -132,6 +132,116 @@ def get_db_connection():
     """获取数据库连接"""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+# ============================================================
+# 奖励配置
+# ============================================================
+
+# 奖励配置缓存
+_reward_config_cache = None
+_reward_config_cache_time = None
+REWARD_CONFIG_CACHE_TTL = 60  # 缓存 60 秒
+
+def get_reward_config():
+    """获取奖励配置（带缓存）"""
+    global _reward_config_cache, _reward_config_cache_time
+    
+    # 检查缓存是否有效
+    if _reward_config_cache and _reward_config_cache_time:
+        if (datetime.now() - _reward_config_cache_time).total_seconds() < REWARD_CONFIG_CACHE_TTL:
+            return _reward_config_cache
+    
+    # 从数据库获取配置
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 确保 bot_settings 表存在
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS bot_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        # 获取奖励设置
+        cur.execute("""
+            SELECT key, value FROM bot_settings 
+            WHERE key IN ('task_reward_x2c', 'newcomer_bonus_multiplier', 'newcomer_bonus_enabled')
+        """)
+        settings = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 转换为字典
+        config = {
+            'task_reward_x2c': 10,  # 默认值
+            'newcomer_bonus_multiplier': 50,  # 默认50倍
+            'newcomer_bonus_enabled': True  # 默认开启
+        }
+        
+        for s in settings:
+            key = s['key']
+            value = s['value']
+            if key == 'newcomer_bonus_enabled':
+                config[key] = value.lower() == 'true'
+            elif key in ['task_reward_x2c', 'newcomer_bonus_multiplier']:
+                config[key] = int(value)
+            else:
+                config[key] = value
+        
+        # 更新缓存
+        _reward_config_cache = config
+        _reward_config_cache_time = datetime.now()
+        
+        logger.info(f"✅ Reward config loaded: {config}")
+        return config
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get reward config: {e}")
+        # 返回默认值
+        return {
+            'task_reward_x2c': 10,
+            'newcomer_bonus_multiplier': 50,
+            'newcomer_bonus_enabled': True
+        }
+
+def get_task_reward(task_id: int = None, is_newcomer: bool = False) -> int:
+    """获取任务奖励金额"""
+    config = get_reward_config()
+    base_reward = config['task_reward_x2c']
+    
+    # 如果是新手且新手奖励开启
+    if is_newcomer and config['newcomer_bonus_enabled']:
+        return base_reward * config['newcomer_bonus_multiplier']
+    
+    return base_reward
+
+def is_user_newcomer(user_id: int) -> bool:
+    """检查用户是否是新手（从未完成过任务）"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 检查用户是否有已完成的任务
+        cur.execute("""
+            SELECT COUNT(*) as count FROM user_tasks 
+            WHERE user_id = %s AND status IN ('submitted', 'approved', 'completed', 'verified')
+        """, (user_id,))
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        return result['count'] == 0
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to check newcomer status: {e}")
+        return False
+
 def auto_migrate():
     """自动运行数据库迁移"""
     try:
@@ -966,10 +1076,13 @@ def submit_task_link(user_id: int, task_id: int, platform: str, link: str) -> in
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 获取任务奖励
-    cur.execute("SELECT node_power_reward FROM drama_tasks WHERE task_id = %s", (task_id,))
-    task = cur.fetchone()
-    reward = task['node_power_reward'] if task else 10
+    # 检查用户是否是新手（首次完成任务）
+    is_newcomer = is_user_newcomer(user_id)
+    
+    # 从全局配置获取奖励金额
+    reward = get_task_reward(task_id, is_newcomer)
+    
+    logger.info(f"🎁 Task reward for user {user_id}: {reward} X2C (newcomer: {is_newcomer})")
     
     # 更新任务状态
     cur.execute("""

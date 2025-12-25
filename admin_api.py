@@ -2056,3 +2056,218 @@ def get_stats_overview():
 if __name__ == '__main__':
     port = int(os.getenv('ADMIN_PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=True)
+
+
+# ==================== 奖励设置 API ====================
+
+@app.route('/api/settings/reward', methods=['GET'])
+def get_reward_settings():
+    """
+    获取任务完成奖励设置
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 确保 bot_settings 表存在
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS bot_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        # 获取奖励设置
+        cur.execute("""
+            SELECT key, value, description, updated_at 
+            FROM bot_settings 
+            WHERE key IN ('task_reward_x2c', 'newcomer_bonus_multiplier', 'newcomer_bonus_enabled')
+        """)
+        settings = cur.fetchall()
+        
+        # 转换为字典
+        result = {
+            'task_reward_x2c': 10,  # 默认值
+            'newcomer_bonus_multiplier': 50,  # 默认50倍
+            'newcomer_bonus_enabled': True  # 默认开启
+        }
+        
+        for s in settings:
+            key = s['key']
+            value = s['value']
+            if key == 'newcomer_bonus_enabled':
+                result[key] = value.lower() == 'true'
+            elif key in ['task_reward_x2c', 'newcomer_bonus_multiplier']:
+                result[key] = int(value)
+            else:
+                result[key] = value
+            result[f'{key}_updated_at'] = s['updated_at'].isoformat() if s['updated_at'] else None
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get reward settings: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/settings/reward', methods=['POST'])
+def update_reward_settings():
+    """
+    更新任务完成奖励设置
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 确保 bot_settings 表存在
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS bot_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        updated_keys = []
+        
+        # 更新任务奖励 X2C 数量
+        if 'task_reward_x2c' in data:
+            reward = int(data['task_reward_x2c'])
+            if reward < 1 or reward > 1000:
+                return jsonify({
+                    'success': False,
+                    'error': '任务奖励必须在 1-1000 X2C 之间'
+                }), 400
+            
+            cur.execute("""
+                INSERT INTO bot_settings (key, value, description, updated_at)
+                VALUES ('task_reward_x2c', %s, '每个任务完成奖励的 X2C 数量', CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET value = %s, updated_at = CURRENT_TIMESTAMP
+            """, (str(reward), str(reward)))
+            updated_keys.append('task_reward_x2c')
+        
+        # 更新新手奖励倍数
+        if 'newcomer_bonus_multiplier' in data:
+            multiplier = int(data['newcomer_bonus_multiplier'])
+            if multiplier < 1 or multiplier > 100:
+                return jsonify({
+                    'success': False,
+                    'error': '新手奖励倍数必须在 1-100 之间'
+                }), 400
+            
+            cur.execute("""
+                INSERT INTO bot_settings (key, value, description, updated_at)
+                VALUES ('newcomer_bonus_multiplier', %s, '新手首单奖励倍数', CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET value = %s, updated_at = CURRENT_TIMESTAMP
+            """, (str(multiplier), str(multiplier)))
+            updated_keys.append('newcomer_bonus_multiplier')
+        
+        # 更新新手奖励开关
+        if 'newcomer_bonus_enabled' in data:
+            enabled = str(data['newcomer_bonus_enabled']).lower() == 'true'
+            
+            cur.execute("""
+                INSERT INTO bot_settings (key, value, description, updated_at)
+                VALUES ('newcomer_bonus_enabled', %s, '是否开启新手首单奖励', CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET value = %s, updated_at = CURRENT_TIMESTAMP
+            """, (str(enabled), str(enabled)))
+            updated_keys.append('newcomer_bonus_enabled')
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"✅ Reward settings updated: {updated_keys}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'成功更新设置: {", ".join(updated_keys)}',
+            'updated_keys': updated_keys
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'无效的数值: {str(e)}'
+        }), 400
+    except Exception as e:
+        logger.error(f"❌ Failed to update reward settings: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/settings/all', methods=['GET'])
+def get_all_settings():
+    """
+    获取所有系统设置
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 获取 bot_settings 表的所有设置
+        cur.execute("""
+            SELECT key, value, description, updated_at 
+            FROM bot_settings 
+            ORDER BY key
+        """)
+        bot_settings = cur.fetchall()
+        
+        # 获取 system_config 表的所有设置
+        cur.execute("""
+            SELECT config_key as key, config_value as value, updated_at 
+            FROM system_config 
+            ORDER BY config_key
+        """)
+        system_config = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 格式化日期
+        for s in bot_settings:
+            if s['updated_at']:
+                s['updated_at'] = s['updated_at'].isoformat()
+        
+        for s in system_config:
+            if s['updated_at']:
+                s['updated_at'] = s['updated_at'].isoformat()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'bot_settings': list(bot_settings),
+                'system_config': list(system_config)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to get all settings: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
