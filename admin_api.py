@@ -2325,3 +2325,82 @@ def get_all_settings():
             'error': str(e)
         }), 500
 
+
+
+# ==================== 任务最大完成次数编辑 API ====================
+
+@app.route('/api/tasks/<int:task_id>/max-completions', methods=['PUT'])
+def update_task_max_completions(task_id):
+    """
+    更新任务的最大可完成次数
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'max_completions' not in data:
+            return jsonify({
+                'success': False,
+                'error': '缺少 max_completions 参数'
+            }), 400
+        
+        max_completions = int(data['max_completions'])
+        
+        # 验证范围
+        if max_completions < 1 or max_completions > 100000:
+            return jsonify({
+                'success': False,
+                'error': '最大完成次数必须在 1-100000 之间'
+            }), 400
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 检查任务是否存在
+        cur.execute("SELECT task_id, title, max_completions FROM drama_tasks WHERE task_id = %s", (task_id,))
+        task = cur.fetchone()
+        
+        if not task:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'任务 {task_id} 不存在'
+            }), 404
+        
+        old_value = task['max_completions'] or 100
+        
+        # 更新 max_completions
+        cur.execute("""
+            UPDATE drama_tasks 
+            SET max_completions = %s 
+            WHERE task_id = %s
+        """, (max_completions, task_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"✅ Task {task_id} max_completions updated: {old_value} -> {max_completions}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'任务 {task_id} 的最大完成次数已更新',
+            'data': {
+                'task_id': task_id,
+                'title': task['title'],
+                'old_value': old_value,
+                'new_value': max_completions
+            }
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'无效的数值: {str(e)}'
+        }), 400
+    except Exception as e:
+        logger.error(f"❌ Failed to update task max_completions: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

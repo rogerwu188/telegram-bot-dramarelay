@@ -869,7 +869,7 @@
                                     <th>剧集类型</th>
                                     <th>平台</th>
                                     <th>奖励</th>
-                                    <th>分发数</th>
+                                    <th>分发进度 (可编辑)</th>
                                     <th>完成数</th>
                                     <th>创建时间</th>
                                     <th>操作</th>
@@ -1497,11 +1497,14 @@
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
                         <td>
-                            <div style="display: flex; flex-direction: column; gap: 3px;">
-                                <span style="color: ${progressColor}; font-weight: bold;">${item.assigned_users} / ${maxCompletions}</span>
-                                <div style="width: 60px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
-                                    <div style="width: ${progressPercent}%; height: 100%; background: ${progressColor};"></div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <span style="color: ${progressColor}; font-weight: bold;">${item.assigned_users} / <span id="max-${item.task_id}">${maxCompletions}</span></span>
+                                    <div style="width: 60px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${progressPercent}%; height: 100%; background: ${progressColor};"></div>
+                                    </div>
                                 </div>
+                                <button onclick="editMaxCompletions(${item.task_id}, ${maxCompletions})" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;" title="编辑最大完成次数">✏️</button>
                             </div>
                         </td>
                         <td>${item.completed_users}</td>
@@ -1516,6 +1519,48 @@
                 loading.style.display = 'none';
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
+            }
+        }
+        
+        // 编辑任务最大完成次数
+        async function editMaxCompletions(taskId, currentValue) {
+            const newValue = prompt(`请输入任务 ${taskId} 的新的最大完成次数\n\n当前值: ${currentValue}\n有效范围: 1 - 100000`, currentValue);
+            
+            if (newValue === null) {
+                return; // 用户取消
+            }
+            
+            const numValue = parseInt(newValue, 10);
+            if (isNaN(numValue) || numValue < 1 || numValue > 100000) {
+                alert('❗ 输入无效\n\n请输入 1 到 100000 之间的整数');
+                return;
+            }
+            
+            if (numValue === currentValue) {
+                alert('ℹ️ 值未改变');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/max-completions`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ max_completions: numValue })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 更新成功\n\n任务 ${taskId} 的最大完成次数已更新\n${result.data.old_value} → ${result.data.new_value}`);
+                    // 刷新任务列表
+                    loadTasks();
+                } else {
+                    alert('❌ 更新失败: ' + (result.error || '未知错误'));
+                }
+            } catch (err) {
+                alert('❌ 请求失败: ' + err.message);
             }
         }
         

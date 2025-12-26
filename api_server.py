@@ -909,6 +909,11 @@ def fix_all_approved():
     """批量修复 approved 状态的任务"""
     return admin_api.fix_all_approved_tasks()
 
+@app.route('/api/tasks/<int:task_id>/max-completions', methods=['PUT'])
+def update_task_max_completions(task_id):
+    """更新任务的最大完成次数"""
+    return admin_api.update_task_max_completions(task_id)
+
 # 分发数据回传相关路由
 @app.route('/api/broadcaster/start', methods=['POST'])
 def start_broadcaster():
