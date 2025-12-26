@@ -45,6 +45,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     # 查询该分类的活跃任务（直接在 SQL 中过滤已领取的任务，并过滤超过有效期的任务）
     # 任务超过有效期自动过期，不再允许领取
     # 同时统计每个任务被领取的人数
+    # 过滤已满员的任务（claim_count >= max_completions）
     if category == 'latest':
         # latest 分类显示所有类型的最新任务（包括 category 为 NULL 的任务）
         cur.execute("""
@@ -60,6 +61,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
             AND dt.task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
+            AND COALESCE(claim_counts.claim_count, 0) < COALESCE(dt.max_completions, 100)
             ORDER BY dt.created_at DESC
             LIMIT %s OFFSET %s
         """, (expiry_hours, user_id, page_size, offset))
@@ -79,6 +81,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
             AND dt.task_id NOT IN (
                 SELECT task_id FROM user_tasks WHERE user_id = %s
             )
+            AND COALESCE(claim_counts.claim_count, 0) < COALESCE(dt.max_completions, 100)
             ORDER BY dt.created_at DESC
             LIMIT %s OFFSET %s
         """, (category, expiry_hours, user_id, page_size, offset))
@@ -105,25 +108,39 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     
     for cat_code in categories.keys():
         if cat_code == 'latest':
-            # latest 分类显示所有类型的任务数（过滤超过有效期的任务）
+            # latest 分类显示所有类型的任务数（过滤超过有效期的任务和已满员的任务）
             cur.execute("""
-                SELECT COUNT(*) as count FROM drama_tasks
-                WHERE status = 'active' 
-                AND created_at > NOW() - INTERVAL '%s hours'
-                AND task_id NOT IN (
+                SELECT COUNT(*) as count 
+                FROM drama_tasks dt
+                LEFT JOIN (
+                    SELECT task_id, COUNT(DISTINCT user_id) as claim_count
+                    FROM user_tasks
+                    GROUP BY task_id
+                ) claim_counts ON dt.task_id = claim_counts.task_id
+                WHERE dt.status = 'active' 
+                AND dt.created_at > NOW() - INTERVAL '%s hours'
+                AND dt.task_id NOT IN (
                     SELECT task_id FROM user_tasks WHERE user_id = %s
                 )
+                AND COALESCE(claim_counts.claim_count, 0) < COALESCE(dt.max_completions, 100)
             """, (expiry_hours, user_id))
         else:
-            # 其他分类只统计该分类的任务（过滤超过有效期的任务）
+            # 其他分类只统计该分类的任务（过滤超过有效期的任务和已满员的任务）
             cur.execute("""
-                SELECT COUNT(*) as count FROM drama_tasks
-                WHERE status = 'active' 
-                AND category = %s 
-                AND created_at > NOW() - INTERVAL '%s hours'
-                AND task_id NOT IN (
+                SELECT COUNT(*) as count 
+                FROM drama_tasks dt
+                LEFT JOIN (
+                    SELECT task_id, COUNT(DISTINCT user_id) as claim_count
+                    FROM user_tasks
+                    GROUP BY task_id
+                ) claim_counts ON dt.task_id = claim_counts.task_id
+                WHERE dt.status = 'active' 
+                AND dt.category = %s 
+                AND dt.created_at > NOW() - INTERVAL '%s hours'
+                AND dt.task_id NOT IN (
                     SELECT task_id FROM user_tasks WHERE user_id = %s
                 )
+                AND COALESCE(claim_counts.claim_count, 0) < COALESCE(dt.max_completions, 100)
             """, (cat_code, expiry_hours, user_id))
         
         result = cur.fetchone()

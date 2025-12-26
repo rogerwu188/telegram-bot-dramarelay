@@ -80,6 +80,7 @@ def get_task_logs():
                     t.callback_secret,
                     t.status as task_status,
                     t.created_at,
+                    COALESCE(t.max_completions, 100) as max_completions,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     MAX(ut.submitted_at) as last_completed_at
@@ -112,6 +113,7 @@ def get_task_logs():
                     t.callback_secret,
                     t.status as task_status,
                     t.created_at,
+                    COALESCE(t.max_completions, 100) as max_completions,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
                     MAX(ut.submitted_at) as last_completed_at
@@ -191,6 +193,7 @@ def get_completion_logs():
                     t.category,
                     t.platform_requirements,
                     t.node_power_reward,
+                    t.max_completions,
                     COUNT(DISTINCT ut.user_id) as completion_count,
                     SUM(COALESCE(ut.view_count, 0)) as total_view_count,
                     SUM(COALESCE(ut.like_count, 0)) as total_like_count,
@@ -201,7 +204,7 @@ def get_completion_logs():
                 JOIN drama_tasks t ON ut.task_id = t.task_id
                 WHERE ut.status = 'submitted'
                     AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
-                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward
+                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward, t.max_completions
                 ORDER BY MAX(ut.submitted_at) DESC
                 LIMIT %s
             """, (hours, limit))
@@ -215,6 +218,7 @@ def get_completion_logs():
                     t.category,
                     t.platform_requirements,
                     t.node_power_reward,
+                    t.max_completions,
                     COUNT(DISTINCT ut.user_id) as completion_count,
                     SUM(COALESCE(ut.view_count, 0)) as total_view_count,
                     SUM(COALESCE(ut.like_count, 0)) as total_like_count,
@@ -224,7 +228,7 @@ def get_completion_logs():
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
                 WHERE ut.status = 'submitted'
-                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward
+                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward, t.max_completions
                 ORDER BY MAX(ut.submitted_at) DESC
                 LIMIT %s
             """, (limit,))
@@ -280,6 +284,7 @@ def get_completion_logs():
                 'category': task['category'],
                 'platform_requirements': task['platform_requirements'],
                 'node_power_reward': task['node_power_reward'],
+                'max_completions': task['max_completions'] or 100,  # 默认 100
                 'completion_count': task['completion_count'],
                 'total_view_count': task['total_view_count'] or 0,
                 'total_like_count': task['total_like_count'] or 0,

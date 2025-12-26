@@ -845,6 +845,16 @@
             <!-- X2C Pool下发任务接收日志 Tab -->
             <div id="tab-tasks" class="tab-content">
                 <div class="section-content">
+                    <!-- 任务状态筛选 -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                        <label>分发状态：</label>
+                        <select id="task-distribution-filter" onchange="loadTasks()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
+                            <option value="all" selected>📊 全部</option>
+                            <option value="distributing">✅ 分发中</option>
+                            <option value="full">🚫 已满员</option>
+                        </select>
+                        <button onclick="loadTasks()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                    </div>
                     <div id="tasks-loading" class="loading">加载中...</div>
                     <div id="tasks-error" class="error" style="display: none;"></div>
                     <div id="tasks-empty" class="empty" style="display: none;">暂无任务记录</div>
@@ -1281,12 +1291,29 @@
                         fetchStatusHtml = `<span class="badge badge-secondary">⏳ 未抓取</span>`;
                     }
                     
+                    // 计算任务进度
+                    const maxCompletions = item.max_completions || 100;
+                    const completionCount = item.completion_count || 0;
+                    const isFull = completionCount >= maxCompletions;
+                    const progressPercent = Math.min((completionCount / maxCompletions) * 100, 100);
+                    const progressColor = isFull ? '#dc3545' : (progressPercent > 80 ? '#ffc107' : '#28a745');
+                    
+                    // 满员状态标签
+                    const fullBadge = isFull ? '<span class="badge badge-danger" style="margin-left: 5px;">🚫 已满员</span>' : '';
+                    
                     row.innerHTML = `
                         <td>${item.task_id}</td>
                         <td>${item.external_task_id || '-'}</td>
                         <td><small>${truncate(item.project_id, 20)}</small></td>
-                        <td>${truncate(item.title, 30)}</td>
-                        <td><span class="badge badge-info">${item.completion_count} 人</span></td>
+                        <td>${truncate(item.title, 30)}${fullBadge}</td>
+                        <td>
+                            <div style="min-width: 80px;">
+                                <span class="badge ${isFull ? 'badge-danger' : 'badge-info'}">${completionCount} / ${maxCompletions}</span>
+                                <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 4px;">
+                                    <div style="background: ${progressColor}; width: ${progressPercent}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                        </td>
                         <td>${fetchStatusHtml}</td>
                         <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements || '-'}</td>
@@ -1295,7 +1322,7 @@
                         <td><span class="view-count">👁 ${totalViewCount}</span></td>
                         <td><span class="like-count">❤️ ${totalLikeCount}</span></td>
                         <td>
-                            <button class="btn-view" onclick='showCompleters(${JSON.stringify(item.completers).replace(/'/g, "&apos;")})'>👥 查看完成者(${item.completion_count})</button>
+                            <button class="btn-view" onclick='showCompleters(${JSON.stringify(item.completers).replace(/'/g, "&apos;")})'>👥 查看完成者(${completionCount})</button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -1357,11 +1384,14 @@
         };
         
         // 加载任务接收日志
-        async function loadTasks() {            const loading = document.getElementById('tasks-loading');
+        async function loadTasks() {
+            const loading = document.getElementById('tasks-loading');
             const error = document.getElementById('tasks-error');
             const empty = document.getElementById('tasks-empty');
             const table = document.getElementById('tasks-table');
             const tbody = document.getElementById('tasks-body');
+            const distributionFilter = document.getElementById('task-distribution-filter');
+            const filterValue = distributionFilter ? distributionFilter.value : 'all';
             
             loading.style.display = 'block';
             error.style.display = 'none';
@@ -1382,26 +1412,56 @@
                     return;
                 }
                 
-                // 更新标签页数量显示
-                document.getElementById('tasks-count').textContent = `${result.count || 0} 条`;
+                // 过滤数据
+                let filteredData = result.data;
+                if (filterValue === 'distributing') {
+                    filteredData = result.data.filter(item => {
+                        const maxCompletions = item.max_completions || 100;
+                        return item.assigned_users < maxCompletions;
+                    });
+                } else if (filterValue === 'full') {
+                    filteredData = result.data.filter(item => {
+                        const maxCompletions = item.max_completions || 100;
+                        return item.assigned_users >= maxCompletions;
+                    });
+                }
                 
-                if (result.count === 0) {
+                // 更新标签页数量显示
+                document.getElementById('tasks-count').textContent = `${filteredData.length} 条`;
+                
+                if (filteredData.length === 0) {
                     empty.style.display = 'block';
                     return;
                 }
                 
                 tbody.innerHTML = '';
-                result.data.forEach(item => {
+                filteredData.forEach(item => {
+                    const maxCompletions = item.max_completions || 100;
+                    const isFull = item.assigned_users >= maxCompletions;
+                    const progressPercent = Math.min((item.assigned_users / maxCompletions) * 100, 100);
+                    const progressColor = isFull ? '#dc3545' : (progressPercent > 80 ? '#ffc107' : '#28a745');
+                    
                     const row = document.createElement('tr');
+                    row.style.opacity = isFull ? '0.7' : '1';
                     row.innerHTML = `
                         <td>${item.task_id}</td>
                         <td>${item.external_task_id || '-'}</td>
                         <td><small>${truncate(item.project_id, 20)}</small></td>
-                        <td>${truncate(item.title, 30)}</td>
+                        <td>
+                            ${truncate(item.title, 30)}
+                            ${isFull ? '<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">🚫 已满员</span>' : ''}
+                        </td>
                         <td><span class="badge">${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.node_power_reward} X2C</td>
-                        <td>${item.assigned_users}</td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 3px;">
+                                <span style="color: ${progressColor}; font-weight: bold;">${item.assigned_users} / ${maxCompletions}</span>
+                                <div style="width: 60px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${progressPercent}%; height: 100%; background: ${progressColor};"></div>
+                                </div>
+                            </div>
+                        </td>
                         <td>${item.completed_users}</td>
                         <td class="timestamp">${formatTime(item.created_at)}</td>
                         <td><button class="btn-view" onclick='showTaskData(${JSON.stringify(item.original_request).replace(/'/g, "&apos;")})'>📝 查看数据</button></td>
