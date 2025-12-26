@@ -1276,57 +1276,16 @@
                     return;
                 }
                 
-                tbody.innerHTML = '';
-                result.data.forEach(item => {
-                    const row = document.createElement('tr');
-                    const totalViewCount = item.total_view_count ? item.total_view_count.toLocaleString() : '-';
-                    const totalLikeCount = item.total_like_count ? item.total_like_count.toLocaleString() : '-';
-                    
-                    // 抓取状态显示
-                    let fetchStatusHtml = '';
-                    if (item.view_count_updated_at) {
-                        const updateTime = formatTime(item.view_count_updated_at);
-                        fetchStatusHtml = `<span class="badge badge-success">✅ 成功</span><br><small>${updateTime}</small>`;
-                    } else {
-                        fetchStatusHtml = `<span class="badge badge-secondary">⏳ 未抓取</span>`;
-                    }
-                    
-                    // 计算任务进度
-                    const maxCompletions = item.max_completions || 100;
-                    const completionCount = item.completion_count || 0;
-                    const isFull = completionCount >= maxCompletions;
-                    const progressPercent = Math.min((completionCount / maxCompletions) * 100, 100);
-                    const progressColor = isFull ? '#dc3545' : (progressPercent > 80 ? '#ffc107' : '#28a745');
-                    
-                    // 满员状态标签
-                    const fullBadge = isFull ? '<span class="badge badge-danger" style="margin-left: 5px;">🚫 已满员</span>' : '';
-                    
-                    row.innerHTML = `
-                        <td>${item.task_id}</td>
-                        <td>${item.external_task_id || '-'}</td>
-                        <td><small>${truncate(item.project_id, 20)}</small></td>
-                        <td>${truncate(item.title, 30)}${fullBadge}</td>
-                        <td>
-                            <div style="min-width: 80px;">
-                                <span class="badge ${isFull ? 'badge-danger' : 'badge-info'}">${completionCount} / ${maxCompletions}</span>
-                                <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 4px;">
-                                    <div style="background: ${progressColor}; width: ${progressPercent}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>${fetchStatusHtml}</td>
-                        <td><span class="badge">${item.category || '-'}</span></td>
-                        <td>${item.platform_requirements || '-'}</td>
-                        <td>${item.node_power_reward} X2C</td>
-                        <td class="timestamp">${formatTime(item.latest_completed_at)}</td>
-                        <td><span class="view-count">👁 ${totalViewCount}</span></td>
-                        <td><span class="like-count">❤️ ${totalLikeCount}</span></td>
-                        <td>
-                            <button class="btn-view" onclick='showCompleters(${JSON.stringify(item.completers).replace(/'/g, "&apos;")})'>👥 查看完成者(${completionCount})</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                // 保存数据到全局变量，用于排序
+                completionsData = result.data;
+                
+                // 重置排序状态
+                viewsSortOrder = 'desc';
+                const icon = document.getElementById('views-sort-icon');
+                if (icon) icon.textContent = '↓';
+                
+                // 渲染表格
+                renderCompletionsTable();
                 
                 table.style.display = 'block';
             } catch (err) {
@@ -1334,6 +1293,89 @@
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
             }
+        }
+        
+        // 播放量排序相关变量
+        let completionsData = [];
+        let viewsSortOrder = 'desc'; // 'asc' 或 'desc'
+        
+        // 按播放量排序
+        function sortTasksByViews() {
+            if (completionsData.length === 0) return;
+            
+            // 切换排序顺序
+            viewsSortOrder = viewsSortOrder === 'desc' ? 'asc' : 'desc';
+            
+            // 更新排序图标
+            const icon = document.getElementById('views-sort-icon');
+            icon.textContent = viewsSortOrder === 'desc' ? '↓' : '↑';
+            
+            // 排序数据
+            completionsData.sort((a, b) => {
+                const viewsA = a.total_view_count || 0;
+                const viewsB = b.total_view_count || 0;
+                return viewsSortOrder === 'desc' ? viewsB - viewsA : viewsA - viewsB;
+            });
+            
+            // 重新渲染表格
+            renderCompletionsTable();
+        }
+        
+        // 渲染完成日志表格
+        function renderCompletionsTable() {
+            const tbody = document.getElementById('completions-body');
+            tbody.innerHTML = '';
+            
+            completionsData.forEach(item => {
+                const row = document.createElement('tr');
+                const totalViewCount = item.total_view_count ? item.total_view_count.toLocaleString() : '-';
+                const totalLikeCount = item.total_like_count ? item.total_like_count.toLocaleString() : '-';
+                
+                // 抓取状态显示
+                let fetchStatusHtml = '';
+                if (item.view_count_updated_at) {
+                    const updateTime = formatTime(item.view_count_updated_at);
+                    fetchStatusHtml = `<span class="badge badge-success">✅ 成功</span><br><small>${updateTime}</small>`;
+                } else {
+                    fetchStatusHtml = `<span class="badge badge-secondary">⏳ 未抓取</span>`;
+                }
+                
+                // 计算任务进度
+                const maxCompletions = item.max_completions || 100;
+                const completionCount = item.completion_count || 0;
+                const isFull = completionCount >= maxCompletions;
+                const progressPercent = Math.min((completionCount / maxCompletions) * 100, 100);
+                const progressColor = isFull ? '#dc3545' : (progressPercent > 80 ? '#ffc107' : '#28a745');
+                
+                // 满员状态标签
+                const fullBadge = isFull ? '<span class="badge badge-danger" style="margin-left: 5px;">🚫 已满员</span>' : '';
+                
+                row.innerHTML = `
+                    <td>${item.task_id}</td>
+                    <td>${item.external_task_id || '-'}</td>
+                    <td><small>${truncate(item.project_id, 20)}</small></td>
+                    <td>${truncate(item.title, 30)}${fullBadge}</td>
+                    <td>
+                        <div style="min-width: 80px;">
+                            <span class="badge ${isFull ? 'badge-danger' : 'badge-info'}">${completionCount} / ${maxCompletions}</span>
+                            <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 4px;">
+                                <div style="background: ${progressColor}; width: ${progressPercent}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${fetchStatusHtml}</td>
+                    <td><span class="badge">${item.category || '-'}</span></td>
+                    <td>${item.platform_requirements || '-'}</td>
+                    <td>${item.node_power_reward} X2C</td>
+                    <td class="timestamp">${formatTime(item.latest_completed_at)}</td>
+                    <td><span class="view-count">👁 ${totalViewCount}</span></td>
+                    <td><span class="like-count">❤️ ${totalLikeCount}</span></td>
+                    <td>
+                        <button class="btn-view" onclick='showCompleters(${JSON.stringify(item.completers).replace(/'/g, "&apos;")})'>👥 查看完成者(${completionCount})</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
         }
         
         // 显示完成者详情弹窗
