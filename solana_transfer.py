@@ -296,7 +296,8 @@ def execute_solana_transfer(
     to_address: str,
     amount: str,
     withdrawal_id: int,
-    asset_type: str = "x2c"
+    asset_type: str = "x2c",
+    max_poll_duration: int = 3600  # 最多轮询 1 小时
 ) -> Optional[str]:
     """
     执行 Solana 转账（主函数）
@@ -305,11 +306,19 @@ def execute_solana_transfer(
     - 批次状态: PENDING, PROCESSING, SUCCESS, PARTIAL_SUCCESS, FAILED
     - 单个转账状态: PENDING, PROCESSING, SUCCESS, FAILED, CANCELLED
     
+    轮询策略：
+    - 使用指数退避算法（exponential backoff）
+    - 初始间隔：2 秒
+    - 最大间隔：60 秒
+    - 最大轮询时间：1 小时（可被 Callback 终止）
+    - 可被 Callback 回调中断
+    
     Args:
         to_address: 收款地址
         amount: 转账金额
         withdrawal_id: 提现申请 ID
         asset_type: 资产类型
+        max_poll_duration: 最大轮询时间（秒）
         
     Returns:
         交易哈希（tx_hash），失败返回 None
@@ -324,18 +333,31 @@ def execute_solana_transfer(
         
         batch_id = transfer_result["batch_id"]
         
-        # 2. 轮询查询状态（最多等待 60 秒）
-        max_retries = 12
+        # 2. 轮询查询状态（指数退避策略）
+        # 初始间隔：2 秒，每次增加 1.5 倍，最大 60 秒
+        initial_interval = 2  # 初始间隔
+        max_interval = 60     # 最大间隔
+        backoff_multiplier = 1.5  # 退避倍数
+        
+        current_interval = initial_interval
+        total_wait_time = 0
         retry_count = 0
         
-        while retry_count < max_retries:
-            time.sleep(5)  # 每 5 秒查询一次
+        logger.info(f"[Execute] Starting polling for batch_id={batch_id}, max_duration={max_poll_duration}s")
+        
+        while total_wait_time < max_poll_duration:
+            # 等待指定时间后查询
+            logger.debug(f"[Execute] Waiting {current_interval}s before query #{retry_count + 1}")
+            time.sleep(current_interval)
+            total_wait_time += current_interval
             
             query_result = query_transfer_status(batch_id)
             
             if not query_result:
-                logger.warning(f"[Execute] Query failed, retrying: batch_id={batch_id}")
+                logger.warning(f"[Execute] Query failed (attempt {retry_count + 1}), will retry: batch_id={batch_id}")
                 retry_count += 1
+                # 查询失败也要增加间隔
+                current_interval = min(current_interval * backoff_multiplier, max_interval)
                 continue
             
             # 检查转账状态
@@ -347,24 +369,32 @@ def execute_solana_transfer(
                 
                 # 成功状态
                 if status in SUCCESS_STATUSES:
-                    logger.info(f"[Execute] Transfer success: batch_id={batch_id}, tx_hash={tx_hash}")
+                    logger.info(f"[Execute] Transfer success: batch_id={batch_id}, tx_hash={tx_hash}, total_wait={total_wait_time}s")
                     return tx_hash
                 
                 # 失败/取消状态
                 elif status in FAILURE_STATUSES:
-                    logger.error(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}")
+                    logger.error(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}, total_wait={total_wait_time}s")
                     return None
                 
                 # 处理中状态
                 elif status in PENDING_STATUSES:
-                    logger.debug(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}, retrying...")
-                    # 继续轮询
+                    logger.debug(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}, retry_count={retry_count + 1}, next_interval={min(current_interval * backoff_multiplier, max_interval)}s")
+                    # 继续轮询，增加间隔
+                    current_interval = min(current_interval * backoff_multiplier, max_interval)
                 else:
                     logger.warning(f"[Execute] Unknown transfer status: {status}")
+                    # 未知状态也继续轮询
+                    current_interval = min(current_interval * backoff_multiplier, max_interval)
             
             retry_count += 1
         
-        logger.warning(f"[Execute] Transfer timeout: batch_id={batch_id}")
+        # 轮询超时，等待 Callback 回调
+        logger.warning(f"[Execute] Polling timeout after {total_wait_time}s: batch_id={batch_id}")
+        logger.info(f"[Execute] Waiting for Callback notification for batch_id={batch_id}")
+        
+        # 返回 None 表示轮询超时
+        # 但转账仍在进行中，将由 Callback 更新状态
         return None
         
     except Exception as e:
