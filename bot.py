@@ -178,7 +178,7 @@ def get_reward_config():
         
         # 转换为字典
         config = {
-            'task_reward_x2c': 10,  # 默认值
+            'task_reward_x2c': 100,  # 默认值
             'newcomer_bonus_multiplier': 50,  # 默认50倍
             'newcomer_bonus_enabled': True  # 默认开启
         }
@@ -204,7 +204,7 @@ def get_reward_config():
         logger.error(f"❌ Failed to get reward config: {e}")
         # 返回默认值
         return {
-            'task_reward_x2c': 10,
+            'task_reward_x2c': 100,
             'newcomer_bonus_multiplier': 50,
             'newcomer_bonus_enabled': True
         }

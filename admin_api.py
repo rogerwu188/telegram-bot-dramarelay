@@ -2217,7 +2217,7 @@ def get_reward_settings():
         
         # 转换为字典
         result = {
-            'task_reward_x2c': 10,  # 默认值
+            'task_reward_x2c': 100,  # 默认值
             'newcomer_bonus_multiplier': 50,  # 默认50倍
             'newcomer_bonus_enabled': True  # 默认开启
         }
