@@ -60,6 +60,10 @@ def get_task_logs():
         cur = conn.cursor()
         
         # 查询最近的任务活动
+        # 获取基础奖励配置
+        reward_config = get_reward_config()
+        base_reward = reward_config['task_reward_x2c']
+        
         if hours > 0:
             cur.execute("""
                 SELECT 
@@ -85,7 +89,8 @@ def get_task_logs():
                     COALESCE(t.max_completions, 100) as max_completions,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
-                    MAX(ut.submitted_at) as last_completed_at
+                    MAX(ut.submitted_at) as last_completed_at,
+                    SUM(COALESCE(ut.node_power_earned, 0)) as total_earned_reward
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
                 WHERE t.created_at >= NOW() - INTERVAL '%s hours'
@@ -118,7 +123,8 @@ def get_task_logs():
                     COALESCE(t.max_completions, 100) as max_completions,
                     COUNT(DISTINCT ut.user_id) as assigned_users,
                     COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
-                    MAX(ut.submitted_at) as last_completed_at
+                    MAX(ut.submitted_at) as last_completed_at,
+                    SUM(COALESCE(ut.node_power_earned, 0)) as total_earned_reward
                 FROM drama_tasks t
                 LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
                 GROUP BY t.task_id
@@ -134,6 +140,10 @@ def get_task_logs():
                 task['created_at'] = task['created_at'].isoformat()
             if task['last_completed_at']:
                 task['last_completed_at'] = task['last_completed_at'].isoformat()
+            
+            # 添加基础奖励和实际奖励
+            task['base_reward_x2c'] = base_reward  # 接收日志显示的基础奖励
+            task['total_earned_reward'] = task.get('total_earned_reward') or 0  # 完成日志显示的实际奖励
             
             # 生成原始请求数据（模拟 X2C 平台下发的数据）
             task['original_request'] = {
@@ -253,7 +263,8 @@ def get_completion_logs():
                     COALESCE(ut.view_count, 0) as view_count,
                     COALESCE(ut.like_count, 0) as like_count,
                     ut.view_count_updated_at,
-                    EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds
+                    EXTRACT(EPOCH FROM (ut.submitted_at - ut.created_at)) as duration_seconds,
+                    COALESCE(ut.node_power_earned, 0) as earned_reward
                 FROM user_tasks ut
                 LEFT JOIN users u ON ut.user_id = u.user_id
                 WHERE ut.task_id = %s AND ut.status = 'submitted'
@@ -274,7 +285,8 @@ def get_completion_logs():
                     'view_count': c['view_count'],
                     'like_count': c['like_count'],
                     'view_count_updated_at': c['view_count_updated_at'].isoformat() if c.get('view_count_updated_at') else None,
-                    'duration_seconds': c['duration_seconds']
+                    'duration_seconds': c['duration_seconds'],
+                    'earned_reward': c['earned_reward']  # 实际获得的 X2C 奖励
                 })
             
             # 构建任务数据
