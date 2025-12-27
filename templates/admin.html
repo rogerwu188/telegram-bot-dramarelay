@@ -81,6 +81,34 @@
             flex-wrap: wrap;
         }
         
+        /* 控制面板行分组 */
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        
+        .controls-row + .controls-row {
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        /* 按钮组容器 */
+        .btn-group {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .btn-group small {
+            color: #666;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
         .controls label {
             font-weight: 600;
             color: #555;
@@ -685,47 +713,54 @@
         
         <!-- 控制面板 -->
         <div class="controls">
-            <label for="time-range">时间范围:</label>
-            <select id="time-range">
-                <option value="0" selected>所有时间</option>
-                <option value="1">最近 1 小时</option>
-                <option value="6">最近 6 小时</option>
-                <option value="24">最近 24 小时</option>
-                <option value="72">最近 3 天</option>
-                <option value="168">最近 7 天</option>
-            </select>
-            
-            <label for="limit">显示条数:</label>
-            <select id="limit">
-                <option value="20">20 条</option>
-                <option value="50" selected>50 条</option>
-                <option value="100">100 条</option>
-                <option value="200">200 条</option>
-            </select>
-            
-            <button onclick="refreshData()">🔄 刷新数据</button>
-            <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
-            <div style="display: inline-flex; flex-direction: column; align-items: center; margin-right: 5px;">
-                <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
-                    📡 启动分发数据回传
-                </button>
-                <small style="color: #666; font-size: 11px; margin-top: 3px;">⏰ 每 3 分钟回传一次</small>
+            <!-- 第一行：筛选和刷新 -->
+            <div class="controls-row">
+                <label for="time-range">时间范围:</label>
+                <select id="time-range">
+                    <option value="0" selected>所有时间</option>
+                    <option value="1">最近 1 小时</option>
+                    <option value="6">最近 6 小时</option>
+                    <option value="24">最近 24 小时</option>
+                    <option value="72">最近 3 天</option>
+                    <option value="168">最近 7 天</option>
+                </select>
+                
+                <label for="limit">显示条数:</label>
+                <select id="limit">
+                    <option value="20">20 条</option>
+                    <option value="50" selected>50 条</option>
+                    <option value="100">100 条</option>
+                    <option value="200">200 条</option>
+                </select>
+                
+                <button onclick="refreshData()">🔄 刷新数据</button>
+                <button onclick="autoRefresh()">⏱️ 自动刷新 (30s)</button>
             </div>
-            <button onclick="triggerBroadcast()" style="background: #17a2b8;" id="trigger-btn">
-                🚀 立即回传一次
-            </button>
-            <div style="display: inline-flex; flex-direction: column; align-items: center; margin-right: 5px;">
-                <button onclick="toggleViewCounter()" id="view-counter-btn" style="background: #6f42c1;">
-                    👁 启动播放量抓取
+            
+            <!-- 第二行：操作按钮 -->
+            <div class="controls-row">
+                <div class="btn-group">
+                    <button onclick="toggleBroadcaster()" id="broadcaster-btn" style="background: #28a745;">
+                        📡 启动分发数据回传
+                    </button>
+                    <small>⏰ 每 3 分钟回传一次</small>
+                </div>
+                <button onclick="triggerBroadcast()" style="background: #17a2b8;" id="trigger-btn">
+                    🚀 立即回传一次
                 </button>
-                <small style="color: #666; font-size: 11px; margin-top: 3px;">⏰ 每 10 分钟抓取一次</small>
+                <div class="btn-group">
+                    <button onclick="toggleViewCounter()" id="view-counter-btn" style="background: #6f42c1;">
+                        👁 启动播放量抓取
+                    </button>
+                    <small>⏰ 每 10 分钟抓取一次</small>
+                </div>
+                <button onclick="triggerViewCounter()" style="background: #fd7e14;" id="view-counter-trigger-btn">
+                    🔄 立即抓取播放量
+                </button>
+                <button onclick="clearAllLogs()" style="background: #dc3545;" id="clear-logs-btn">
+                    🗑️ 清空所有日志
+                </button>
             </div>
-            <button onclick="triggerViewCounter()" style="background: #fd7e14;" id="view-counter-trigger-btn">
-                🔄 立即抓取播放量
-            </button>
-            <button onclick="clearAllLogs()" style="background: #dc3545;" id="clear-logs-btn">
-                🗑️ 清空所有日志
-            </button>
         </div>
         
         <!-- 进度条和倒计时显示区域 -->
