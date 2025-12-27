@@ -209,3 +209,81 @@ if __name__ == '__main__':
     else:
         print(f"❌ {len(result.failures)} test(s) failed")
         print(f"❌ {len(result.errors)} test(s) had errors")
+
+    @patch('solana_transfer.query_transfer_status')
+    @patch('solana_transfer.batch_transfer')
+    def test_execute_solana_transfer_cancelled(self, mock_batch, mock_query):
+        """测试执行 Solana 转账被取消"""
+        mock_batch.return_value = {
+            "batch_id": "test_batch_123",
+            "request_id": "req_1",
+            "status": "PENDING",
+            "tx_hash": "",
+            "to_address": "7Krw7trf1JDufFQWguhiiprXxDpHuftPHYTQYJvzop7p",
+            "amount": "0.1"
+        }
+        
+        # 模拟转账被取消
+        mock_query.return_value = {
+            "batch_id": "test_batch_123",
+            "status": "PROCESSING",
+            "transfers": [
+                {
+                    "request_id": "req_1",
+                    "status": "CANCELLED",
+                    "tx_hash": "",
+                    "to_address": "7Krw7trf1JDufFQWguhiiprXxDpHuftPHYTQYJvzop7p",
+                    "amount": "0.1"
+                }
+            ]
+        }
+        
+        tx_hash = execute_solana_transfer(
+            to_address="7Krw7trf1JDufFQWguhiiprXxDpHuftPHYTQYJvzop7p",
+            amount="0.1",
+            withdrawal_id=1
+        )
+        
+        self.assertIsNone(tx_hash)
+        print(f"✅ Execute Solana transfer cancelled test passed")
+    
+    @patch('solana_transfer.query_transfer_status')
+    @patch('solana_transfer.batch_transfer')
+    def test_execute_solana_transfer_processing(self, mock_batch, mock_query):
+        """测试执行 Solana 转账处理中状态"""
+        mock_batch.return_value = {
+            "batch_id": "test_batch_123",
+            "request_id": "req_1",
+            "status": "PENDING",
+            "tx_hash": "",
+            "to_address": "7Krw7trf1JDufFQWguhiiprXxDpHuftPHYTQYJvzop7p",
+            "amount": "0.1"
+        }
+        
+        # 模拟多次查询，最后成功
+        mock_query.side_effect = [
+            {
+                "batch_id": "test_batch_123",
+                "status": "PROCESSING",
+                "transfers": [{"request_id": "req_1", "status": "PROCESSING", "tx_hash": ""}]
+            },
+            {
+                "batch_id": "test_batch_123",
+                "status": "SUCCESS",
+                "transfers": [{
+                    "request_id": "req_1",
+                    "status": "SUCCESS",
+                    "tx_hash": "Lz4i1vZkwXqDGHA6b3sGozp6rk41pA6WWXWY2PhdW6wUVi1nmabeZEcXzeHA1VBUwUGiSPiTkvfE9LX7LMNY6Nh"
+                }]
+            }
+        ]
+        
+        tx_hash = execute_solana_transfer(
+            to_address="7Krw7trf1JDufFQWguhiiprXxDpHuftPHYTQYJvzop7p",
+            amount="0.1",
+            withdrawal_id=1
+        )
+        
+        self.assertIsNotNone(tx_hash)
+        self.assertEqual(tx_hash, "Lz4i1vZkwXqDGHA6b3sGozp6rk41pA6WWXWY2PhdW6wUVi1nmabeZEcXzeHA1VBUwUGiSPiTkvfE9LX7LMNY6Nh")
+        print(f"✅ Execute Solana transfer processing test passed")

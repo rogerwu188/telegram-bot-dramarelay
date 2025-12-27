@@ -20,9 +20,26 @@ GIGGLE_APP_SECRET = "C8laAnozXqbG9l0PaHRmKBcSuzuS8fcL"
 GIGGLE_API_KEY = "DXrocNWEBkWS38Rp5Br1fcOZ0aHg3Unmu"
 
 # Solana 配置
-DEFAULT_FROM_ADDRESS = "6aaqtgfdDY9Xh1upeucyMMJuyk5VMpw5FNZvSCD3js1w"  # 官方提供的出币地址
+DEFAULT_FROM_ADDRESS = "6aaqtgfdDY9Xh1upeucyMMJuyk5VMpw5FNZvSCD3js1w"
 ASSET_SYMBOL = "x2c"
 CHAIN = "sol"
+
+# 状态常量
+BATCH_STATUS_PENDING = "PENDING"
+BATCH_STATUS_PROCESSING = "PROCESSING"
+BATCH_STATUS_SUCCESS = "SUCCESS"
+BATCH_STATUS_PARTIAL_SUCCESS = "PARTIAL_SUCCESS"
+BATCH_STATUS_FAILED = "FAILED"
+
+TRANSFER_STATUS_PENDING = "PENDING"
+TRANSFER_STATUS_PROCESSING = "PROCESSING"
+TRANSFER_STATUS_SUCCESS = "SUCCESS"
+TRANSFER_STATUS_FAILED = "FAILED"
+TRANSFER_STATUS_CANCELLED = "CANCELLED"
+
+SUCCESS_STATUSES = {TRANSFER_STATUS_SUCCESS}
+FAILURE_STATUSES = {TRANSFER_STATUS_FAILED, TRANSFER_STATUS_CANCELLED}
+PENDING_STATUSES = {TRANSFER_STATUS_PENDING, TRANSFER_STATUS_PROCESSING}
 
 
 def generate_signature(params: Dict[str, Any], app_secret: str = GIGGLE_API_KEY) -> str:
@@ -43,19 +60,33 @@ def generate_signature(params: Dict[str, Any], app_secret: str = GIGGLE_API_KEY)
         MD5 签名（大写）
     """
     try:
-        # 1. 过滤空值参数并按 ASCII 码排序
-        filtered_params = {k: v for k, v in params.items() if v is not None and v != "" and k != "sign"}
+        # 1. 不过滤任何字段（包括空值），只排除 sign 字段
+        # 重要：所有字段都必须包含在签名字符串中，包括空字符串值
+        filtered_params = {k: v for k, v in params.items() if k != "sign"}
         
         # 2. 参数排序（ASCII 码）
         sorted_items = sorted(filtered_params.items())
         
         # 3. 拼接参数字符串
-        # 对于复杂类型（dict/list），使用 json.dumps 并确保使用紧凑格式
+        # 对于复杂类型（list），需要对内部对象的字段也进行排序
         param_parts = []
         for k, v in sorted_items:
-            if isinstance(v, (dict, list)):
+            if isinstance(v, list):
+                # 对列表中的每个对象进行字段排序
+                sorted_list = []
+                for item in v:
+                    if isinstance(item, dict):
+                        # 对字典的键进行排序
+                        sorted_item = {key: item[key] for key in sorted(item.keys())}
+                        sorted_list.append(sorted_item)
+                    else:
+                        sorted_list.append(item)
                 # 使用 separators 确保紧凑格式（无空格）
-                v_str = json.dumps(v, separators=(',', ':'), ensure_ascii=False)
+                v_str = json.dumps(sorted_list, separators=(',', ':'), ensure_ascii=False)
+            elif isinstance(v, dict):
+                # 对字典的键进行排序
+                sorted_dict = {key: v[key] for key in sorted(v.keys())}
+                v_str = json.dumps(sorted_dict, separators=(',', ':'), ensure_ascii=False)
             else:
                 v_str = str(v)
             param_parts.append(f"{k}={v_str}")
@@ -261,6 +292,10 @@ def execute_solana_transfer(
     """
     执行 Solana 转账（主函数）
     
+    支持的状态：
+    - 批次状态: PENDING, PROCESSING, SUCCESS, PARTIAL_SUCCESS, FAILED
+    - 单个转账状态: PENDING, PROCESSING, SUCCESS, FAILED, CANCELLED
+    
     Args:
         to_address: 收款地址
         amount: 转账金额
@@ -301,13 +336,22 @@ def execute_solana_transfer(
                 status = transfer.get("status", "PENDING")
                 tx_hash = transfer.get("tx_hash", "")
                 
-                if status == "SUCCESS":
+                # 成功状态
+                if status in SUCCESS_STATUSES:
                     logger.info(f"[Execute] Transfer success: batch_id={batch_id}, tx_hash={tx_hash}")
                     return tx_hash
-                elif status == "FAILED":
-                    logger.error(f"[Execute] Transfer failed: batch_id={batch_id}")
+                
+                # 失败/取消状态
+                elif status in FAILURE_STATUSES:
+                    logger.error(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}")
                     return None
-                # PENDING 继续轮询
+                
+                # 处理中状态
+                elif status in PENDING_STATUSES:
+                    logger.debug(f"[Execute] Transfer {status.lower()}: batch_id={batch_id}, retrying...")
+                    # 继续轮询
+                else:
+                    logger.warning(f"[Execute] Unknown transfer status: {status}")
             
             retry_count += 1
         
