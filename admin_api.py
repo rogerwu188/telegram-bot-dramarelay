@@ -12,6 +12,7 @@ from psycopg2.extras import RealDictCursor
 import os
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
+import requests
 
 # 配置日志
 logging.basicConfig(
@@ -1598,10 +1599,35 @@ def approve_withdrawal(withdrawal_id):
         cur.close()
         conn.close()
         
-        # 模拟转账操作（虚拟实现，后续替换为真实 API）
-        import hashlib
-        import time
-        mock_tx_hash = hashlib.sha256(f"{withdrawal['sol_address']}{withdrawal['amount']}{time.time()}".encode()).hexdigest()
+        # 执行真实 Solana 转账
+        from solana_transfer import execute_solana_transfer
+        tx_hash = execute_solana_transfer(
+            to_address=withdrawal['sol_address'],
+            amount=str(withdrawal['amount']),
+            withdrawal_id=withdrawal_id,
+            asset_type=withdrawal.get('asset_type', 'x2c')
+        )
+        
+        if not tx_hash:
+            # 转账失败，更新状态为 failed
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE withdrawals
+                SET status = 'failed',
+                    error_message = 'Solana transfer failed',
+                    processed_at = CURRENT_TIMESTAMP
+                WHERE withdrawal_id = %s
+            """, (withdrawal_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            logger.error(f"❌ Solana transfer failed: withdrawal_id={withdrawal_id}")
+            return jsonify({
+                'success': False,
+                'error': 'Solana transfer failed'
+            }), 500
         
         # 更新提现记录为 completed
         conn = get_db_connection()
@@ -1613,26 +1639,25 @@ def approve_withdrawal(withdrawal_id):
                 tx_hash = %s,
                 processed_at = CURRENT_TIMESTAMP
             WHERE withdrawal_id = %s
-        """, (mock_tx_hash, withdrawal_id))
+        """, (tx_hash, withdrawal_id))
         
         conn.commit()
         cur.close()
         conn.close()
         
-        logger.info(f"✅ Withdrawal approved and processed: withdrawal_id={withdrawal_id}, tx_hash={mock_tx_hash}")
+        logger.info(f"✅ Withdrawal approved and processed: withdrawal_id={withdrawal_id}, tx_hash={tx_hash}")
         
         # 通知 X2C Web 更新提现状态
         try:
-            import requests as http_requests
             x2c_web_url = os.environ.get('X2C_WEB_WEBHOOK_URL', 'https://x2c-web.manus.space/api/webhook/withdrawal-status')
             x2c_web_api_key = os.environ.get('X2C_WEB_API_KEY', '')
             if x2c_web_api_key:
-                http_requests.post(
+                requests.post(
                     x2c_web_url,
                     json={
                         'withdrawalId': withdrawal_id,
                         'status': 'completed',
-                        'txHash': mock_tx_hash,
+                        'txHash': tx_hash,
                         'processedAt': datetime.now().isoformat()
                     },
                     headers={
@@ -1648,7 +1673,7 @@ def approve_withdrawal(withdrawal_id):
         return jsonify({
             'success': True,
             'message': '提现已审批并转账成功',
-            'tx_hash': mock_tx_hash
+            'tx_hash': tx_hash
         })
         
     except Exception as e:
@@ -1714,11 +1739,10 @@ def reject_withdrawal(withdrawal_id):
         
         # 通知 X2C Web 更新提现状态
         try:
-            import requests as http_requests
             x2c_web_url = os.environ.get('X2C_WEB_WEBHOOK_URL', 'https://x2c-web.manus.space/api/webhook/withdrawal-status')
             x2c_web_api_key = os.environ.get('X2C_WEB_API_KEY', '')
             if x2c_web_api_key:
-                http_requests.post(
+                requests.post(
                     x2c_web_url,
                     json={
                         'withdrawalId': withdrawal_id,
