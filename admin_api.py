@@ -13,6 +13,7 @@ import os
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 import requests
+import json
 
 # 配置日志
 logging.basicConfig(
@@ -2129,6 +2130,54 @@ def get_stats_overview():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+
+# ==================== Solana 转账 Callback 处理 ====================
+
+@app.route('/api/solana/callback', methods=['POST'])
+def solana_callback():
+    """
+    处理 Giggle API 的 Solana 转账 Callback 回调
+    
+    Giggle API 在转账完成后会调用此端点通知转账结果
+    """
+    try:
+        # 获取回调数据
+        callback_data = request.get_json() or {}
+        
+        logger.info(f"[Callback] Received callback: batch_id={callback_data.get('batch_id')}")
+        
+        # 处理回调
+        from solana_callback import process_callback
+        result = process_callback(callback_data)
+        
+        if result['success']:
+            logger.info(f"[Callback] Callback processed successfully: {result['message']}")
+            # 返回成功响应
+            return jsonify({
+                'code': 0,
+                'data': None,
+                'msg': ''
+            }), 200
+        else:
+            logger.error(f"[Callback] Callback processing failed: {result['message']}")
+            # 返回失败响应（但仍然返回 200，让 Giggle 知道我们收到了请求）
+            return jsonify({
+                'code': 0,
+                'data': None,
+                'msg': ''
+            }), 200
+        
+    except Exception as e:
+        logger.error(f"[Callback] Failed to handle callback: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # 返回成功响应，避免 Giggle 重试
+        return jsonify({
+            'code': 0,
+            'data': None,
+            'msg': ''
+        }), 200
 
 
 if __name__ == '__main__':

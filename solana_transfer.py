@@ -140,15 +140,23 @@ def batch_transfer(
         batch_id = f"withdrawal_{withdrawal_id}_{int(time.time() * 1000)}"
         request_id = f"req_{withdrawal_id}"
         
+        # 构建 Callback URL
+        # 优先使用环境变量中的 URL，否则使用默认值
+        import os
+        callback_url = os.environ.get(
+            'GIGGLE_CALLBACK_URL',
+            'http://localhost:5001/api/solana/callback'
+        )
+        
         # 构建转账数据
         transfers = [
             {
-                "request_id": request_id,
+                "request_id": f"withdrawal_{withdrawal_id}",  # 用于 Callback 中识别提现申请
                 "from_address": "",  # 使用默认地址
                 "to_address": to_address,
                 "amount": amount,
                 "memo": f"X2C withdrawal #{withdrawal_id}",
-                "callback_url": ""
+                "callback_url": ""  # 单笔转账不需要 callback_url
             }
         ]
         
@@ -159,7 +167,7 @@ def batch_transfer(
             "asset_symbol": ASSET_SYMBOL,
             "chain": CHAIN,
             "default_from_address": DEFAULT_FROM_ADDRESS,
-            "callback_url": "",
+            "callback_url": callback_url,  # 批次级别的 Callback URL
             "transfers": transfers,
             "appid": GIGGLE_APP_ID,
             "timestamp": timestamp
@@ -170,7 +178,7 @@ def batch_transfer(
         params["sign"] = signature
         
         # 发起转账请求
-        logger.info(f"[Transfer] Initiating transfer: withdrawal_id={withdrawal_id}, to={to_address}, amount={amount}")
+        logger.info(f"[Transfer] Initiating transfer: withdrawal_id={withdrawal_id}, to={to_address}, amount={amount}, callback_url={callback_url}")
         
         response = requests.post(
             f"{GIGGLE_API_URL}/batch-transfers",
@@ -195,12 +203,13 @@ def batch_transfer(
         
         return {
             "batch_id": batch_id,
-            "request_id": request_id,
+            "request_id": f"withdrawal_{withdrawal_id}",  # 返回标准化的 request_id
             "status": transfer_data.get("status", "PENDING"),
             "tx_hash": transfer_data.get("tx_hash", ""),
             "to_address": to_address,
             "amount": amount,
-            "asset_type": asset_type
+            "asset_type": asset_type,
+            "callback_url": callback_url
         }
         
     except requests.exceptions.RequestException as e:
