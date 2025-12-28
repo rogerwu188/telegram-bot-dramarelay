@@ -40,6 +40,47 @@ def get_db_connection():
         cursor_factory=RealDictCursor
     )
 
+def get_reward_config():
+    """获取奖励配置"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT key, value FROM bot_settings 
+            WHERE key IN ('task_reward_x2c', 'newcomer_reward_multiplier', 'enable_newcomer_reward')
+        """)
+        
+        settings = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        config = {
+            'task_reward_x2c': 100,
+            'newcomer_reward_multiplier': 5,
+            'enable_newcomer_reward': True
+        }
+        
+        for setting in settings:
+            key = setting['key']
+            value = setting['value']
+            
+            if key == 'task_reward_x2c':
+                config['task_reward_x2c'] = int(value)
+            elif key == 'newcomer_reward_multiplier':
+                config['newcomer_reward_multiplier'] = int(value)
+            elif key == 'enable_newcomer_reward':
+                config['enable_newcomer_reward'] = value.lower() in ('true', '1', 'yes')
+        
+        return config
+    except Exception as e:
+        logger.error(f"获取奖励配置失败: {e}")
+        return {
+            'task_reward_x2c': 100,
+            'newcomer_reward_multiplier': 5,
+            'enable_newcomer_reward': True
+        }
+
 @app.route('/')
 def index():
     """管理页面首页"""
