@@ -86,12 +86,9 @@ def build_category_mapping(categories: List[Dict]) -> Dict[str, Dict]:
         # X2C 发送的 project_style 格式是 "#Female Revenge Arc"
         project_style_key = f"#{name}"
         
-        # 使用 name_key 作为 Bot 的分类代码，如果没有则使用 name 的小写下划线格式
-        if name_key:
-            code = name_key
-        else:
-            # 将中文或英文名称转换为代码格式
-            code = name.lower().replace(' ', '_').replace('/', '_')
+        # 直接使用原始分类名称，不进行转换
+        # 中文分类保持中文，英文分类保持英文
+        code = name
         
         mapping[project_style_key] = {
             "code": code,
