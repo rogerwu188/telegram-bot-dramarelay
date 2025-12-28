@@ -288,6 +288,10 @@ def get_completion_logs():
         
         tasks = cur.fetchall()
         
+        # 获取基础奖励配置（只查询一次）
+        reward_config = get_reward_config()
+        base_reward = reward_config.get('task_reward_x2c', 100)
+        
         # 为每个任务获取完成者详情
         result_data = []
         for task in tasks:
@@ -332,10 +336,6 @@ def get_completion_logs():
             
             # 计算所有完成者的总奖励
             total_earned = sum(c.get('earned_reward', 0) for c in completers_list)
-            
-            # 获取基础奖励配置
-            reward_config = get_reward_config()
-            base_reward = reward_config.get('task_reward_x2c', 100)
             
             # 构建任务数据
             task_data = {
