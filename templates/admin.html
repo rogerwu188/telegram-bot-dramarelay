@@ -1365,7 +1365,7 @@
             categories.forEach(category => {
                 const option = document.createElement('option');
                 option.value = category;
-                option.textContent = category;
+                option.textContent = getCategoryDisplayName(category);
                 select.appendChild(option);
             });
             
@@ -1448,7 +1448,7 @@
                         </div>
                     </td>
                     <td>${fetchStatusHtml}</td>
-                    <td><span class="badge">${item.category || '-'}</span></td>
+                    <td><span class="badge">${getCategoryDisplayName(item.category)}</span></td>
                     <td>${item.platform_requirements || '-'}</td>
                     <td>${item.total_earned_reward || item.node_power_reward} X2C</td>
                     <td class="timestamp">${formatTime(item.latest_completed_at)}</td>
@@ -1486,28 +1486,28 @@
             modal.classList.add('show');
         }
                 // 分类中文映射
-        const CATEGORY_NAMES_ZH = {
-            'revenge': '霸道总裁/豪门虐恋',
-            'rebirth': '穿越重生/逆天改命',
-            'revenge_slap': '复仇爽文/打脸反杀',
-            'marriage': '婚恋错配/先婚后爱',
-            'sweet_romance': '甜宠小白花/治愈爱情',
-            'family': '家庭伦理/婆媳大战',
-            'detective': '破案刑侦/悬疑推理',
-            'medical': '医疗法庭/职场权谋',
-            'career_woman': '女强成长/职场逆袭',
-            'campus': '校园青春/青涩暗恋',
-            'horror': '恐怖灵异/民俗悬疑',
-            'scifi': '赛博/未来科幻',
-            'survival': '末日生存/丧尸灾难',
-            'costume': '宫斗宅斗/古装权谋',
-            'business': '商战博弈/资本智斗',
-            'rural': '乡村/人生治愈系',
-            'superpower': '超能力变异/英雄觉醒',
-            'triangle': '三角恋/修罗场',
-            'underdog': '小人物大机缘',
-            'dark': '反社会性人格/黑暗系'
+        // X2C API 分类映射表：name_key -> name (显示名称)
+        const CATEGORY_NAMES = {
+            'billionaireRomance': 'Spiritual Awakening Drama',
+            'Thriller': 'Supernatural Thriller',
+            'werewolfVampire': 'Female Revenge Arc',
+            'rebirthTimeTravel': 'Billionaire Romance',
+            'periodCostume': 'Fantasy',
+            'marriageBetrayal': 'AI Drama Lab',
+            'fantasyMysticism': '玄幻异能',
+            'suspenseCrime': '悬疑惊悚',
+            'sciFiApocalypse': '科幻末世',
+            'urbanLife': '都市复仇',
+            'generalMixed': '热门综合',
+            'ceoRomance': '霸总甜宠',
+            'immortalFantasy': '仙侠古装',
+            'latest': '最新'
         };
+        
+        function getCategoryDisplayName(categoryCode) {
+            if (!categoryCode) return '-';
+            return CATEGORY_NAMES[categoryCode] || categoryCode;
+        }
         
         // 加载任务接收日志
         async function loadTasks() {
@@ -1577,7 +1577,7 @@
                             ${truncate(item.title, 30)}
                             ${isFull ? '<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">🚫 已满员</span>' : ''}
                         </td>
-                              <td>${item.category || '-'}</span></td>
+                              <td>${getCategoryDisplayName(item.category)}</td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.base_reward_x2c || item.node_power_reward} X2C</td>
                         <td>
