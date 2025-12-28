@@ -1264,60 +1264,71 @@ def update_callback_url():
 @app.route('/api/admin/migrate_categories', methods=['POST'])
 def migrate_categories():
     """
-    迁移旧的category值到X2C分类
-    将不在X2C分类列表中的category设置为NULL
+    迁移旧的category值：将 name_key 转换为 name
+    例如：ceoRomance -> 霸总甜宠
     """
     try:
-        # X2C分类列表
-        x2c_categories = [
-            'latest',
-            'billionaireRomance',
-            'underdogRevenge',
-            'werewolfVampire',
-            'rebirthTimeTravel',
-            'periodCostume',
-            'marriageBetrayal',
-            'fantasyMysticism',
-            'suspenseCrime',
-            'sciFiApocalypse',
-            'urbanLife',
-            'generalMixed',
-            '霸总甘宠',
-            '仙侠奇幻'
-        ]
+        # name_key 到 name 的映射表（来自 X2C API）
+        CATEGORY_MAPPING = {
+            # 英文分类
+            'billionaireRomance': 'Spiritual Awakening Drama',
+            'Thriller': 'Supernatural Thriller',
+            'werewolfVampire': 'Female Revenge Arc',
+            'rebirthTimeTravel': 'Billionaire Romance',
+            'periodCostume': 'Fantasy',
+            'marriageBetrayal': 'AI Drama Lab',
+            # 中文分类
+            'fantasyMysticism': '玄幻异能',
+            'suspenseCrime': '悬疑惊悚',
+            'sciFiApocalypse': '科幻末世',
+            'urbanLife': '都市复仇',
+            'generalMixed': '热门综合',
+            'ceoRomance': '霸总甜宠',
+            'immortalFantasy': '仙侠古装',
+        }
         
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询当前category分布
+        # 查询当前 category 分布
         cur.execute("""
             SELECT category, COUNT(*) as count 
             FROM drama_tasks 
-            WHERE status = 'active' 
+            WHERE category IS NOT NULL 
             GROUP BY category 
             ORDER BY count DESC
         """)
         
         old_distribution = cur.fetchall()
         
-        # 更新旧的category为NULL
-        cur.execute("""
-            UPDATE drama_tasks 
-            SET category = NULL 
-            WHERE category IS NOT NULL 
-            AND category NOT IN %s
-        """, (tuple(x2c_categories),))
+        # 执行迁移：将 name_key 更新为 name
+        total_updated = 0
+        update_details = []
         
-        affected_rows = cur.rowcount
+        for old_key, new_name in CATEGORY_MAPPING.items():
+            cur.execute("""
+                UPDATE drama_tasks 
+                SET category = %s 
+                WHERE category = %s
+            """, (new_name, old_key))
+            
+            affected = cur.rowcount
+            if affected > 0:
+                update_details.append({
+                    'from': old_key,
+                    'to': new_name,
+                    'count': affected
+                })
+                total_updated += affected
         
         # 提交更改
         conn.commit()
         
-        # 查询更新后的category分布
+        # 查询更新后的 category 分布
         cur.execute("""
             SELECT category, COUNT(*) as count 
             FROM drama_tasks 
-            WHERE status = 'active' 
+            WHERE category IS NOT NULL 
             GROUP BY category 
             ORDER BY count DESC
         """)
@@ -1329,8 +1340,9 @@ def migrate_categories():
         
         return jsonify({
             'success': True,
-            'message': f'已将 {affected_rows} 个旧任务的category设置为NULL',
-            'affected_rows': affected_rows,
+            'message': f'已将 {total_updated} 个任务的 category 从 name_key 更新为 name',
+            'total_updated': total_updated,
+            'update_details': update_details,
             'old_distribution': [dict(row) for row in old_distribution],
             'new_distribution': [dict(row) for row in new_distribution]
         })
