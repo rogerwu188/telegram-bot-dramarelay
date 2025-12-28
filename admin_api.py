@@ -2557,3 +2557,124 @@ def update_task_max_completions(task_id):
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/admin/task_receive_logs', methods=['GET'])
+def get_task_receive_logs():
+    """
+    查询任务接收日志，用于恢复分类数据
+    """
+    try:
+        limit = int(request.args.get('limit', 100))
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT task_id, project_id, title, parsed_category, final_category, created_at
+            FROM task_receive_logs
+            ORDER BY task_id DESC
+            LIMIT %s
+        """, (limit,))
+        
+        logs = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 转换datetime对象为字符串
+        logs_data = []
+        for log in logs:
+            log_dict = dict(log)
+            for key, value in log_dict.items():
+                if isinstance(value, datetime):
+                    log_dict[key] = value.isoformat()
+            logs_data.append(log_dict)
+        
+        return jsonify({
+            'success': True,
+            'count': len(logs_data),
+            'data': logs_data
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/admin/restore_categories', methods=['POST'])
+def restore_categories():
+    """
+    从任务接收日志恢复分类数据
+    将 drama_tasks 表中 category 为 NULL 的任务，根据 task_receive_logs 中的 parsed_category 恢复
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询需要恢复的任务
+        cur.execute("""
+            SELECT t.task_id, l.parsed_category
+            FROM drama_tasks t
+            JOIN task_receive_logs l ON t.task_id = l.task_id
+            WHERE t.category IS NULL AND l.parsed_category IS NOT NULL
+        """)
+        
+        tasks_to_restore = cur.fetchall()
+        
+        # 恢复分类
+        restored_count = 0
+        restore_details = []
+        
+        for task in tasks_to_restore:
+            task_id = task['task_id']
+            parsed_category = task['parsed_category']
+            
+            cur.execute("""
+                UPDATE drama_tasks
+                SET category = %s
+                WHERE task_id = %s
+            """, (parsed_category, task_id))
+            
+            if cur.rowcount > 0:
+                restored_count += 1
+                restore_details.append({
+                    'task_id': task_id,
+                    'category': parsed_category
+                })
+        
+        conn.commit()
+        
+        # 查询恢复后的分类分布
+        cur.execute("""
+            SELECT category, COUNT(*) as count
+            FROM drama_tasks
+            WHERE category IS NOT NULL
+            GROUP BY category
+            ORDER BY count DESC
+        """)
+        
+        new_distribution = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'已恢复 {restored_count} 个任务的分类',
+            'restored_count': restored_count,
+            'restore_details': restore_details[:20],  # 只返回前20条详情
+            'new_distribution': [dict(row) for row in new_distribution]
+        })
+    
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
