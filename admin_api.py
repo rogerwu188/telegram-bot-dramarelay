@@ -100,6 +100,13 @@ def get_task_logs():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 先查询总数
+        if hours > 0:
+            cur.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
+        else:
+            cur.execute("SELECT COUNT(*) as total FROM drama_tasks")
+        total_count = cur.fetchone()['total']
+        
         # 查询最近的任务活动
         # 获取基础奖励配置
         reward_config = get_reward_config()
@@ -213,7 +220,8 @@ def get_task_logs():
         return jsonify({
             'success': True,
             'data': tasks,
-            'count': len(tasks)
+            'count': total_count,  # 返回真实总数
+            'displayed': len(tasks)  # 当前显示的数量
         })
     
     except Exception as e:
@@ -234,6 +242,24 @@ def get_completion_logs():
         
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # 先查询总数（有完成记录的任务数）
+        if hours > 0:
+            cur.execute("""
+                SELECT COUNT(DISTINCT t.task_id) as total
+                FROM user_tasks ut
+                JOIN drama_tasks t ON ut.task_id = t.task_id
+                WHERE ut.status = 'submitted'
+                    AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
+            """, (hours,))
+        else:
+            cur.execute("""
+                SELECT COUNT(DISTINCT t.task_id) as total
+                FROM user_tasks ut
+                JOIN drama_tasks t ON ut.task_id = t.task_id
+                WHERE ut.status = 'submitted'
+            """)
+        total_count = cur.fetchone()['total']
         
         # 查询最近完成的任务（按任务分组）
         if hours > 0:
@@ -371,7 +397,8 @@ def get_completion_logs():
         return jsonify({
             'success': True,
             'data': result_data,
-            'count': len(result_data)
+            'count': total_count,  # 返回真实总数
+            'displayed': len(result_data)  # 当前显示的数量
         })
     
     except Exception as e:
@@ -588,10 +615,23 @@ def get_webhook_logs():
             cur.close()
             conn.close()
             
+            # 查询总任务数（按任务ID去重）
+            if hours > 0:
+                cur2 = conn.cursor()
+                cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
+                total_count = cur2.fetchone()['total']
+                cur2.close()
+            else:
+                cur2 = conn.cursor()
+                cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs")
+                total_count = cur2.fetchone()['total']
+                cur2.close()
+            
             return jsonify({
                 'success': True,
                 'data': webhooks,
-                'count': len(webhooks),
+                'count': total_count,  # 返回真实总数
+                'displayed': len(webhooks),  # 当前显示的数量
                 'source': 'webhook_logs'
             })
         
@@ -697,10 +737,23 @@ def get_webhook_logs():
         cur.close()
         conn.close()
         
+        # 查询总数（有回调配置的任务数）
+        if hours > 0:
+            cur2 = conn.cursor()
+            cur2.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE callback_url IS NOT NULL AND created_at >= NOW() - INTERVAL '%s hours'", (hours,))
+            total_count = cur2.fetchone()['total']
+            cur2.close()
+        else:
+            cur2 = conn.cursor()
+            cur2.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE callback_url IS NOT NULL")
+            total_count = cur2.fetchone()['total']
+            cur2.close()
+        
         return jsonify({
             'success': True,
             'data': webhooks,
-            'count': len(webhooks)
+            'count': total_count,  # 返回真实总数
+            'displayed': len(webhooks)  # 当前显示的数量
         })
     
     except Exception as e:
@@ -1003,8 +1056,12 @@ def get_error_logs():
         # 计算时间范围
         if hours > 0:
             time_filter = f"WHERE created_at >= NOW() - INTERVAL '{hours} hours'"
+            # 先查询总数
+            cur.execute(f"SELECT COUNT(*) as total FROM broadcaster_error_logs {time_filter}")
         else:
             time_filter = ""
+            cur.execute("SELECT COUNT(*) as total FROM broadcaster_error_logs")
+        total_count = cur.fetchone()['total']
         
         # 查询错误日志
         query = f"""
@@ -1033,7 +1090,8 @@ def get_error_logs():
         
         return jsonify({
             'success': True,
-            'count': len(logs),
+            'count': total_count,  # 返回真实总数
+            'displayed': len(logs),  # 当前显示的数量
             'data': logs
         })
         

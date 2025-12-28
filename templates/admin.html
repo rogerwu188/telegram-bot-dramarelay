@@ -1183,7 +1183,7 @@
                     return;
                 }
                 
-                // 更新标签页数量显示
+                // 更新标签页数量显示（显示真实总数）
                 document.getElementById('webhooks-count').textContent = `${result.count || 0} 条`;
                 
                 if (result.count === 0) {
@@ -1251,7 +1251,7 @@
                     return;
                 }
                 
-                // 更新标签页数量显示
+                // 更新标签页数量显示（显示真实总数）
                 document.getElementById('errors-count').textContent = `${result.count || 0} 条`;
                 
                 if (result.count === 0) {
@@ -1311,7 +1311,7 @@
                     return;
                 }
                 
-                // 更新标签页数量显示
+                // 更新标签页数量显示（显示真实总数）
                 document.getElementById('completions-count').textContent = `${result.count || 0} 条`;
                 
                 if (result.count === 0) {
@@ -1552,8 +1552,9 @@
                     });
                 }
                 
-                // 更新标签页数量显示
-                document.getElementById('tasks-count').textContent = `${filteredData.length} 条`;
+                // 更新标签页数量显示（显示真实总数，如果有过滤则显示过滤后数量）
+                const displayCount = filterValue ? filteredData.length : (result.count || filteredData.length);
+                document.getElementById('tasks-count').textContent = `${displayCount} 条`;
                 
                 if (filteredData.length === 0) {
                     empty.style.display = 'block';
