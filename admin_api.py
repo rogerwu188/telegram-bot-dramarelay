@@ -330,6 +330,13 @@ def get_completion_logs():
                     'earned_reward': c['earned_reward']  # 实际获得的 X2C 奖励
                 })
             
+            # 计算所有完成者的总奖励
+            total_earned = sum(c.get('earned_reward', 0) for c in completers_list)
+            
+            # 获取基础奖励配置
+            reward_config = get_reward_config()
+            base_reward = reward_config.get('task_reward_x2c', 100)
+            
             # 构建任务数据
             task_data = {
                 'task_id': task['task_id'],
@@ -346,7 +353,9 @@ def get_completion_logs():
                 'latest_completed_at': task['latest_completed_at'].isoformat() if task['latest_completed_at'] else None,
                 'earliest_completed_at': task['earliest_completed_at'].isoformat() if task['earliest_completed_at'] else None,
                 'view_count_updated_at': task['view_count_updated_at'].isoformat() if task.get('view_count_updated_at') else None,
-                'completers': completers_list
+                'completers': completers_list,
+                'base_reward_x2c': base_reward,  # 基础奖励
+                'total_earned_reward': total_earned  # 所有完成者的总奖励
             }
             result_data.append(task_data)
         
