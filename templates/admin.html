@@ -919,6 +919,14 @@
             <!-- X2C Pool下发任务完成日志 Tab -->
             <div id="tab-completions" class="tab-content">
                 <div class="section-content">
+                    <!-- 剧集类型筛选 -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                        <label>剧集类型：</label>
+                        <select id="completions-category-filter" onchange="loadCompletions()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
+                            <option value="" selected>📊 全部</option>
+                        </select>
+                        <button onclick="loadCompletions()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                    </div>
                     <div id="completions-loading" class="loading">加载中...</div>
                     <div id="completions-error" class="error" style="display: none;"></div>
                     <div id="completions-empty" class="empty" style="display: none;">暂无完成记录</div>
@@ -1314,6 +1322,9 @@
                 // 保存数据到全局变量，用于排序
                 completionsData = result.data;
                 
+                // 更新剧集类型下拉菜单
+                updateCategoryFilter(completionsData);
+                
                 // 重置排序状态
                 viewsSortOrder = 'desc';
                 const icon = document.getElementById('views-sort-icon');
@@ -1333,6 +1344,38 @@
         // 播放量排序相关变量
         let completionsData = [];
         let viewsSortOrder = 'desc'; // 'asc' 或 'desc'
+        
+        // 更新剧集类型下拉菜单
+        function updateCategoryFilter(data) {
+            const select = document.getElementById('completions-category-filter');
+            
+            // 提取所有不重辑的类型
+            const categories = [...new Set(data.map(item => item.category).filter(cat => cat))];
+            categories.sort();
+            
+            // 保存当前选择的值
+            const currentValue = select.value;
+            
+            // 清空除了第一个选项之外的所有选项
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // 添加类型选项
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            });
+            
+            // 恢复之前的选择
+            if (categories.includes(currentValue)) {
+                select.value = currentValue;
+            } else {
+                select.value = '';
+            }
+        }
         
         // 按播放量排序
         function sortTasksByViews() {
@@ -1361,7 +1404,13 @@
             const tbody = document.getElementById('completions-body');
             tbody.innerHTML = '';
             
-            completionsData.forEach(item => {
+            // 获取筛选的类型
+            const selectedCategory = document.getElementById('completions-category-filter').value;
+            
+            // 根据筛选条件过滤数据
+            const filteredData = selectedCategory ? completionsData.filter(item => item.category === selectedCategory) : completionsData;
+            
+            filteredData.forEach(item => {
                 const row = document.createElement('tr');
                 const totalViewCount = item.total_view_count ? item.total_view_count.toLocaleString() : '-';
                 const totalLikeCount = item.total_like_count ? item.total_like_count.toLocaleString() : '-';
