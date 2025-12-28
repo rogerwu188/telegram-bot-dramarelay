@@ -484,6 +484,47 @@
                 padding: 8px;
             }
         }
+        
+        /* 分页控件样式 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .pagination-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s, opacity 0.3s;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background: #5568d3;
+        }
+        
+        .pagination-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .pagination-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .pagination-info strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -848,6 +889,12 @@
             <!-- 回传X2C Pool任务状态数据日志 Tab -->
             <div id="tab-webhooks" class="tab-content active">
                 <div class="section-content">
+                    <!-- 搜索框 -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+                        <input type="text" id="webhooks-search" placeholder="🔍 搜索任务名/Project ID" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px; width: 220px;" onkeypress="if(event.key==='Enter') searchWebhooks()">
+                        <button onclick="searchWebhooks()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 搜索</button>
+                        <button onclick="clearWebhooksSearch()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">✕ 清除</button>
+                    </div>
                     <div id="webhooks-loading" class="loading">加载中...</div>
                     <div id="webhooks-error" class="error" style="display: none;"></div>
                     <div id="webhooks-empty" class="empty" style="display: none;">暂无回调记录</div>
@@ -873,6 +920,12 @@
                             </thead>
                             <tbody id="webhooks-body"></tbody>
                         </table>
+                        <!-- 分页控件 -->
+                        <div id="webhooks-pagination" class="pagination">
+                            <button class="pagination-btn" id="webhooks-prev-btn" onclick="loadWebhooksPage('prev')" disabled>← 上一页</button>
+                            <span class="pagination-info" id="webhooks-page-info">第 1 页</span>
+                            <button class="pagination-btn" id="webhooks-next-btn" onclick="loadWebhooksPage('next')" disabled>下一页 →</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -881,7 +934,7 @@
             <div id="tab-tasks" class="tab-content">
                 <div class="section-content">
                     <!-- 任务状态筛选 -->
-                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <label>分发状态：</label>
                         <select id="task-distribution-filter" onchange="loadTasks()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
                             <option value="all" selected>📊 全部</option>
@@ -889,6 +942,11 @@
                             <option value="full">🚫 已满员</option>
                         </select>
                         <button onclick="loadTasks()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="tasks-search" placeholder="🔍 搜索任务名/Project ID" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px; width: 220px;" onkeypress="if(event.key==='Enter') searchTasks()">
+                            <button onclick="searchTasks()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 搜索</button>
+                            <button onclick="clearTasksSearch()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">✕ 清除</button>
+                        </div>
                     </div>
                     <div id="tasks-loading" class="loading">加载中...</div>
                     <div id="tasks-error" class="error" style="display: none;"></div>
@@ -912,6 +970,12 @@
                             </thead>
                             <tbody id="tasks-body"></tbody>
                         </table>
+                        <!-- 分页控件 -->
+                        <div id="tasks-pagination" class="pagination">
+                            <button class="pagination-btn" id="tasks-prev-btn" onclick="loadTasksPage('prev')" disabled>← 上一页</button>
+                            <span class="pagination-info" id="tasks-page-info">第 1 页</span>
+                            <button class="pagination-btn" id="tasks-next-btn" onclick="loadTasksPage('next')" disabled>下一页 →</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -920,12 +984,17 @@
             <div id="tab-completions" class="tab-content">
                 <div class="section-content">
                     <!-- 剧集类型筛选 -->
-                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <label>剧集类型：</label>
-                        <select id="completions-category-filter" onchange="loadCompletions()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
+                        <select id="completions-category-filter" onchange="renderCompletionsTable()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
                             <option value="" selected>📊 全部</option>
                         </select>
                         <button onclick="loadCompletions()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="completions-search" placeholder="🔍 搜索任务名/Project ID" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px; width: 220px;" onkeypress="if(event.key==='Enter') searchCompletions()">
+                            <button onclick="searchCompletions()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 搜索</button>
+                            <button onclick="clearCompletionsSearch()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">✕ 清除</button>
+                        </div>
                     </div>
                     <div id="completions-loading" class="loading">加载中...</div>
                     <div id="completions-error" class="error" style="display: none;"></div>
@@ -951,6 +1020,12 @@
                             </thead>
                             <tbody id="completions-body"></tbody>
                         </table>
+                        <!-- 分页控件 -->
+                        <div id="completions-pagination" class="pagination">
+                            <button class="pagination-btn" id="completions-prev-btn" onclick="loadCompletionsPage('prev')" disabled>← 上一页</button>
+                            <span class="pagination-info" id="completions-page-info">第 1 页</span>
+                            <button class="pagination-btn" id="completions-next-btn" onclick="loadCompletionsPage('next')" disabled>下一页 →</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1050,6 +1125,16 @@
     
     <script>
         let autoRefreshTimer = null;
+        
+        // 分页状态变量
+        let tasksPagination = { offset: 0, limit: 50, total: 0 };
+        let completionsPagination = { offset: 0, limit: 50, total: 0 };
+        let webhooksPagination = { offset: 0, limit: 50, total: 0 };
+        
+        // 搜索状态变量
+        let tasksSearchKeyword = '';
+        let completionsSearchKeyword = '';
+        let webhooksSearchKeyword = '';
         
         // 格式化时间
         function formatTime(isoString) {
@@ -1157,12 +1242,17 @@
         }
         
         // 加载 Webhook 日志
-        async function loadWebhooks() {
+        async function loadWebhooks(resetPage = true) {
             const loading = document.getElementById('webhooks-loading');
             const error = document.getElementById('webhooks-error');
             const empty = document.getElementById('webhooks-empty');
             const table = document.getElementById('webhooks-table');
             const tbody = document.getElementById('webhooks-body');
+            
+            // 重置分页到第一页
+            if (resetPage) {
+                webhooksPagination.offset = 0;
+            }
             
             loading.style.display = 'block';
             error.style.display = 'none';
@@ -1172,7 +1262,12 @@
             try {
                 const hours = document.getElementById('time-range').value;
                 const limit = document.getElementById('limit').value;
-                const response = await fetch(`/api/logs/webhooks?hours=${hours}&limit=${limit}`);
+                webhooksPagination.limit = parseInt(limit);
+                let url = `/api/logs/webhooks?hours=${hours}&limit=${limit}&offset=${webhooksPagination.offset}`;
+                if (webhooksSearchKeyword) {
+                    url += `&search=${encodeURIComponent(webhooksSearchKeyword)}`;
+                }
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 loading.style.display = 'none';
@@ -1216,12 +1311,50 @@
                     tbody.appendChild(row);
                 });
                 
+                // 更新分页状态和控件
+                webhooksPagination.total = result.count || 0;
+                updateWebhooksPagination();
+                
                 table.style.display = 'block';
             } catch (err) {
                 loading.style.display = 'none';
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
             }
+        }
+        
+        // 更新回传日志分页控件
+        function updateWebhooksPagination() {
+            const currentPage = Math.floor(webhooksPagination.offset / webhooksPagination.limit) + 1;
+            const totalPages = Math.ceil(webhooksPagination.total / webhooksPagination.limit);
+            
+            document.getElementById('webhooks-page-info').innerHTML = `第 <strong>${currentPage}</strong> 页 / 共 <strong>${totalPages}</strong> 页 (总 ${webhooksPagination.total} 条)`;
+            document.getElementById('webhooks-prev-btn').disabled = webhooksPagination.offset === 0;
+            document.getElementById('webhooks-next-btn').disabled = webhooksPagination.offset + webhooksPagination.limit >= webhooksPagination.total;
+        }
+        
+        // 回传日志分页操作
+        function loadWebhooksPage(direction) {
+            if (direction === 'prev' && webhooksPagination.offset > 0) {
+                webhooksPagination.offset -= webhooksPagination.limit;
+            } else if (direction === 'next' && webhooksPagination.offset + webhooksPagination.limit < webhooksPagination.total) {
+                webhooksPagination.offset += webhooksPagination.limit;
+            }
+            loadWebhooks(false);
+        }
+        
+        // 回传日志搜索操作
+        function searchWebhooks() {
+            webhooksSearchKeyword = document.getElementById('webhooks-search').value.trim();
+            webhooksPagination.offset = 0;
+            loadWebhooks(false);
+        }
+        
+        function clearWebhooksSearch() {
+            document.getElementById('webhooks-search').value = '';
+            webhooksSearchKeyword = '';
+            webhooksPagination.offset = 0;
+            loadWebhooks(false);
         }
         
         // 加载错误日志
@@ -1285,12 +1418,17 @@
         }
         
         // 加载完成日志（按任务分组显示）
-        async function loadCompletions() {
+        async function loadCompletions(resetPage = true) {
             const loading = document.getElementById('completions-loading');
             const error = document.getElementById('completions-error');
             const empty = document.getElementById('completions-empty');
             const table = document.getElementById('completions-table');
             const tbody = document.getElementById('completions-body');
+            
+            // 重置分页到第一页
+            if (resetPage) {
+                completionsPagination.offset = 0;
+            }
             
             loading.style.display = 'block';
             error.style.display = 'none';
@@ -1300,7 +1438,12 @@
             try {
                 const hours = document.getElementById('time-range').value;
                 const limit = document.getElementById('limit').value;
-                const response = await fetch(`/api/logs/completions?hours=${hours}&limit=${limit}`);
+                completionsPagination.limit = parseInt(limit);
+                let url = `/api/logs/completions?hours=${hours}&limit=${limit}&offset=${completionsPagination.offset}`;
+                if (completionsSearchKeyword) {
+                    url += `&search=${encodeURIComponent(completionsSearchKeyword)}`;
+                }
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 loading.style.display = 'none';
@@ -1333,12 +1476,50 @@
                 // 渲染表格
                 renderCompletionsTable();
                 
+                // 更新分页状态和控件
+                completionsPagination.total = result.count || 0;
+                updateCompletionsPagination();
+                
                 table.style.display = 'block';
             } catch (err) {
                 loading.style.display = 'none';
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
             }
+        }
+        
+        // 更新完成日志分页控件
+        function updateCompletionsPagination() {
+            const currentPage = Math.floor(completionsPagination.offset / completionsPagination.limit) + 1;
+            const totalPages = Math.ceil(completionsPagination.total / completionsPagination.limit);
+            
+            document.getElementById('completions-page-info').innerHTML = `第 <strong>${currentPage}</strong> 页 / 共 <strong>${totalPages}</strong> 页 (总 ${completionsPagination.total} 条)`;
+            document.getElementById('completions-prev-btn').disabled = completionsPagination.offset === 0;
+            document.getElementById('completions-next-btn').disabled = completionsPagination.offset + completionsPagination.limit >= completionsPagination.total;
+        }
+        
+        // 完成日志分页操作
+        function loadCompletionsPage(direction) {
+            if (direction === 'prev' && completionsPagination.offset > 0) {
+                completionsPagination.offset -= completionsPagination.limit;
+            } else if (direction === 'next' && completionsPagination.offset + completionsPagination.limit < completionsPagination.total) {
+                completionsPagination.offset += completionsPagination.limit;
+            }
+            loadCompletions(false);
+        }
+        
+        // 完成日志搜索操作
+        function searchCompletions() {
+            completionsSearchKeyword = document.getElementById('completions-search').value.trim();
+            completionsPagination.offset = 0;
+            loadCompletions(false);
+        }
+        
+        function clearCompletionsSearch() {
+            document.getElementById('completions-search').value = '';
+            completionsSearchKeyword = '';
+            completionsPagination.offset = 0;
+            loadCompletions(false);
         }
         
         // 播放量排序相关变量
@@ -1510,7 +1691,7 @@
         }
         
         // 加载任务接收日志
-        async function loadTasks() {
+        async function loadTasks(resetPage = true) {
             const loading = document.getElementById('tasks-loading');
             const error = document.getElementById('tasks-error');
             const empty = document.getElementById('tasks-empty');
@@ -1518,6 +1699,11 @@
             const tbody = document.getElementById('tasks-body');
             const distributionFilter = document.getElementById('task-distribution-filter');
             const filterValue = distributionFilter ? distributionFilter.value : 'all';
+            
+            // 重置分页到第一页（当筛选条件改变时）
+            if (resetPage) {
+                tasksPagination.offset = 0;
+            }
             
             loading.style.display = 'block';
             error.style.display = 'none';
@@ -1527,7 +1713,12 @@
             try {
                 const hours = document.getElementById('time-range').value;
                 const limit = document.getElementById('limit').value;
-                const response = await fetch(`/api/logs/tasks?hours=${hours}&limit=${limit}`);
+                tasksPagination.limit = parseInt(limit);
+                let url = `/api/logs/tasks?hours=${hours}&limit=${limit}&offset=${tasksPagination.offset}`;
+                if (tasksSearchKeyword) {
+                    url += `&search=${encodeURIComponent(tasksSearchKeyword)}`;
+                }
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 loading.style.display = 'none';
@@ -1601,11 +1792,49 @@
                 });
                 
                 table.style.display = 'block';
+                
+                // 更新分页状态和控件
+                tasksPagination.total = result.count || 0;
+                updateTasksPagination();
             } catch (err) {
                 loading.style.display = 'none';
                 error.textContent = '加载失败: ' + err.message;
                 error.style.display = 'block';
             }
+        }
+        
+        // 更新任务接收日志分页控件
+        function updateTasksPagination() {
+            const currentPage = Math.floor(tasksPagination.offset / tasksPagination.limit) + 1;
+            const totalPages = Math.ceil(tasksPagination.total / tasksPagination.limit);
+            
+            document.getElementById('tasks-page-info').innerHTML = `第 <strong>${currentPage}</strong> 页 / 共 <strong>${totalPages}</strong> 页 (总 ${tasksPagination.total} 条)`;
+            document.getElementById('tasks-prev-btn').disabled = tasksPagination.offset === 0;
+            document.getElementById('tasks-next-btn').disabled = tasksPagination.offset + tasksPagination.limit >= tasksPagination.total;
+        }
+        
+        // 任务接收日志分页操作
+        function loadTasksPage(direction) {
+            if (direction === 'prev' && tasksPagination.offset > 0) {
+                tasksPagination.offset -= tasksPagination.limit;
+            } else if (direction === 'next' && tasksPagination.offset + tasksPagination.limit < tasksPagination.total) {
+                tasksPagination.offset += tasksPagination.limit;
+            }
+            loadTasks(false);
+        }
+        
+        // 任务接收日志搜索操作
+        function searchTasks() {
+            tasksSearchKeyword = document.getElementById('tasks-search').value.trim();
+            tasksPagination.offset = 0;
+            loadTasks(false);
+        }
+        
+        function clearTasksSearch() {
+            document.getElementById('tasks-search').value = '';
+            tasksSearchKeyword = '';
+            tasksPagination.offset = 0;
+            loadTasks(false);
         }
         
         // 编辑任务最大完成次数

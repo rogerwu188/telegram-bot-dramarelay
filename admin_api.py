@@ -91,20 +91,34 @@ def get_task_logs():
     """
     获取任务日志
     包括：任务接收、用户领取、任务完成
+    支持分页参数: limit, offset, hours
+    支持搜索参数: search (按任务名或 project_id 搜索)
     """
     try:
         # 获取查询参数
         limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
         hours = int(request.args.get('hours', 24))
+        search = request.args.get('search', '').strip()
         
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 构建搜索条件
+        search_condition = ""
+        search_params = []
+        if search:
+            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
+            search_params = [f'%{search}%', f'%{search}%', f'%{search}%']
+        
         # 先查询总数
         if hours > 0:
-            cur.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
+            cur.execute(f"SELECT COUNT(*) as total FROM drama_tasks t WHERE created_at >= NOW() - INTERVAL '%s hours'{search_condition}", [hours] + search_params)
         else:
-            cur.execute("SELECT COUNT(*) as total FROM drama_tasks")
+            if search:
+                cur.execute(f"SELECT COUNT(*) as total FROM drama_tasks t WHERE 1=1{search_condition}", search_params)
+            else:
+                cur.execute("SELECT COUNT(*) as total FROM drama_tasks")
         total_count = cur.fetchone()['total']
         
         # 查询最近的任务活动
@@ -112,73 +126,50 @@ def get_task_logs():
         reward_config = get_reward_config()
         base_reward = reward_config['task_reward_x2c']
         
+        # 构建主查询 SQL
+        base_sql = """
+            SELECT 
+                t.task_id,
+                t.external_task_id,
+                t.project_id,
+                t.title,
+                t.description,
+                t.category,
+                t.platform_requirements,
+                t.node_power_reward,
+                t.duration,
+                t.video_file_id,
+                t.video_url,
+                t.thumbnail_url,
+                t.task_template,
+                t.keywords_template,
+                t.video_title,
+                t.callback_url,
+                t.callback_secret,
+                t.status as task_status,
+                t.created_at,
+                COALESCE(t.max_completions, 100) as max_completions,
+                COUNT(DISTINCT ut.user_id) as assigned_users,
+                COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
+                MAX(ut.submitted_at) as last_completed_at,
+                SUM(COALESCE(ut.node_power_earned, 0)) as total_earned_reward
+            FROM drama_tasks t
+            LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
+        """
+        
         if hours > 0:
-            cur.execute("""
-                SELECT 
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    t.description,
-                    t.category,
-                    t.platform_requirements,
-                    t.node_power_reward,
-                    t.duration,
-                    t.video_file_id,
-                    t.video_url,
-                    t.thumbnail_url,
-                    t.task_template,
-                    t.keywords_template,
-                    t.video_title,
-                    t.callback_url,
-                    t.callback_secret,
-                    t.status as task_status,
-                    t.created_at,
-                    COALESCE(t.max_completions, 100) as max_completions,
-                    COUNT(DISTINCT ut.user_id) as assigned_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
-                    MAX(ut.submitted_at) as last_completed_at,
-                    SUM(COALESCE(ut.node_power_earned, 0)) as total_earned_reward
-                FROM drama_tasks t
-                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
-                WHERE t.created_at >= NOW() - INTERVAL '%s hours'
-                GROUP BY t.task_id
-                ORDER BY t.created_at DESC
-                LIMIT %s
-            """, (hours, limit))
+            where_clause = f"WHERE t.created_at >= NOW() - INTERVAL '%s hours'{search_condition}"
+            query_params = [hours] + search_params + [limit, offset]
         else:
-            cur.execute("""
-                SELECT 
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    t.description,
-                    t.category,
-                    t.platform_requirements,
-                    t.node_power_reward,
-                    t.duration,
-                    t.video_file_id,
-                    t.video_url,
-                    t.thumbnail_url,
-                    t.task_template,
-                    t.keywords_template,
-                    t.video_title,
-                    t.callback_url,
-                    t.callback_secret,
-                    t.status as task_status,
-                    t.created_at,
-                    COALESCE(t.max_completions, 100) as max_completions,
-                    COUNT(DISTINCT ut.user_id) as assigned_users,
-                    COUNT(DISTINCT CASE WHEN ut.status = 'submitted' THEN ut.user_id END) as completed_users,
-                    MAX(ut.submitted_at) as last_completed_at,
-                    SUM(COALESCE(ut.node_power_earned, 0)) as total_earned_reward
-                FROM drama_tasks t
-                LEFT JOIN user_tasks ut ON t.task_id = ut.task_id
-                GROUP BY t.task_id
-                ORDER BY t.created_at DESC
-                LIMIT %s
-            """, (limit,))
+            if search:
+                where_clause = f"WHERE 1=1{search_condition}"
+                query_params = search_params + [limit, offset]
+            else:
+                where_clause = ""
+                query_params = [limit, offset]
+        
+        full_sql = f"{base_sql} {where_clause} GROUP BY t.task_id ORDER BY t.created_at DESC LIMIT %s OFFSET %s"
+        cur.execute(full_sql, query_params)
         
         tasks = cur.fetchall()
         
@@ -221,7 +212,10 @@ def get_task_logs():
             'success': True,
             'data': tasks,
             'count': total_count,  # 返回真实总数
-            'displayed': len(tasks)  # 当前显示的数量
+            'displayed': len(tasks),  # 当前显示的数量
+            'offset': offset,  # 当前偏移量
+            'limit': limit,  # 每页数量
+            'has_more': offset + len(tasks) < total_count  # 是否有更多数据
         })
     
     except Exception as e:
@@ -235,82 +229,78 @@ def get_completion_logs():
     """
     获取任务完成日志
     按任务分组，同一任务的多个完成者整合到一行
+    支持分页参数: limit, offset, hours
+    支持搜索参数: search (按任务名或 project_id 搜索)
     """
     try:
         limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
         hours = int(request.args.get('hours', 24))
+        search = request.args.get('search', '').strip()
         
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 构建搜索条件
+        search_condition = ""
+        search_params = []
+        if search:
+            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
+            search_params = [f'%{search}%', f'%{search}%', f'%{search}%']
+        
         # 先查询总数（有完成记录的任务数）
         if hours > 0:
-            cur.execute("""
+            cur.execute(f"""
                 SELECT COUNT(DISTINCT t.task_id) as total
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
                 WHERE ut.status = 'submitted'
-                    AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
-            """, (hours,))
+                    AND ut.submitted_at >= NOW() - INTERVAL '%s hours'{search_condition}
+            """, [hours] + search_params)
         else:
-            cur.execute("""
+            cur.execute(f"""
                 SELECT COUNT(DISTINCT t.task_id) as total
                 FROM user_tasks ut
                 JOIN drama_tasks t ON ut.task_id = t.task_id
-                WHERE ut.status = 'submitted'
-            """)
+                WHERE ut.status = 'submitted'{search_condition}
+            """, search_params if search_params else [])
         total_count = cur.fetchone()['total']
         
         # 查询最近完成的任务（按任务分组）
+        base_sql = """
+            SELECT 
+                t.task_id,
+                t.external_task_id,
+                t.project_id,
+                t.title,
+                t.category,
+                t.platform_requirements,
+                t.node_power_reward,
+                t.max_completions,
+                COUNT(DISTINCT ut.user_id) as completion_count,
+                SUM(COALESCE(ut.view_count, 0)) as total_view_count,
+                SUM(COALESCE(ut.like_count, 0)) as total_like_count,
+                MAX(ut.submitted_at) as latest_completed_at,
+                MIN(ut.submitted_at) as earliest_completed_at,
+                MAX(ut.view_count_updated_at) as view_count_updated_at
+            FROM user_tasks ut
+            JOIN drama_tasks t ON ut.task_id = t.task_id
+            WHERE ut.status = 'submitted'
+        """
+        
         if hours > 0:
-            cur.execute("""
-                SELECT 
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    t.category,
-                    t.platform_requirements,
-                    t.node_power_reward,
-                    t.max_completions,
-                    COUNT(DISTINCT ut.user_id) as completion_count,
-                    SUM(COALESCE(ut.view_count, 0)) as total_view_count,
-                    SUM(COALESCE(ut.like_count, 0)) as total_like_count,
-                    MAX(ut.submitted_at) as latest_completed_at,
-                    MIN(ut.submitted_at) as earliest_completed_at,
-                    MAX(ut.view_count_updated_at) as view_count_updated_at
-                FROM user_tasks ut
-                JOIN drama_tasks t ON ut.task_id = t.task_id
-                WHERE ut.status = 'submitted'
-                    AND ut.submitted_at >= NOW() - INTERVAL '%s hours'
-                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward, t.max_completions
-                ORDER BY MAX(ut.submitted_at) DESC
-                LIMIT %s
-            """, (hours, limit))
+            where_extra = f" AND ut.submitted_at >= NOW() - INTERVAL '%s hours'{search_condition}"
+            query_params = [hours] + search_params + [limit, offset]
         else:
-            cur.execute("""
-                SELECT 
-                    t.task_id,
-                    t.external_task_id,
-                    t.project_id,
-                    t.title,
-                    t.category,
-                    t.platform_requirements,
-                    t.node_power_reward,
-                    t.max_completions,
-                    COUNT(DISTINCT ut.user_id) as completion_count,
-                    SUM(COALESCE(ut.view_count, 0)) as total_view_count,
-                    SUM(COALESCE(ut.like_count, 0)) as total_like_count,
-                    MAX(ut.submitted_at) as latest_completed_at,
-                    MIN(ut.submitted_at) as earliest_completed_at,
-                    MAX(ut.view_count_updated_at) as view_count_updated_at
-                FROM user_tasks ut
-                JOIN drama_tasks t ON ut.task_id = t.task_id
-                WHERE ut.status = 'submitted'
-                GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward, t.max_completions
-                ORDER BY MAX(ut.submitted_at) DESC
-                LIMIT %s
-            """, (limit,))
+            where_extra = search_condition
+            query_params = search_params + [limit, offset]
+        
+        full_sql = f"""{base_sql}{where_extra}
+            GROUP BY t.task_id, t.external_task_id, t.project_id, t.title, t.category, t.platform_requirements, t.node_power_reward, t.max_completions
+            ORDER BY MAX(ut.submitted_at) DESC
+            LIMIT %s OFFSET %s
+        """
+        cur.execute(full_sql, query_params)
         
         tasks = cur.fetchall()
         
@@ -398,7 +388,10 @@ def get_completion_logs():
             'success': True,
             'data': result_data,
             'count': total_count,  # 返回真实总数
-            'displayed': len(result_data)  # 当前显示的数量
+            'displayed': len(result_data),  # 当前显示的数量
+            'offset': offset,  # 当前偏移量
+            'limit': limit,  # 每页数量
+            'has_more': offset + len(result_data) < total_count  # 是否有更多数据
         })
     
     except Exception as e:
@@ -412,14 +405,27 @@ def get_completion_logs():
 def get_webhook_logs():
     """
     获取 Webhook 回调日志
-    从webhook_logs表读取真实的回调记录（如果表存在）
+    从webook_logs表读取真实的回调记录（如果表存在）
+    支持分页参数: limit, offset, hours
+    支持搜索参数: search (按任务名或 project_id 搜索)
     """
     try:
         limit = int(request.args.get('limit', 100))
+        offset = int(request.args.get('offset', 0))
         hours = int(request.args.get('hours', 24))
+        search = request.args.get('search', '').strip()
         
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # 构建搜索条件
+        search_condition_webhook = ""
+        search_condition_task = ""
+        search_params = []
+        if search:
+            search_condition_webhook = " AND (task_title ILIKE %s OR project_id ILIKE %s)"
+            search_condition_task = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
+            search_params = [f'%{search}%', f'%{search}%']
         
         # 检查webhook_logs表是否存在
         cur.execute("""
@@ -434,7 +440,13 @@ def get_webhook_logs():
         # 如果表存在，从 webhook_logs 读取（按任务ID分组，只显示最新的一条回调记录，按回调时间降序排列）
         if table_exists:
             if hours > 0:
-                cur.execute("""
+                # 构建搜索条件的 SQL 片段
+                search_where = search_condition_webhook if search else ""
+                webhook_params = [hours] + search_params if search else [hours]
+                count_params = [hours] + search_params if search else [hours]
+                final_params = webhook_params + count_params + [limit, offset]
+                
+                cur.execute(f"""
                     WITH latest_webhooks AS (
                         SELECT DISTINCT ON (task_id)
                             id,
@@ -446,13 +458,13 @@ def get_webhook_logs():
                             payload,
                             created_at
                         FROM webhook_logs
-                        WHERE created_at >= NOW() - INTERVAL '%s hours'
+                        WHERE created_at >= NOW() - INTERVAL '%s hours'{search_where}
                         ORDER BY task_id, created_at DESC
                     ),
                     callback_counts AS (
                         SELECT task_id, COUNT(*) as callback_count
                         FROM webhook_logs
-                        WHERE created_at >= NOW() - INTERVAL '%s hours'
+                        WHERE created_at >= NOW() - INTERVAL '%s hours'{search_where}
                         GROUP BY task_id
                     ),
                     task_completion_times AS (
@@ -486,10 +498,18 @@ def get_webhook_logs():
                              lw.callback_status, lw.payload, lw.created_at, t.external_task_id,
                              t.callback_retry_count, t.callback_last_attempt, t.video_url, cc.callback_count, tct.latest_completed_at
                     ORDER BY tct.latest_completed_at DESC NULLS LAST
-                    LIMIT %s
-                """, (hours, hours, limit))
+                    LIMIT %s OFFSET %s
+                """, final_params)
             else:
-                cur.execute("""
+                # 构建搜索条件的 SQL 片段
+                if search:
+                    search_where = " WHERE" + search_condition_webhook.replace(" AND", "", 1)
+                    final_params = search_params + search_params + [limit, offset]
+                else:
+                    search_where = ""
+                    final_params = [limit, offset]
+                
+                cur.execute(f"""
                     WITH latest_webhooks AS (
                         SELECT DISTINCT ON (task_id)
                             id,
@@ -500,12 +520,12 @@ def get_webhook_logs():
                             callback_status,
                             payload,
                             created_at
-                        FROM webhook_logs
+                        FROM webhook_logs{search_where}
                         ORDER BY task_id, created_at DESC
                     ),
                     callback_counts AS (
                         SELECT task_id, COUNT(*) as callback_count
-                        FROM webhook_logs
+                        FROM webhook_logs{search_where}
                         GROUP BY task_id
                     ),
                     task_completion_times AS (
@@ -539,8 +559,8 @@ def get_webhook_logs():
                              lw.callback_status, lw.payload, lw.created_at, t.external_task_id,
                              t.callback_retry_count, t.callback_last_attempt, t.video_url, cc.callback_count, tct.latest_completed_at
                     ORDER BY tct.latest_completed_at DESC NULLS LAST
-                    LIMIT %s
-                """, (limit,))
+                    LIMIT %s OFFSET %s
+                """, final_params)
             
             webhooks = cur.fetchall()
             
@@ -632,6 +652,9 @@ def get_webhook_logs():
                 'data': webhooks,
                 'count': total_count,  # 返回真实总数
                 'displayed': len(webhooks),  # 当前显示的数量
+                'offset': offset,  # 当前偏移量
+                'limit': limit,  # 每页数量
+                'has_more': offset + len(webhooks) < total_count,  # 是否有更多数据
                 'source': 'webhook_logs'
             })
         
@@ -753,7 +776,10 @@ def get_webhook_logs():
             'success': True,
             'data': webhooks,
             'count': total_count,  # 返回真实总数
-            'displayed': len(webhooks)  # 当前显示的数量
+            'displayed': len(webhooks),  # 当前显示的数量
+            'offset': offset,  # 当前偏移量
+            'limit': limit,  # 每页数量
+            'has_more': offset + len(webhooks) < total_count  # 是否有更多数据
         })
     
     except Exception as e:
