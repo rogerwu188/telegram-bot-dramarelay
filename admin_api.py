@@ -292,14 +292,15 @@ def get_completion_logs():
         reward_config = get_reward_config()
         base_reward = reward_config.get('task_reward_x2c', 100)
         
-        # 为每个任务获取完成者详情
-        result_data = []
-        for task in tasks:
-            task_id = task['task_id']
-            
-            # 获取该任务的所有完成者
+        # 获取所有任务ID
+        task_ids = [task['task_id'] for task in tasks]
+        
+        # 批量获取所有完成者详情（只查询一次）
+        all_completers = {}
+        if task_ids:
             cur.execute("""
                 SELECT 
+                    ut.task_id,
                     ut.user_id,
                     u.username,
                     u.first_name,
@@ -312,17 +313,16 @@ def get_completion_logs():
                     COALESCE(ut.node_power_earned, 0) as earned_reward
                 FROM user_tasks ut
                 LEFT JOIN users u ON ut.user_id = u.user_id
-                WHERE ut.task_id = %s AND ut.status = 'submitted'
-                ORDER BY ut.submitted_at ASC
-            """, (task_id,))
+                WHERE ut.task_id = ANY(%s) AND ut.status = 'submitted'
+                ORDER BY ut.task_id, ut.submitted_at ASC
+            """, (task_ids,))
             
-            completers = cur.fetchall()
-            
-            # 格式化完成者数据
-            completers_list = []
-            for c in completers:
+            for c in cur.fetchall():
+                task_id = c['task_id']
+                if task_id not in all_completers:
+                    all_completers[task_id] = []
                 display_name = c.get('first_name') or c.get('username') or f"User_{c['user_id']}"
-                completers_list.append({
+                all_completers[task_id].append({
                     'user_id': c['user_id'],
                     'display_name': display_name,
                     'submission_link': c['submission_link'],
@@ -331,8 +331,14 @@ def get_completion_logs():
                     'like_count': c['like_count'],
                     'view_count_updated_at': c['view_count_updated_at'].isoformat() if c.get('view_count_updated_at') else None,
                     'duration_seconds': c['duration_seconds'],
-                    'earned_reward': c['earned_reward']  # 实际获得的 X2C 奖励
+                    'earned_reward': c['earned_reward']
                 })
+        
+        # 构建结果数据
+        result_data = []
+        for task in tasks:
+            task_id = task['task_id']
+            completers_list = all_completers.get(task_id, [])
             
             # 计算所有完成者的总奖励
             total_earned = sum(c.get('earned_reward', 0) for c in completers_list)
@@ -346,7 +352,7 @@ def get_completion_logs():
                 'category': task['category'],
                 'platform_requirements': task['platform_requirements'],
                 'node_power_reward': task['node_power_reward'],
-                'max_completions': task['max_completions'] or 100,  # 默认 100
+                'max_completions': task['max_completions'] or 100,
                 'completion_count': task['completion_count'],
                 'total_view_count': task['total_view_count'] or 0,
                 'total_like_count': task['total_like_count'] or 0,
@@ -354,8 +360,8 @@ def get_completion_logs():
                 'earliest_completed_at': task['earliest_completed_at'].isoformat() if task['earliest_completed_at'] else None,
                 'view_count_updated_at': task['view_count_updated_at'].isoformat() if task.get('view_count_updated_at') else None,
                 'completers': completers_list,
-                'base_reward_x2c': base_reward,  # 基础奖励
-                'total_earned_reward': total_earned  # 所有完成者的总奖励
+                'base_reward_x2c': base_reward,
+                'total_earned_reward': total_earned
             }
             result_data.append(task_data)
         
