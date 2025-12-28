@@ -612,10 +612,7 @@ def get_webhook_logs():
                 else:
                     webhook['user_submissions'] = []
             
-            cur.close()
-            conn.close()
-            
-            # 查询总任务数（按任务ID去重）
+            # 查询总任务数（按任务ID去重）- 在关闭连接前执行
             if hours > 0:
                 cur2 = conn.cursor()
                 cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
@@ -626,6 +623,9 @@ def get_webhook_logs():
                 cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs")
                 total_count = cur2.fetchone()['total']
                 cur2.close()
+            
+            cur.close()
+            conn.close()
             
             return jsonify({
                 'success': True,
@@ -734,10 +734,7 @@ def get_webhook_logs():
                 'stats': [stats_data]
             }
         
-        cur.close()
-        conn.close()
-        
-        # 查询总数（有回调配置的任务数）
+        # 查询总数（有回调配置的任务数）- 在关闭连接前执行
         if hours > 0:
             cur2 = conn.cursor()
             cur2.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE callback_url IS NOT NULL AND created_at >= NOW() - INTERVAL '%s hours'", (hours,))
@@ -748,6 +745,9 @@ def get_webhook_logs():
             cur2.execute("SELECT COUNT(*) as total FROM drama_tasks WHERE callback_url IS NOT NULL")
             total_count = cur2.fetchone()['total']
             cur2.close()
+        
+        cur.close()
+        conn.close()
         
         return jsonify({
             'success': True,
