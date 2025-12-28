@@ -1401,7 +1401,7 @@
                     <td>${fetchStatusHtml}</td>
                     <td><span class="badge">${item.category || '-'}</span></td>
                     <td>${item.platform_requirements || '-'}</td>
-                    <td>${item.node_power_reward} X2C</td>
+                    <td>${item.total_earned_reward || item.node_power_reward} X2C</td>
                     <td class="timestamp">${formatTime(item.latest_completed_at)}</td>
                     <td><span class="view-count">👁 ${totalViewCount}</span></td>
                     <td><span class="like-count">❤️ ${totalLikeCount}</span></td>
@@ -1528,9 +1528,9 @@
                             ${truncate(item.title, 30)}
                             ${isFull ? '<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">🚫 已满员</span>' : ''}
                         </td>
-                        <td><span class="badge">${item.category || '-'}</span></td>
+                              <td>${item.category || '-'}</span></td>
                         <td>${item.platform_requirements}</td>
-                        <td>${item.node_power_reward} X2C</td>
+                        <td>${item.base_reward_x2c || item.node_power_reward} X2C</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; flex-direction: column; gap: 3px;">
