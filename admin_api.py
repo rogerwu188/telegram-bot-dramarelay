@@ -632,17 +632,21 @@ def get_webhook_logs():
                 else:
                     webhook['user_submissions'] = []
             
-            # 查询总任务数（按任务ID去重）- 在关闭连接前执行
+            # 查询总任务数（按任务ID去重）- 在关闭连接前执行，需要考虑搜索条件
+            cur2 = conn.cursor()
             if hours > 0:
-                cur2 = conn.cursor()
-                cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
-                total_count = cur2.fetchone()['total']
-                cur2.close()
+                if search:
+                    cur2.execute(f"SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs WHERE created_at >= NOW() - INTERVAL '%s hours'{search_condition_webhook}", [hours] + search_params)
+                else:
+                    cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs WHERE created_at >= NOW() - INTERVAL '%s hours'", (hours,))
             else:
-                cur2 = conn.cursor()
-                cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs")
-                total_count = cur2.fetchone()['total']
-                cur2.close()
+                if search:
+                    search_where_count = " WHERE" + search_condition_webhook.replace(" AND", "", 1)
+                    cur2.execute(f"SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs{search_where_count}", search_params)
+                else:
+                    cur2.execute("SELECT COUNT(DISTINCT task_id) as total FROM webhook_logs")
+            total_count = cur2.fetchone()['total']
+            cur2.close()
             
             cur.close()
             conn.close()
