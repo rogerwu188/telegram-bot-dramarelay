@@ -108,8 +108,8 @@ def get_task_logs():
         search_condition = ""
         search_params = []
         if search:
-            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
-            search_params = [f'%{search}%', f'%{search}%', f'%{search}%']
+            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s)"
+            search_params = [f'%{search}%', f'%{search}%']
         
         # 先查询总数
         if hours > 0:
@@ -245,8 +245,8 @@ def get_completion_logs():
         search_condition = ""
         search_params = []
         if search:
-            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
-            search_params = [f'%{search}%', f'%{search}%', f'%{search}%']
+            search_condition = " AND (t.title ILIKE %s OR t.project_id ILIKE %s)"
+            search_params = [f'%{search}%', f'%{search}%']
         
         # 先查询总数（有完成记录的任务数）
         if hours > 0:
@@ -424,7 +424,7 @@ def get_webhook_logs():
         search_params = []
         if search:
             search_condition_webhook = " AND (task_title ILIKE %s OR project_id ILIKE %s)"
-            search_condition_task = " AND (t.title ILIKE %s OR t.project_id ILIKE %s OR t.external_task_id ILIKE %s)"
+            search_condition_task = " AND (t.title ILIKE %s OR t.project_id ILIKE %s)"
             search_params = [f'%{search}%', f'%{search}%']
         
         # 检查webhook_logs表是否存在
