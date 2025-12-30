@@ -29,7 +29,7 @@ async def show_tasks_by_category(update: Update, context: ContextTypes.DEFAULT_T
     user_lang = get_user_language(user_id)
     
     # 分页参数
-    page_size = 10  # 每页显示 10 个任务
+    page_size = 6  # 每页显示 6 个任务（Telegram 消息长度限制）
     offset = (page - 1) * page_size
     
     logger.info(f"📋 [v2.2] show_tasks_by_category: user_id={user_id}, category={category}, page={page}")
