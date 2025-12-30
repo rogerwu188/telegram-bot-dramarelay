@@ -145,56 +145,59 @@ async def broadcast_task_stats(task, global_callback_url=None):
             logger.warning(f"⚠️ 任务 {task_id} 没有配置 callback_url，跳过")
             return False
         
-        # 从user_tasks表聚合用户提交的统计数据
+        # 从user_tasks表获取每个用户的提交数据
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 查询该任务所有用户提交的数据，按平台分组统计
+        # 查询该任务所有用户提交的数据（包含每个用户的 submission_link）
         cur.execute('''
             SELECT 
+                user_id,
                 platform,
-                COUNT(DISTINCT user_id) as account_count,
-                COALESCE(SUM(view_count), 0) as total_views,
-                COALESCE(SUM(like_count), 0) as total_likes
+                submission_link,
+                COALESCE(view_count, 0) as view_count,
+                COALESCE(like_count, 0) as like_count
             FROM user_tasks
             WHERE task_id = %s AND status = 'submitted'
-            GROUP BY platform
+            ORDER BY submitted_at ASC
         ''', (task_id,))
-        platform_stats = cur.fetchall()
+        user_submissions = cur.fetchall()
         
         cur.close()
         conn.close()
         
-        # 初始化统计数据
+        if not user_submissions:
+            logger.warning(f"⚠️ 任务 {task_id} 没有用户提交，跳过")
+            return False
+        
+        # 统计总数据
         yt_view_count = 0
         yt_like_count = 0
         yt_account_count = 0
         tt_view_count = 0
         tt_like_count = 0
         tt_account_count = 0
-        total_account_count = 0
+        total_account_count = len(user_submissions)
         
         # 根据平台分类统计
-        for ps in platform_stats:
-            platform_name = (ps['platform'] or '').lower()
-            views = int(ps['total_views'] or 0)
-            likes = int(ps['total_likes'] or 0)
-            accounts = int(ps['account_count'] or 0)
-            total_account_count += accounts
+        for us in user_submissions:
+            platform_name = (us['platform'] or '').lower()
+            views = int(us['view_count'] or 0)
+            likes = int(us['like_count'] or 0)
             
             if platform_name in ['youtube', 'yt']:
                 yt_view_count += views
                 yt_like_count += likes
-                yt_account_count += accounts
+                yt_account_count += 1
             elif platform_name in ['tiktok', 'tt']:
                 tt_view_count += views
                 tt_like_count += likes
-                tt_account_count += accounts
+                tt_account_count += 1
             else:
                 # 其他平台默认计入TikTok
                 tt_view_count += views
                 tt_like_count += likes
-                tt_account_count += accounts
+                tt_account_count += 1
         
         # 计算总播放量和点赞数
         total_view_count = yt_view_count + tt_view_count
@@ -204,56 +207,66 @@ async def broadcast_task_stats(task, global_callback_url=None):
         logger.info(f"   YouTube: 播放={yt_view_count}, 点赞={yt_like_count}, 账号={yt_account_count}")
         logger.info(f"   TikTok: 播放={tt_view_count}, 点赞={tt_like_count}, 账号={tt_account_count}")
         
-        # 构建符合X2C Pool期望的数据结构
-        stats_data = {
-            'project_id': project_id,
-            'task_id': external_task_id,
-            'duration': duration,
-            'account_count': total_account_count,
-            # X2C Pool期望的字段（始终发送，即使为0）
-            'view_count': total_view_count,
-            'like_count': total_like_count,
-            'comment_count': 0,  # 暂时不统计评论数
-            'share_count': 0,    # 暂时不统计分享数
-            'external_url': video_url or '',  # 外部视频链接
-            # 平台特定字段
-            'yt_view_count': yt_view_count,
-            'yt_like_count': yt_like_count,
-            'yt_account_count': yt_account_count,
-            'tt_view_count': tt_view_count,
-            'tt_like_count': tt_like_count,
-            'tt_account_count': tt_account_count
-        }
-        
-        # 构建payload（符合X2C Pool批量更新格式）
-        payload = {
-            'site_name': 'DramaRelayBot',
-            'stats': [stats_data]
-        }
-        
-        logger.info(f"📤 回传任务 {task_id} 数据: {json.dumps(payload, ensure_ascii=False)}")
-        
-        # 发送Webhook
-        success, error = await send_webhook(
-            callback_url,
-            payload,
-            callback_secret,
-            timeout=30
-        )
-        
-        if success:
-            logger.info(f"✅ 任务 {task_id} 数据回传成功")
-            # 记录成功日志
-            log_webhook_success(
-                task_id=task_id,
-                task_title=task.get('title', ''),
-                project_id=task.get('project_id', ''),
-                callback_url=callback_url,
-                payload=payload
+        # 为每个用户提交发送回调（每个用户的 external_url 不同）
+        all_success = True
+        for us in user_submissions:
+            submission_link = us['submission_link'] or ''
+            
+            # 构建符合X2C Pool期望的数据结构
+            stats_data = {
+                'project_id': project_id,
+                'task_id': external_task_id,
+                'duration': duration,
+                'account_count': total_account_count,
+                # X2C Pool期望的字段（始终发送，即使为0）
+                'view_count': total_view_count,
+                'like_count': total_like_count,
+                'comment_count': 0,  # 暂时不统计评论数
+                'share_count': 0,    # 暂时不统计分享数
+                'external_url': submission_link,  # 用户提交的视频链接
+                # 平台特定字段
+                'yt_view_count': yt_view_count,
+                'yt_like_count': yt_like_count,
+                'yt_account_count': yt_account_count,
+                'tt_view_count': tt_view_count,
+                'tt_like_count': tt_like_count,
+                'tt_account_count': tt_account_count
+            }
+            
+            # 构建payload（符合X2C Pool批量更新格式）
+            payload = {
+                'site_name': 'DramaRelayBot',
+                'stats': [stats_data]
+            }
+            
+            logger.info(f"📤 回传任务 {task_id} 用户 {us['user_id']} 数据: external_url={submission_link}")
+            
+            # 发送Webhook
+            success, error = await send_webhook(
+                callback_url,
+                payload,
+                callback_secret,
+                timeout=30
             )
-            return True
-        else:
-            logger.error(f"❌ 任务 {task_id} 数据回传失败: {error}")
+            
+            if success:
+                logger.info(f"✅ 任务 {task_id} 用户 {us['user_id']} 数据回传成功")
+                # 记录成功日志
+                log_webhook_success(
+                    task_id=task_id,
+                    task_title=task.get('title', ''),
+                    project_id=task.get('project_id', ''),
+                    callback_url=callback_url,
+                    payload=payload
+                )
+            else:
+                logger.error(f"❌ 任务 {task_id} 用户 {us['user_id']} 数据回传失败: {error}")
+                all_success = False
+            
+            # 每个用户之间间隔0.5秒，避免请求过快
+            await asyncio.sleep(0.5)
+        
+        if not all_success:
             # 记录错误日志
             log_broadcaster_error(
                 task_id=task_id,
@@ -261,11 +274,12 @@ async def broadcast_task_stats(task, global_callback_url=None):
                 project_id=task.get('project_id', ''),
                 video_url=task.get('video_url', ''),
                 platform='unknown',
-                error_type='CALLBACK_FAILED',
-                error_message=str(error),
+                error_type='CALLBACK_PARTIAL_FAILED',
+                error_message='部分用户回传失败',
                 callback_url=callback_url
             )
-            return False
+        
+        return all_success
             
     except Exception as e:
         logger.error(f"❌ 任务 {task_id} 回传异常: {e}")

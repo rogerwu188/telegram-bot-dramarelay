@@ -203,42 +203,63 @@ async def send_task_completed_webhook(
         cur.close()
         conn.close()
         
-        # 构建回调数据（按照最小改动原则）
-        # 根据平台生成对应的统计字段
+        # 构建回调数据 - 确保所有字段完整发送（即使为0）
+        # 从 verification_details 中获取数据
+        view_count = 0
+        like_count = 0
+        if verification_details:
+            view_count = verification_details.get('views') or verification_details.get('view_count', 0)
+            like_count = verification_details.get('likes') or verification_details.get('like_count', 0)
+        
+        # 初始化平台特定统计
+        yt_view_count = 0
+        yt_like_count = 0
+        yt_account_count = 0
+        tt_view_count = 0
+        tt_like_count = 0
+        tt_account_count = 0
+        
+        # 根据平台分配统计数据
+        platform_lower = platform.lower()
+        if 'youtube' in platform_lower or 'yt' in platform_lower:
+            yt_view_count = view_count
+            yt_like_count = like_count
+            yt_account_count = 1
+        elif 'tiktok' in platform_lower or 'tt' in platform_lower:
+            tt_view_count = view_count
+            tt_like_count = like_count
+            tt_account_count = 1
+        elif 'douyin' in platform_lower or 'dy' in platform_lower:
+            # 抖音平台统计：计入YouTube总量
+            yt_view_count = view_count
+            yt_like_count = like_count
+            yt_account_count = 1
+        else:
+            # 其他平台默认计入TikTok
+            tt_view_count = view_count
+            tt_like_count = like_count
+            tt_account_count = 1
+        
+        # 构建完整的统计数据（始终发送所有字段，即使为0）
         stats_data = {
             'project_id': task.get('project_id'),
             'task_id': task.get('external_task_id'),  # 使用X2C的task_id
             'duration': task.get('duration', 30),
-            'account_count': 1  # 单个用户完成
+            'account_count': 1,  # 单个用户完成
+            # X2C Pool 期望的字段（始终发送，即使为0）
+            'view_count': view_count,
+            'like_count': like_count,
+            'comment_count': 0,  # 暂时不统计评论数
+            'share_count': 0,    # 暂时不统计分享数
+            'external_url': submission_link or '',  # 用户提交的视频链接
+            # 平台特定字段
+            'yt_view_count': yt_view_count,
+            'yt_like_count': yt_like_count,
+            'yt_account_count': yt_account_count,
+            'tt_view_count': tt_view_count,
+            'tt_like_count': tt_like_count,
+            'tt_account_count': tt_account_count
         }
-        
-        # 从 verification_details 中获取数据（如果有）
-        if verification_details:
-            view_count = verification_details.get('views') or verification_details.get('view_count', 0)
-            like_count = verification_details.get('likes') or verification_details.get('like_count', 0)
-            
-            # 根据平台填充对应的字段
-            platform_lower = platform.lower()
-            if 'youtube' in platform_lower or 'yt' in platform_lower:
-                if view_count > 0:
-                    stats_data['yt_view_count'] = view_count
-                if like_count > 0:
-                    stats_data['yt_like_count'] = like_count
-                stats_data['yt_account_count'] = 1
-            elif 'tiktok' in platform_lower or 'tt' in platform_lower:
-                if view_count > 0:
-                    stats_data['tt_view_count'] = view_count
-                if like_count > 0:
-                    stats_data['tt_like_count'] = like_count
-                stats_data['tt_account_count'] = 1
-            elif 'douyin' in platform_lower or 'dy' in platform_lower:
-                # 抖音平台统计：计入YouTube总量，不单独回传dy_*字段
-                # 抖音数据只在本地展现，但播放量和点赞数计入yt_*总量
-                if view_count > 0:
-                    stats_data['yt_view_count'] = view_count
-                if like_count > 0:
-                    stats_data['yt_like_count'] = like_count
-                stats_data['yt_account_count'] = 1
         
         payload = {
             'site_name': 'DramaRelayBot',
