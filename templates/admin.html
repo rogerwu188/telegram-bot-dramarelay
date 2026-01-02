@@ -938,10 +938,13 @@
                         <label>分发状态：</label>
                         <select id="task-distribution-filter" onchange="loadTasks()" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px;">
                             <option value="all" selected>📊 全部</option>
-                            <option value="distributing">✅ 分发中</option>
+                            <option value="active">✅ 活跃</option>
+                            <option value="expired">⏰ 已过期</option>
+                            <option value="distributing">📦 分发中</option>
                             <option value="full">🚫 已满员</option>
                         </select>
                         <button onclick="loadTasks()" style="padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 刷新</button>
+                        <button onclick="reactivateAllExpiredTasks()" style="padding: 8px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 批量激活过期任务</button>
                         <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
                             <input type="text" id="tasks-search" placeholder="🔍 搜索任务名/Project ID" style="padding: 8px 15px; border: 2px solid #e0e0e0; border-radius: 5px; width: 220px;" onkeypress="if(event.key==='Enter') searchTasks()">
                             <button onclick="searchTasks()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">🔍 搜索</button>
@@ -962,6 +965,7 @@
                                     <th>剧集类型</th>
                                     <th>平台</th>
                                     <th>奖励</th>
+                                    <th>状态</th>
                                     <th>分发进度 (可编辑)</th>
                                     <th>完成数</th>
                                     <th>创建时间</th>
@@ -1731,10 +1735,14 @@
                 
                 // 过滤数据
                 let filteredData = result.data;
-                if (filterValue === 'distributing') {
+                if (filterValue === 'active') {
+                    filteredData = result.data.filter(item => (item.task_status || 'active') === 'active');
+                } else if (filterValue === 'expired') {
+                    filteredData = result.data.filter(item => item.task_status === 'expired');
+                } else if (filterValue === 'distributing') {
                     filteredData = result.data.filter(item => {
                         const maxCompletions = item.max_completions || 100;
-                        return item.assigned_users < maxCompletions;
+                        return item.assigned_users < maxCompletions && (item.task_status || 'active') === 'active';
                     });
                 } else if (filterValue === 'full') {
                     filteredData = result.data.filter(item => {
@@ -1759,9 +1767,11 @@
                     const isFull = item.assigned_users >= maxCompletions;
                     const progressPercent = Math.min((item.assigned_users / maxCompletions) * 100, 100);
                     const progressColor = isFull ? '#dc3545' : (progressPercent > 80 ? '#ffc107' : '#28a745');
+                    const taskStatus = item.task_status || 'active';
+                    const isExpired = taskStatus === 'expired';
                     
                     const row = document.createElement('tr');
-                    row.style.opacity = isFull ? '0.7' : '1';
+                    row.style.opacity = (isFull || isExpired) ? '0.7' : '1';
                     row.innerHTML = `
                         <td>${item.task_id}</td>
                         <td>${item.external_task_id || '-'}</td>
@@ -1769,10 +1779,16 @@
                         <td>
                             ${truncate(item.title, 30)}
                             ${isFull ? '<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">🚫 已满员</span>' : ''}
+                            ${isExpired ? '<span style="background: #ffc107; color: #333; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">⏰ 已过期</span>' : ''}
                         </td>
-                              <td>${getCategoryDisplayName(item.category)}</td>
+                        <td>${getCategoryDisplayName(item.category)}</td>
                         <td>${item.platform_requirements}</td>
                         <td>${item.base_reward_x2c || item.node_power_reward} X2C</td>
+                        <td>
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; ${isExpired ? 'background: #ffc107; color: #333;' : 'background: #28a745; color: white;'}">
+                                ${isExpired ? '⏰ 已过期' : '✅ 活跃'}
+                            </span>
+                        </td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; flex-direction: column; gap: 3px;">
@@ -1786,7 +1802,10 @@
                         </td>
                         <td>${item.completed_users}</td>
                         <td class="timestamp">${formatTime(item.created_at)}</td>
-                        <td><button class="btn-view" onclick='showTaskData(${JSON.stringify(item.original_request).replace(/'/g, "&apos;")})'>📝 查看数据</button></td>
+                        <td>
+                            <button class="btn-view" onclick='showTaskData(${JSON.stringify(item.original_request).replace(/'/g, "&apos;")})'>📝 查看数据</button>
+                            ${isExpired ? `<button onclick="reactivateTask(${item.task_id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px;" title="重新激活任务">🔄 激活</button>` : ''}
+                        </td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -1873,6 +1892,70 @@
                     loadTasks();
                 } else {
                     alert('❌ 更新失败: ' + (result.error || '未知错误'));
+                }
+            } catch (err) {
+                alert('❌ 请求失败: ' + err.message);
+            }
+        }
+        
+        // 重新激活单个任务
+        async function reactivateTask(taskId) {
+            if (!confirm(`确认要重新激活任务 ${taskId} 吗？\n\n激活后任务将重新对用户可见。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/reactivate`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 激活成功\n\n任务 ${taskId} 已重新激活\n状态: ${result.old_status} → ${result.new_status}`);
+                    loadTasks();
+                } else {
+                    alert('❌ 激活失败: ' + (result.error || '未知错误'));
+                }
+            } catch (err) {
+                alert('❌ 请求失败: ' + err.message);
+            }
+        }
+        
+        // 批量重新激活所有过期任务
+        async function reactivateAllExpiredTasks() {
+            const days = prompt('请输入要激活的任务范围（天数）\n\n例如：输入 7 表示激活最近 7 天内创建的过期任务', '7');
+            
+            if (days === null) {
+                return;
+            }
+            
+            const numDays = parseInt(days, 10);
+            if (isNaN(numDays) || numDays < 1 || numDays > 365) {
+                alert('❗ 输入无效\n\n请输入 1 到 365 之间的整数');
+                return;
+            }
+            
+            if (!confirm(`确认要批量激活最近 ${numDays} 天内创建的所有过期任务吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tasks/reactivate-all-expired', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ days: numDays })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 批量激活成功\n\n已激活 ${result.count} 个任务`);
+                    loadTasks();
+                } else {
+                    alert('❌ 激活失败: ' + (result.error || '未知错误'));
                 }
             } catch (err) {
                 alert('❌ 请求失败: ' + err.message);

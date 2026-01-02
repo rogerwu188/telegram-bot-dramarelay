@@ -998,6 +998,141 @@ def fix_all_approved_tasks():
             'error': str(e)
         }), 500
 
+@app.route('/api/tasks/<int:task_id>/reactivate', methods=['POST'])
+def reactivate_task(task_id):
+    """
+    重新激活单个过期任务
+    将 'expired' 状态的任务改为 'active'
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询任务当前状态
+        cur.execute("""
+            SELECT task_id, title, status
+            FROM drama_tasks
+            WHERE task_id = %s
+        """, (task_id,))
+        
+        task = cur.fetchone()
+        
+        if not task:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'任务 {task_id} 不存在'
+            }), 404
+        
+        old_status = task['status']
+        
+        if old_status == 'active':
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': f'任务 {task_id} 状态已经是 active，无需激活',
+                'task_id': task_id,
+                'title': task['title'],
+                'old_status': old_status,
+                'new_status': 'active'
+            })
+        
+        # 更新任务状态为 'active'
+        cur.execute("""
+            UPDATE drama_tasks
+            SET status = 'active'
+            WHERE task_id = %s
+            RETURNING task_id, title, status
+        """, (task_id,))
+        
+        updated_task = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'任务 {task_id} 已重新激活',
+            'task_id': updated_task['task_id'],
+            'title': updated_task['title'],
+            'old_status': old_status,
+            'new_status': updated_task['status']
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/tasks/reactivate-all-expired', methods=['POST'])
+def reactivate_all_expired_tasks():
+    """
+    批量重新激活所有过期任务
+    可选参数: days - 只激活最近 N 天内创建的任务（默认 7 天）
+    """
+    try:
+        # 从请求中获取参数
+        data = request.get_json() or {}
+        days = data.get('days', 7)  # 默认激活 7 天内的任务
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 查询所有符合条件的 expired 状态任务
+        cur.execute("""
+            SELECT task_id, title, status
+            FROM drama_tasks
+            WHERE status = 'expired'
+            AND created_at > NOW() - INTERVAL '%s days'
+            ORDER BY created_at DESC
+        """, (days,))
+        
+        tasks = cur.fetchall()
+        
+        if not tasks:
+            cur.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': f'没有找到最近 {days} 天内的 expired 状态任务',
+                'count': 0,
+                'tasks': []
+            })
+        
+        # 批量更新为 active 状态
+        cur.execute("""
+            UPDATE drama_tasks
+            SET status = 'active'
+            WHERE status = 'expired'
+            AND created_at > NOW() - INTERVAL '%s days'
+            RETURNING task_id, title, status
+        """, (days,))
+        
+        updated_tasks = cur.fetchall()
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'已重新激活 {len(updated_tasks)} 个任务',
+            'count': len(updated_tasks),
+            'tasks': [{
+                'task_id': task['task_id'],
+                'title': task['title'],
+                'new_status': task['status']
+            } for task in updated_tasks]
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/broadcaster/start', methods=['POST'])
 def start_broadcaster_api():
     """
