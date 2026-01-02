@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-# 默认任务过期时间（小时）
-DEFAULT_TASK_EXPIRY_HOURS = 48
+# 默认任务过期时间（小时）- 7天
+DEFAULT_TASK_EXPIRY_HOURS = 168
 
 
 def get_task_expiry_hours() -> int:
