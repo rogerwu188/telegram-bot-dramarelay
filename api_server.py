@@ -1643,4 +1643,16 @@ if __name__ == '__main__':
     logger.info(f"🔑 API Key: {API_KEY[:10]}...")
     logger.info("=" * 60)
     
+    # 自动启动播放量抓取定时器
+    if VIEW_COUNTER_AVAILABLE:
+        try:
+            ensure_view_count_columns()
+            ensure_view_count_error_log_table()
+            start_view_count_timer(interval_minutes=10)
+            logger.info("📊 播放量抓取定时器已自动启动，间隔: 10分钟")
+        except Exception as e:
+            logger.error(f"❌ 自动启动播放量抓取定时器失败: {e}")
+    else:
+        logger.warning("⚠️ 播放量抓取服务不可用，跳过自动启动")
+    
     app.run(host='0.0.0.0', port=PORT, debug=False)
