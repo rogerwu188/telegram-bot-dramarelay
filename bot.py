@@ -1105,14 +1105,15 @@ def submit_task_link(user_id: int, task_id: int, platform: str, link: str) -> in
         WHERE user_id = %s AND task_id = %s
     """, (platform, link, reward, user_id, task_id))
     
-    # 更新用户算力
+    # 更新用户算力和累计收益
     cur.execute("""
         UPDATE users
         SET total_node_power = total_node_power + %s,
+            cumulative_earnings = cumulative_earnings + %s,
             completed_tasks = completed_tasks + 1,
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = %s
-    """, (reward, user_id))
+    """, (reward, reward, user_id))
     
     conn.commit()
     cur.close()
@@ -1422,18 +1423,20 @@ async def manual_reward_command(update: Update, context: ContextTypes.DEFAULT_TY
             WHERE inviter_id = %s AND invitee_id = %s
         """, (referral_reward, inviter_id, invitee_id))
         
-        # 4. 给邀请人增加算力
+        # 4. 给邀请人增加算力（同时更新累计收益）
         cur.execute("""
             UPDATE users
             SET total_node_power = total_node_power + %s,
+                cumulative_earnings = cumulative_earnings + %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE user_id = %s
-        """, (referral_reward, inviter_id))
+        """, (referral_reward, referral_reward, inviter_id))
         
-        # 5. 给被邀请人发放新人奖励（+5 X2C）
+        # 5. 给被邀请人发放新人奖励（+5 X2C）（同时更新累计收益）
         cur.execute("""
             UPDATE users
             SET total_node_power = total_node_power + 5,
+                cumulative_earnings = cumulative_earnings + 5,
                 invitation_reward_received = TRUE,
                 invitation_reward_received_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP

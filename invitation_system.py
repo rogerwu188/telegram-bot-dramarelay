@@ -44,10 +44,11 @@ def record_invitation(inviter_id: int, invitee_id: int) -> bool:
             ON CONFLICT (invitee_id) DO NOTHING
         """, (inviter_id, invitee_id))
         
-        # 给被邀请人发放新人启动金 +2 X2C
+        # 给被邀请人发放新人启动金 +2 X2C（同时更新累计收益）
         cur.execute("""
             UPDATE users
-            SET total_node_power = total_node_power + 2
+            SET total_node_power = total_node_power + 2,
+                cumulative_earnings = cumulative_earnings + 2
             WHERE user_id = %s
         """, (invitee_id,))
         
@@ -135,12 +136,13 @@ def process_referral_reward(invitee_id: int, task_id: int, original_reward: floa
         # 计算推荐奖励（10%）
         referral_reward = original_reward * 0.1
         
-        # 给邀请人增加奖励
+        # 给邀请人增加奖励（同时更新累计收益）
         cur.execute("""
             UPDATE users
-            SET total_node_power = total_node_power + %s
+            SET total_node_power = total_node_power + %s,
+                cumulative_earnings = cumulative_earnings + %s
             WHERE user_id = %s
-        """, (referral_reward, inviter_id))
+        """, (referral_reward, referral_reward, inviter_id))
         
         # 记录推荐奖励
         cur.execute("""
@@ -165,10 +167,11 @@ def process_referral_reward(invitee_id: int, task_id: int, original_reward: floa
                 WHERE invitee_id = %s
             """, (invitee_id,))
             
-            # 给邀请人首单赏金 +5 X2C
+            # 给邀请人首单赏金 +5 X2C（同时更新累计收益）
             cur.execute("""
                 UPDATE users
-                SET total_node_power = total_node_power + 5
+                SET total_node_power = total_node_power + 5,
+                    cumulative_earnings = cumulative_earnings + 5
                 WHERE user_id = %s
             """, (inviter_id,))
             
